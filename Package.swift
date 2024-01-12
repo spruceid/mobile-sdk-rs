@@ -18,12 +18,13 @@ let package = Package(
     ],
     dependencies: [ ],
     targets: [
-        .binaryTarget(name: "RustFramework", path: "./RustFramework.xcframework"),
+        .binaryTarget(name: "RustFramework", path: "./WalletSdkRs/RustFramework.xcframework"),
         .target(
             name: "WalletSdkRs",
             dependencies: [
                 .target(name: "RustFramework")
-            ]
-        ),
+            ],
+            path: "./WalletSdkRs/Sources/WalletSdkRs"
+        )
     ]
 )
