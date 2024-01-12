@@ -1,0 +1,25 @@
+[package]
+name = "wallet-sdk-rs"
+version = "0.1.0"
+edition = "2021"
+authors = ["Spruce Systems, Inc."]
+license = "Apache-2.0 OR MIT"
+description = "Wallet SDK Rust bindings"
+repository = "https://github.com/spruceid/wallet-sdk-rs/"
+
+[lib]
+crate-type = ["staticlib", "lib", "cdylib"]
+name = "wallet_sdk_rs"
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "uniffi-bindgen.rs"
+
+[dependencies]
+uniffi = { version = "0.25", features = ["cli"] }
+
+[dev-dependencies]
+uniffi = { version = "0.25", features = ["bindgen-tests"] }
+
+[build-dependencies]
+uniffi = { version = "0.25", features = ["build"] }
