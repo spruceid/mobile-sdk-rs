@@ -69,17 +69,25 @@ afterEvaluate {
     }
 }
 
+import org.apache.tools.ant.taskdefs.condition.Os
 tasks.register('bindGen', Exec) {
     def outDir = "${projectDir}/src/main/java"
     workingDir "../../"
-    if (System.getProperty('os.name').toLowerCase().contains('windows')) {
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
         commandLine("cmd", "/c",
-                "cargo run --bin uniffi-bindgen generate --library target\\debug\\libwallet_sdk_rs.dylib " + "--language kotlin " + "--out-dir " + outDir.replace('/', '\\'))
+                "cargo build && " + "cargo run --bin uniffi-bindgen generate --library target\\debug\\libwallet_sdk_rs.dll " + "--language kotlin " + "--out-dir " + outDir.replace('/', '\\'))
     } else {
+        def extension
+        if (Os.isFamily(Os.FAMILY_MAC)) {
+            extension = "dylib"
+        } else {
+            extension = "so"
+        }
         commandLine("sh", "-c",
                 """\
+                cargo build && \
                 cargo run --bin uniffi-bindgen generate \
-                --library target/debug/libwallet_sdk_rs.dylib \
+                --library target/debug/libwallet_sdk_rs.$extension \
                 --language kotlin \
                 --out-dir $outDir
                 """)
