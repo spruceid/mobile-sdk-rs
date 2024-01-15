@@ -63,7 +63,16 @@ typedef struct RustCallStatus {
 typedef void (*UniFfiRustFutureContinuation)(void * _Nonnull, int8_t);
 
 // Scaffolding functions
+RustBuffer uniffi_wallet_sdk_rs_fn_func_handle_request(RustBuffer state, RustBuffer request, RustCallStatus *_Nonnull out_status
+);
 RustBuffer uniffi_wallet_sdk_rs_fn_func_hello_ffi(RustCallStatus *_Nonnull out_status
+    
+);
+RustBuffer uniffi_wallet_sdk_rs_fn_func_initialise_session(RustBuffer document, RustBuffer uuid, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_wallet_sdk_rs_fn_func_submit_signature(RustBuffer state, RustBuffer signature, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_wallet_sdk_rs_fn_func_terminate_session(RustCallStatus *_Nonnull out_status
     
 );
 RustBuffer ffi_wallet_sdk_rs_rustbuffer_alloc(int32_t size, RustCallStatus *_Nonnull out_status
@@ -180,7 +189,19 @@ void ffi_wallet_sdk_rs_rust_future_free_void(void* _Nonnull handle
 );
 void ffi_wallet_sdk_rs_rust_future_complete_void(void* _Nonnull handle, RustCallStatus *_Nonnull out_status
 );
+uint16_t uniffi_wallet_sdk_rs_checksum_func_handle_request(void
+    
+);
 uint16_t uniffi_wallet_sdk_rs_checksum_func_hello_ffi(void
+    
+);
+uint16_t uniffi_wallet_sdk_rs_checksum_func_initialise_session(void
+    
+);
+uint16_t uniffi_wallet_sdk_rs_checksum_func_submit_signature(void
+    
+);
+uint16_t uniffi_wallet_sdk_rs_checksum_func_terminate_session(void
     
 );
 uint32_t ffi_wallet_sdk_rs_uniffi_contract_version(void

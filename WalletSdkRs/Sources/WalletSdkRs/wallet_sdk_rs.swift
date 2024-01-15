@@ -335,10 +335,474 @@ fileprivate struct FfiConverterString: FfiConverter {
     }
 }
 
+
+public struct RequestData {
+    public var state: String
+    public var payload: String
+    public var requestedValues: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(state: String, payload: String, requestedValues: String) {
+        self.state = state
+        self.payload = payload
+        self.requestedValues = requestedValues
+    }
+}
+
+
+extension RequestData: Equatable, Hashable {
+    public static func ==(lhs: RequestData, rhs: RequestData) -> Bool {
+        if lhs.state != rhs.state {
+            return false
+        }
+        if lhs.payload != rhs.payload {
+            return false
+        }
+        if lhs.requestedValues != rhs.requestedValues {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(state)
+        hasher.combine(payload)
+        hasher.combine(requestedValues)
+    }
+}
+
+
+public struct FfiConverterTypeRequestData: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RequestData {
+        return try RequestData(
+            state: FfiConverterString.read(from: &buf), 
+            payload: FfiConverterString.read(from: &buf), 
+            requestedValues: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: RequestData, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.state, into: &buf)
+        FfiConverterString.write(value.payload, into: &buf)
+        FfiConverterString.write(value.requestedValues, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeRequestData_lift(_ buf: RustBuffer) throws -> RequestData {
+    return try FfiConverterTypeRequestData.lift(buf)
+}
+
+public func FfiConverterTypeRequestData_lower(_ value: RequestData) -> RustBuffer {
+    return FfiConverterTypeRequestData.lower(value)
+}
+
+
+public struct SessionData {
+    public var state: String
+    public var qrCodeUri: String
+    public var bleIdent: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(state: String, qrCodeUri: String, bleIdent: String) {
+        self.state = state
+        self.qrCodeUri = qrCodeUri
+        self.bleIdent = bleIdent
+    }
+}
+
+
+extension SessionData: Equatable, Hashable {
+    public static func ==(lhs: SessionData, rhs: SessionData) -> Bool {
+        if lhs.state != rhs.state {
+            return false
+        }
+        if lhs.qrCodeUri != rhs.qrCodeUri {
+            return false
+        }
+        if lhs.bleIdent != rhs.bleIdent {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(state)
+        hasher.combine(qrCodeUri)
+        hasher.combine(bleIdent)
+    }
+}
+
+
+public struct FfiConverterTypeSessionData: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SessionData {
+        return try SessionData(
+            state: FfiConverterString.read(from: &buf), 
+            qrCodeUri: FfiConverterString.read(from: &buf), 
+            bleIdent: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SessionData, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.state, into: &buf)
+        FfiConverterString.write(value.qrCodeUri, into: &buf)
+        FfiConverterString.write(value.bleIdent, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeSessionData_lift(_ buf: RustBuffer) throws -> SessionData {
+    return try FfiConverterTypeSessionData.lift(buf)
+}
+
+public func FfiConverterTypeSessionData_lower(_ value: SessionData) -> RustBuffer {
+    return FfiConverterTypeSessionData.lower(value)
+}
+
+
+public struct SignatureData {
+    public var state: String
+    public var response: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(state: String, response: String) {
+        self.state = state
+        self.response = response
+    }
+}
+
+
+extension SignatureData: Equatable, Hashable {
+    public static func ==(lhs: SignatureData, rhs: SignatureData) -> Bool {
+        if lhs.state != rhs.state {
+            return false
+        }
+        if lhs.response != rhs.response {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(state)
+        hasher.combine(response)
+    }
+}
+
+
+public struct FfiConverterTypeSignatureData: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SignatureData {
+        return try SignatureData(
+            state: FfiConverterString.read(from: &buf), 
+            response: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: SignatureData, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.state, into: &buf)
+        FfiConverterString.write(value.response, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeSignatureData_lift(_ buf: RustBuffer) throws -> SignatureData {
+    return try FfiConverterTypeSignatureData.lift(buf)
+}
+
+public func FfiConverterTypeSignatureData_lower(_ value: SignatureData) -> RustBuffer {
+    return FfiConverterTypeSignatureData.lower(value)
+}
+
+public enum RequestError {
+
+    
+    
+    case MissingSignature
+    case Generic(value: String)
+
+    fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
+        return try FfiConverterTypeRequestError.lift(error)
+    }
+}
+
+
+public struct FfiConverterTypeRequestError: FfiConverterRustBuffer {
+    typealias SwiftType = RequestError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RequestError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .MissingSignature
+        case 2: return .Generic(
+            value: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: RequestError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case .MissingSignature:
+            writeInt(&buf, Int32(1))
+        
+        
+        case let .Generic(value):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(value, into: &buf)
+            
+        }
+    }
+}
+
+
+extension RequestError: Equatable, Hashable {}
+
+extension RequestError: Error { }
+
+public enum SessionError {
+
+    
+    
+    case Generic(value: String)
+
+    fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
+        return try FfiConverterTypeSessionError.lift(error)
+    }
+}
+
+
+public struct FfiConverterTypeSessionError: FfiConverterRustBuffer {
+    typealias SwiftType = SessionError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SessionError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .Generic(
+            value: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: SessionError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case let .Generic(value):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(value, into: &buf)
+            
+        }
+    }
+}
+
+
+extension SessionError: Equatable, Hashable {}
+
+extension SessionError: Error { }
+
+public enum SignatureError {
+
+    
+    
+    case TooManyDocuments
+    case Generic(value: String)
+
+    fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
+        return try FfiConverterTypeSignatureError.lift(error)
+    }
+}
+
+
+public struct FfiConverterTypeSignatureError: FfiConverterRustBuffer {
+    typealias SwiftType = SignatureError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SignatureError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .TooManyDocuments
+        case 2: return .Generic(
+            value: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: SignatureError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case .TooManyDocuments:
+            writeInt(&buf, Int32(1))
+        
+        
+        case let .Generic(value):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(value, into: &buf)
+            
+        }
+    }
+}
+
+
+extension SignatureError: Equatable, Hashable {}
+
+extension SignatureError: Error { }
+
+public enum TerminationError {
+
+    
+    
+    case Generic(value: String)
+
+    fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
+        return try FfiConverterTypeTerminationError.lift(error)
+    }
+}
+
+
+public struct FfiConverterTypeTerminationError: FfiConverterRustBuffer {
+    typealias SwiftType = TerminationError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TerminationError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .Generic(
+            value: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: TerminationError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case let .Generic(value):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(value, into: &buf)
+            
+        }
+    }
+}
+
+
+extension TerminationError: Equatable, Hashable {}
+
+extension TerminationError: Error { }
+
+
+/**
+ * Typealias from the type name used in the UDL file to the builtin type.  This
+ * is needed because the UDL type name is used in function/method signatures.
+ */
+public typealias Uuid = String
+public struct FfiConverterTypeUuid: FfiConverter {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Uuid {
+        return try FfiConverterString.read(from: &buf)
+    }
+
+    public static func write(_ value: Uuid, into buf: inout [UInt8]) {
+        return FfiConverterString.write(value, into: &buf)
+    }
+
+    public static func lift(_ value: RustBuffer) throws -> Uuid {
+        return try FfiConverterString.lift(value)
+    }
+
+    public static func lower(_ value: Uuid) -> RustBuffer {
+        return FfiConverterString.lower(value)
+    }
+}
+
+
+public func FfiConverterTypeUuid_lift(_ value: RustBuffer) throws -> Uuid {
+    return try FfiConverterTypeUuid.lift(value)
+}
+
+public func FfiConverterTypeUuid_lower(_ value: Uuid) -> RustBuffer {
+    return FfiConverterTypeUuid.lower(value)
+}
+
+public func handleRequest(state: String, request: String) throws -> RequestData {
+    return try  FfiConverterTypeRequestData.lift(
+        try rustCallWithError(FfiConverterTypeRequestError.lift) {
+    uniffi_wallet_sdk_rs_fn_func_handle_request(
+        FfiConverterString.lower(state),
+        FfiConverterString.lower(request),$0)
+}
+    )
+}
+
 public func helloFfi()  -> String {
     return try!  FfiConverterString.lift(
         try! rustCall() {
     uniffi_wallet_sdk_rs_fn_func_hello_ffi($0)
+}
+    )
+}
+
+public func initialiseSession(document: String, uuid: Uuid) throws -> SessionData {
+    return try  FfiConverterTypeSessionData.lift(
+        try rustCallWithError(FfiConverterTypeSessionError.lift) {
+    uniffi_wallet_sdk_rs_fn_func_initialise_session(
+        FfiConverterString.lower(document),
+        FfiConverterTypeUuid.lower(uuid),$0)
+}
+    )
+}
+
+public func submitSignature(state: String, signature: String) throws -> SignatureData {
+    return try  FfiConverterTypeSignatureData.lift(
+        try rustCallWithError(FfiConverterTypeSignatureError.lift) {
+    uniffi_wallet_sdk_rs_fn_func_submit_signature(
+        FfiConverterString.lower(state),
+        FfiConverterString.lower(signature),$0)
+}
+    )
+}
+
+public func terminateSession() throws -> String {
+    return try  FfiConverterString.lift(
+        try rustCallWithError(FfiConverterTypeTerminationError.lift) {
+    uniffi_wallet_sdk_rs_fn_func_terminate_session($0)
 }
     )
 }
@@ -358,7 +822,19 @@ private var initializationResult: InitializationResult {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
+    if (uniffi_wallet_sdk_rs_checksum_func_handle_request() != 57070) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_wallet_sdk_rs_checksum_func_hello_ffi() != 49556) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_wallet_sdk_rs_checksum_func_initialise_session() != 30313) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_wallet_sdk_rs_checksum_func_submit_signature() != 56190) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_wallet_sdk_rs_checksum_func_terminate_session() != 30335) {
         return InitializationResult.apiChecksumMismatch
     }
 
