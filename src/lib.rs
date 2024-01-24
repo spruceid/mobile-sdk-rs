@@ -1,11 +1,19 @@
+uniffi::setup_scaffolding!();
+
+use std::{
+    collections::{BTreeMap, HashMap},
+    sync::{Arc, Mutex},
+};
+
 use isomdl::{
     definitions::{
         device_engagement::{CentralClientMode, DeviceRetrievalMethods},
+        device_request,
         helpers::NonEmptyMap,
-        BleOptions, DeviceRetrievalMethod,
+        BleOptions, DeviceRetrievalMethod, SessionEstablishment,
     },
     presentation::{
-        device::{Document, SessionManagerInit},
+        device::{self, Document, SessionManagerEngaged, SessionManagerInit},
         Stringify,
     },
 };
@@ -41,16 +49,13 @@ impl UniffiCustomTypeConverter for Uuid {
 }
 
 #[uniffi::export]
-fn initialise_session(document: String, uuid: Uuid) -> Result<SessionData, SessionError> {
+fn initialise_session(document: Arc<MDoc>, uuid: Uuid) -> Result<SessionData, SessionError> {
     let drms = DeviceRetrievalMethods::new(DeviceRetrievalMethod::BLE(BleOptions {
         peripheral_server_mode: None,
         central_client_mode: Some(CentralClientMode { uuid }),
     }));
-    let document = Document::parse(document).map_err(|e| SessionError::Generic {
-        value: format!("Could not parse document: {e:?}"),
-    })?;
     let session = SessionManagerInit::initialise(
-        NonEmptyMap::new("org.iso.18013.5.1.mDL".into(), document),
+        NonEmptyMap::new("org.iso.18013.5.1.mDL".into(), document.0.clone()),
         Some(drms),
         None,
     )
@@ -83,29 +88,37 @@ fn initialise_session(document: String, uuid: Uuid) -> Result<SessionData, Sessi
 
 #[derive(thiserror::Error, uniffi::Error, Debug)]
 pub enum RequestError {
-    #[error("no signature payload received from session manager")]
-    MissingSignature,
     #[error("{value}")]
     Generic { value: String },
 }
 
 #[derive(uniffi::Record)]
+struct ItemsRequest {
+    doc_type: String,
+    namespaces: HashMap<String, HashMap<String, bool>>,
+}
+
+// uniffi::custom_newtype!(SessionManager, device::SessionManager);
+#[derive(uniffi::Object)]
+pub struct SessionManager(Mutex<device::SessionManager>);
+
+// #[uniffi::export]
+// impl SessionManager {
+//     #[uniffi::constructor]
+//     fn from_cbor(value: Vec<u8>) -> Arc<Self> {
+//         Arc::new(SessionManager(serde_cbor::from_slice(&value).unwrap()))
+//     }
+// }
+
+#[derive(uniffi::Record)]
 struct RequestData {
-    state: String,
-    payload: String,
-    requested_values: String,
+    session_manager: Arc<SessionManager>,
+    items_requests: Vec<ItemsRequest>,
 }
 
 #[uniffi::export]
-fn handle_request(state: String, request: String) -> Result<RequestData, RequestError> {
-    use isomdl::definitions::session::SessionEstablishment;
-    use isomdl::presentation::device::{SessionManager, SessionManagerEngaged};
-
-    let request = request.strip_prefix("0x").unwrap_or(&request);
-    let request: Vec<u8> = hex::decode(request).map_err(|e| RequestError::Generic {
-        value: format!("Could not decode request: {e:?}"),
-    })?;
-    let (mut session, requested) = match SessionManagerEngaged::parse(state.to_string()) {
+fn handle_request(state: String, request: Vec<u8>) -> Result<RequestData, RequestError> {
+    let (session_manager, items_requests) = match SessionManagerEngaged::parse(state.to_string()) {
         Ok(sme) => {
             let session_establishment: SessionEstablishment = serde_cbor::from_slice(&request)
                 .map_err(|e| RequestError::Generic {
@@ -117,10 +130,11 @@ fn handle_request(state: String, request: String) -> Result<RequestData, Request
                 })?
         }
         Err(_) => {
-            let mut sm =
-                SessionManager::parse(state.to_string()).map_err(|e| RequestError::Generic {
+            let mut sm = device::SessionManager::parse(state.to_string()).map_err(|e| {
+                RequestError::Generic {
                     value: format!("Could not parse session manager state: {e:?}"),
-                })?;
+                }
+            })?;
             let req = sm
                 .handle_request(&request)
                 .map_err(|e| RequestError::Generic {
@@ -129,46 +143,84 @@ fn handle_request(state: String, request: String) -> Result<RequestData, Request
             (sm, req)
         }
     };
-    let permitted = requested
-        .clone()
+    Ok(RequestData {
+        session_manager: Arc::new(SessionManager(Mutex::new(session_manager))),
+        items_requests: items_requests
+            .into_iter()
+            .map(|req| ItemsRequest {
+                doc_type: req.doc_type,
+                namespaces: req
+                    .namespaces
+                    .into_inner()
+                    .into_iter()
+                    .map(|(ns, es)| {
+                        let items_request = es.into_inner().into_iter().collect();
+                        (ns, items_request)
+                    })
+                    .collect(),
+            })
+            .collect(),
+    })
+}
+
+#[derive(thiserror::Error, uniffi::Error, Debug)]
+pub enum ResponseError {
+    #[error("no signature payload received from session manager")]
+    MissingSignature,
+    #[error("{value}")]
+    Generic { value: String },
+}
+
+#[derive(uniffi::Record)]
+struct ResponseData {
+    payload: Vec<u8>,
+}
+
+#[uniffi::export]
+fn submit_response(
+    session_manager: Arc<SessionManager>,
+    items_requests: Vec<ItemsRequest>,
+    permitted_items: HashMap<String, HashMap<String, Vec<String>>>,
+) -> Result<ResponseData, ResponseError> {
+    let permitted = permitted_items
         .into_iter()
-        .map(|req| {
-            let namespaces = req
-                .namespaces
-                .into_inner()
-                .into_iter()
-                .map(|(ns, es)| {
-                    let ids = es.into_inner().into_keys().collect();
-                    (ns, ids)
-                })
-                .collect();
-            (req.doc_type, namespaces)
+        .map(|(doc_type, namespaces)| {
+            let ns = namespaces.into_iter().collect();
+            (doc_type, ns)
         })
         .collect();
-    session.prepare_response(&requested, permitted);
-    let payload = session
+    let mut session_manager = session_manager.0.lock().unwrap();
+    session_manager.prepare_response(
+        &items_requests
+            .into_iter()
+            .map(|req| device_request::ItemsRequest {
+                doc_type: req.doc_type,
+                namespaces: req
+                    .namespaces
+                    .into_iter()
+                    .map(|(ns, ir)| {
+                        (
+                            ns,
+                            ir.into_iter()
+                                .collect::<BTreeMap<_, _>>()
+                                .try_into()
+                                .unwrap(),
+                        )
+                    })
+                    .collect::<BTreeMap<_, _>>()
+                    .try_into()
+                    .unwrap(),
+                request_info: None,
+            })
+            .collect(),
+        permitted,
+    );
+    let payload = session_manager
         .get_next_signature_payload()
         .map(|(_, payload)| payload)
-        .ok_or(RequestError::MissingSignature)?;
-    let mut payload = hex::encode(payload);
-    payload.insert_str(0, "0x");
-    let state = session.stringify().map_err(|e| RequestError::Generic {
-        value: format!("Could not stringify session: {e:?}"),
-    })?;
-
-    let requested_values = requested
-        .into_iter()
-        .map(|req| (req.doc_type, req.namespaces))
-        .collect::<std::collections::BTreeMap<_, _>>();
-    Ok(RequestData {
-        state,
-        payload,
-        requested_values: serde_json::to_string(&requested_values).map_err(|e| {
-            RequestError::Generic {
-                value: format!("Could not serialize requested values: {e:?}"),
-            }
-        })?,
-    })
+        .ok_or(ResponseError::MissingSignature)?
+        .to_vec();
+    Ok(ResponseData { payload })
 }
 
 #[derive(thiserror::Error, uniffi::Error, Debug)]
@@ -182,36 +234,28 @@ pub enum SignatureError {
 #[derive(uniffi::Record)]
 struct SignatureData {
     state: String,
-    response: String,
+    response: Vec<u8>,
 }
 
 #[uniffi::export]
-fn submit_signature(state: String, signature: String) -> Result<SignatureData, SignatureError> {
-    use isomdl::presentation::device::SessionManager;
-
-    let sig = signature.strip_prefix("0x").unwrap_or(&signature);
-    let sig: Vec<u8> = hex::decode(sig).map_err(|e| SignatureError::Generic {
-        value: format!("Could not decode signature: {e:?}"),
-    })?;
-    let mut session =
-        SessionManager::parse(state.to_string()).map_err(|e| SignatureError::Generic {
-            value: format!("Could not parse session manager state: {e:?}"),
-        })?;
-    session
-        .submit_next_signature(sig)
+fn submit_signature(
+    session_manager: Arc<SessionManager>,
+    signature: Vec<u8>,
+) -> Result<SignatureData, SignatureError> {
+    let mut session_manager = session_manager.0.lock().unwrap();
+    session_manager
+        .submit_next_signature(signature)
         .map_err(|e| SignatureError::Generic {
             value: format!("Could not submit next signature: {e:?}"),
         })?;
-
-    let response = session
+    let response = session_manager
         .retrieve_response()
         .ok_or(SignatureError::TooManyDocuments)?;
-    let mut response = hex::encode(response);
-    response.insert_str(0, "0x");
-
-    let state = session.stringify().map_err(|e| SignatureError::Generic {
-        value: format!("Could not stringify session: {e:?}"),
-    })?;
+    let state = session_manager
+        .stringify()
+        .map_err(|e| SignatureError::Generic {
+            value: format!("Could not stringify session: {e:?}"),
+        })?;
     Ok(SignatureData { state, response })
 }
 
@@ -237,4 +281,27 @@ fn terminate_session() -> Result<String, TerminationError> {
     Ok(response)
 }
 
-uniffi::setup_scaffolding!();
+#[derive(uniffi::Object)]
+pub struct MDoc(Document);
+
+#[derive(thiserror::Error, uniffi::Error, Debug)]
+pub enum MDocInitError {
+    #[error("Could not initialize mDoc: {value}")]
+    Generic { value: String },
+}
+
+#[uniffi::export]
+impl MDoc {
+    #[uniffi::constructor]
+    fn from_cbor(value: Vec<u8>) -> Result<Arc<Self>, MDocInitError> {
+        Ok(Arc::new(MDoc(serde_cbor::from_slice(&value).map_err(
+            |e| MDocInitError::Generic {
+                value: e.to_string(),
+            },
+        )?)))
+    }
+
+    fn id(&self) -> Uuid {
+        self.0.id
+    }
+}

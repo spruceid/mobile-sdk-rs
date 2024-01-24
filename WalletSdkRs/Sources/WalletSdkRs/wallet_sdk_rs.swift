@@ -297,6 +297,27 @@ private func uniffiCheckCallStatus(
 // Public interface members begin here.
 
 
+fileprivate struct FfiConverterBool : FfiConverter {
+    typealias FfiType = Int8
+    typealias SwiftType = Bool
+
+    public static func lift(_ value: Int8) throws -> Bool {
+        return value != 0
+    }
+
+    public static func lower(_ value: Bool) -> Int8 {
+        return value ? 1 : 0
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Bool {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: Bool, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
 fileprivate struct FfiConverterString: FfiConverter {
     typealias SwiftType = String
     typealias FfiType = RustBuffer
@@ -335,57 +356,251 @@ fileprivate struct FfiConverterString: FfiConverter {
     }
 }
 
+fileprivate struct FfiConverterData: FfiConverterRustBuffer {
+    typealias SwiftType = Data
 
-public struct RequestData {
-    public var state: String
-    public var payload: String
-    public var requestedValues: String
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Data {
+        let len: Int32 = try readInt(&buf)
+        return Data(try readBytes(&buf, count: Int(len)))
+    }
 
-    // Default memberwise initializers are never public by default, so we
-    // declare one manually.
-    public init(state: String, payload: String, requestedValues: String) {
-        self.state = state
-        self.payload = payload
-        self.requestedValues = requestedValues
+    public static func write(_ value: Data, into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        writeBytes(&buf, value)
     }
 }
 
 
-extension RequestData: Equatable, Hashable {
-    public static func ==(lhs: RequestData, rhs: RequestData) -> Bool {
-        if lhs.state != rhs.state {
+public protocol MDocProtocol {
+    func id()   -> Uuid
+    
+}
+
+public class MDoc: MDocProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    deinit {
+        try! rustCall { uniffi_wallet_sdk_rs_fn_free_mdoc(pointer, $0) }
+    }
+
+    
+
+    public static func fromCbor(value: Data) throws -> MDoc {
+        return MDoc(unsafeFromRawPointer: try rustCallWithError(FfiConverterTypeMDocInitError.lift) {
+    uniffi_wallet_sdk_rs_fn_constructor_mdoc_from_cbor(
+        FfiConverterData.lower(value),$0)
+})
+    }
+
+    
+
+    
+    
+
+    public func id()  -> Uuid {
+        return try!  FfiConverterTypeUuid.lift(
+            try! 
+    rustCall() {
+    
+    uniffi_wallet_sdk_rs_fn_method_mdoc_id(self.pointer, $0
+    )
+}
+        )
+    }
+}
+
+public struct FfiConverterTypeMDoc: FfiConverter {
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = MDoc
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MDoc {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: MDoc, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> MDoc {
+        return MDoc(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: MDoc) -> UnsafeMutableRawPointer {
+        return value.pointer
+    }
+}
+
+
+public func FfiConverterTypeMDoc_lift(_ pointer: UnsafeMutableRawPointer) throws -> MDoc {
+    return try FfiConverterTypeMDoc.lift(pointer)
+}
+
+public func FfiConverterTypeMDoc_lower(_ value: MDoc) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeMDoc.lower(value)
+}
+
+
+public protocol SessionManagerProtocol {
+    
+}
+
+public class SessionManager: SessionManagerProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    deinit {
+        try! rustCall { uniffi_wallet_sdk_rs_fn_free_sessionmanager(pointer, $0) }
+    }
+
+    
+
+    
+    
+}
+
+public struct FfiConverterTypeSessionManager: FfiConverter {
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = SessionManager
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SessionManager {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: SessionManager, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> SessionManager {
+        return SessionManager(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: SessionManager) -> UnsafeMutableRawPointer {
+        return value.pointer
+    }
+}
+
+
+public func FfiConverterTypeSessionManager_lift(_ pointer: UnsafeMutableRawPointer) throws -> SessionManager {
+    return try FfiConverterTypeSessionManager.lift(pointer)
+}
+
+public func FfiConverterTypeSessionManager_lower(_ value: SessionManager) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeSessionManager.lower(value)
+}
+
+
+public struct ItemsRequest {
+    public var docType: String
+    public var namespaces: [String: [String: Bool]]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(docType: String, namespaces: [String: [String: Bool]]) {
+        self.docType = docType
+        self.namespaces = namespaces
+    }
+}
+
+
+extension ItemsRequest: Equatable, Hashable {
+    public static func ==(lhs: ItemsRequest, rhs: ItemsRequest) -> Bool {
+        if lhs.docType != rhs.docType {
             return false
         }
-        if lhs.payload != rhs.payload {
-            return false
-        }
-        if lhs.requestedValues != rhs.requestedValues {
+        if lhs.namespaces != rhs.namespaces {
             return false
         }
         return true
     }
 
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(state)
-        hasher.combine(payload)
-        hasher.combine(requestedValues)
+        hasher.combine(docType)
+        hasher.combine(namespaces)
     }
 }
+
+
+public struct FfiConverterTypeItemsRequest: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ItemsRequest {
+        return try ItemsRequest(
+            docType: FfiConverterString.read(from: &buf), 
+            namespaces: FfiConverterDictionaryStringDictionaryStringBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ItemsRequest, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.docType, into: &buf)
+        FfiConverterDictionaryStringDictionaryStringBool.write(value.namespaces, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeItemsRequest_lift(_ buf: RustBuffer) throws -> ItemsRequest {
+    return try FfiConverterTypeItemsRequest.lift(buf)
+}
+
+public func FfiConverterTypeItemsRequest_lower(_ value: ItemsRequest) -> RustBuffer {
+    return FfiConverterTypeItemsRequest.lower(value)
+}
+
+
+public struct RequestData {
+    public var sessionManager: SessionManager
+    public var itemsRequests: [ItemsRequest]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(sessionManager: SessionManager, itemsRequests: [ItemsRequest]) {
+        self.sessionManager = sessionManager
+        self.itemsRequests = itemsRequests
+    }
+}
+
 
 
 public struct FfiConverterTypeRequestData: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RequestData {
         return try RequestData(
-            state: FfiConverterString.read(from: &buf), 
-            payload: FfiConverterString.read(from: &buf), 
-            requestedValues: FfiConverterString.read(from: &buf)
+            sessionManager: FfiConverterTypeSessionManager.read(from: &buf), 
+            itemsRequests: FfiConverterSequenceTypeItemsRequest.read(from: &buf)
         )
     }
 
     public static func write(_ value: RequestData, into buf: inout [UInt8]) {
-        FfiConverterString.write(value.state, into: &buf)
-        FfiConverterString.write(value.payload, into: &buf)
-        FfiConverterString.write(value.requestedValues, into: &buf)
+        FfiConverterTypeSessionManager.write(value.sessionManager, into: &buf)
+        FfiConverterSequenceTypeItemsRequest.write(value.itemsRequests, into: &buf)
     }
 }
 
@@ -396,6 +611,53 @@ public func FfiConverterTypeRequestData_lift(_ buf: RustBuffer) throws -> Reques
 
 public func FfiConverterTypeRequestData_lower(_ value: RequestData) -> RustBuffer {
     return FfiConverterTypeRequestData.lower(value)
+}
+
+
+public struct ResponseData {
+    public var payload: Data
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(payload: Data) {
+        self.payload = payload
+    }
+}
+
+
+extension ResponseData: Equatable, Hashable {
+    public static func ==(lhs: ResponseData, rhs: ResponseData) -> Bool {
+        if lhs.payload != rhs.payload {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(payload)
+    }
+}
+
+
+public struct FfiConverterTypeResponseData: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ResponseData {
+        return try ResponseData(
+            payload: FfiConverterData.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ResponseData, into buf: inout [UInt8]) {
+        FfiConverterData.write(value.payload, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeResponseData_lift(_ buf: RustBuffer) throws -> ResponseData {
+    return try FfiConverterTypeResponseData.lift(buf)
+}
+
+public func FfiConverterTypeResponseData_lower(_ value: ResponseData) -> RustBuffer {
+    return FfiConverterTypeResponseData.lower(value)
 }
 
 
@@ -464,11 +726,11 @@ public func FfiConverterTypeSessionData_lower(_ value: SessionData) -> RustBuffe
 
 public struct SignatureData {
     public var state: String
-    public var response: String
+    public var response: Data
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(state: String, response: String) {
+    public init(state: String, response: Data) {
         self.state = state
         self.response = response
     }
@@ -497,13 +759,13 @@ public struct FfiConverterTypeSignatureData: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SignatureData {
         return try SignatureData(
             state: FfiConverterString.read(from: &buf), 
-            response: FfiConverterString.read(from: &buf)
+            response: FfiConverterData.read(from: &buf)
         )
     }
 
     public static func write(_ value: SignatureData, into buf: inout [UInt8]) {
         FfiConverterString.write(value.state, into: &buf)
-        FfiConverterString.write(value.response, into: &buf)
+        FfiConverterData.write(value.response, into: &buf)
     }
 }
 
@@ -516,11 +778,60 @@ public func FfiConverterTypeSignatureData_lower(_ value: SignatureData) -> RustB
     return FfiConverterTypeSignatureData.lower(value)
 }
 
+public enum MDocInitError {
+
+    
+    
+    case Generic(value: String)
+
+    fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
+        return try FfiConverterTypeMDocInitError.lift(error)
+    }
+}
+
+
+public struct FfiConverterTypeMDocInitError: FfiConverterRustBuffer {
+    typealias SwiftType = MDocInitError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MDocInitError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .Generic(
+            value: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: MDocInitError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case let .Generic(value):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(value, into: &buf)
+            
+        }
+    }
+}
+
+
+extension MDocInitError: Equatable, Hashable {}
+
+extension MDocInitError: Error { }
+
 public enum RequestError {
 
     
     
-    case MissingSignature
     case Generic(value: String)
 
     fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
@@ -539,6 +850,57 @@ public struct FfiConverterTypeRequestError: FfiConverterRustBuffer {
         
 
         
+        case 1: return .Generic(
+            value: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: RequestError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case let .Generic(value):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(value, into: &buf)
+            
+        }
+    }
+}
+
+
+extension RequestError: Equatable, Hashable {}
+
+extension RequestError: Error { }
+
+public enum ResponseError {
+
+    
+    
+    case MissingSignature
+    case Generic(value: String)
+
+    fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
+        return try FfiConverterTypeResponseError.lift(error)
+    }
+}
+
+
+public struct FfiConverterTypeResponseError: FfiConverterRustBuffer {
+    typealias SwiftType = ResponseError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ResponseError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
         case 1: return .MissingSignature
         case 2: return .Generic(
             value: try FfiConverterString.read(from: &buf)
@@ -548,7 +910,7 @@ public struct FfiConverterTypeRequestError: FfiConverterRustBuffer {
         }
     }
 
-    public static func write(_ value: RequestError, into buf: inout [UInt8]) {
+    public static func write(_ value: ResponseError, into buf: inout [UInt8]) {
         switch value {
 
         
@@ -568,9 +930,9 @@ public struct FfiConverterTypeRequestError: FfiConverterRustBuffer {
 }
 
 
-extension RequestError: Equatable, Hashable {}
+extension ResponseError: Equatable, Hashable {}
 
-extension RequestError: Error { }
+extension ResponseError: Error { }
 
 public enum SessionError {
 
@@ -728,6 +1090,142 @@ extension TerminationError: Equatable, Hashable {}
 
 extension TerminationError: Error { }
 
+fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
+    typealias SwiftType = [String]
+
+    public static func write(_ value: [String], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterString.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [String]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterString.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+fileprivate struct FfiConverterSequenceTypeItemsRequest: FfiConverterRustBuffer {
+    typealias SwiftType = [ItemsRequest]
+
+    public static func write(_ value: [ItemsRequest], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeItemsRequest.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ItemsRequest] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ItemsRequest]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeItemsRequest.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+fileprivate struct FfiConverterDictionaryStringBool: FfiConverterRustBuffer {
+    public static func write(_ value: [String: Bool], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterString.write(key, into: &buf)
+            FfiConverterBool.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String: Bool] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [String: Bool]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0..<len {
+            let key = try FfiConverterString.read(from: &buf)
+            let value = try FfiConverterBool.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
+    }
+}
+
+fileprivate struct FfiConverterDictionaryStringSequenceString: FfiConverterRustBuffer {
+    public static func write(_ value: [String: [String]], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterString.write(key, into: &buf)
+            FfiConverterSequenceString.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String: [String]] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [String: [String]]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0..<len {
+            let key = try FfiConverterString.read(from: &buf)
+            let value = try FfiConverterSequenceString.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
+    }
+}
+
+fileprivate struct FfiConverterDictionaryStringDictionaryStringBool: FfiConverterRustBuffer {
+    public static func write(_ value: [String: [String: Bool]], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterString.write(key, into: &buf)
+            FfiConverterDictionaryStringBool.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String: [String: Bool]] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [String: [String: Bool]]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0..<len {
+            let key = try FfiConverterString.read(from: &buf)
+            let value = try FfiConverterDictionaryStringBool.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
+    }
+}
+
+fileprivate struct FfiConverterDictionaryStringDictionaryStringSequenceString: FfiConverterRustBuffer {
+    public static func write(_ value: [String: [String: [String]]], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterString.write(key, into: &buf)
+            FfiConverterDictionaryStringSequenceString.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String: [String: [String]]] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [String: [String: [String]]]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0..<len {
+            let key = try FfiConverterString.read(from: &buf)
+            let value = try FfiConverterDictionaryStringSequenceString.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
+    }
+}
+
 
 /**
  * Typealias from the type name used in the UDL file to the builtin type.  This
@@ -761,12 +1259,12 @@ public func FfiConverterTypeUuid_lower(_ value: Uuid) -> RustBuffer {
     return FfiConverterTypeUuid.lower(value)
 }
 
-public func handleRequest(state: String, request: String) throws -> RequestData {
+public func handleRequest(state: String, request: Data) throws -> RequestData {
     return try  FfiConverterTypeRequestData.lift(
         try rustCallWithError(FfiConverterTypeRequestError.lift) {
     uniffi_wallet_sdk_rs_fn_func_handle_request(
         FfiConverterString.lower(state),
-        FfiConverterString.lower(request),$0)
+        FfiConverterData.lower(request),$0)
 }
     )
 }
@@ -779,22 +1277,33 @@ public func helloFfi()  -> String {
     )
 }
 
-public func initialiseSession(document: String, uuid: Uuid) throws -> SessionData {
+public func initialiseSession(document: MDoc, uuid: Uuid) throws -> SessionData {
     return try  FfiConverterTypeSessionData.lift(
         try rustCallWithError(FfiConverterTypeSessionError.lift) {
     uniffi_wallet_sdk_rs_fn_func_initialise_session(
-        FfiConverterString.lower(document),
+        FfiConverterTypeMDoc.lower(document),
         FfiConverterTypeUuid.lower(uuid),$0)
 }
     )
 }
 
-public func submitSignature(state: String, signature: String) throws -> SignatureData {
+public func submitResponse(sessionManager: SessionManager, itemsRequests: [ItemsRequest], permittedItems: [String: [String: [String]]]) throws -> ResponseData {
+    return try  FfiConverterTypeResponseData.lift(
+        try rustCallWithError(FfiConverterTypeResponseError.lift) {
+    uniffi_wallet_sdk_rs_fn_func_submit_response(
+        FfiConverterTypeSessionManager.lower(sessionManager),
+        FfiConverterSequenceTypeItemsRequest.lower(itemsRequests),
+        FfiConverterDictionaryStringDictionaryStringSequenceString.lower(permittedItems),$0)
+}
+    )
+}
+
+public func submitSignature(sessionManager: SessionManager, signature: Data) throws -> SignatureData {
     return try  FfiConverterTypeSignatureData.lift(
         try rustCallWithError(FfiConverterTypeSignatureError.lift) {
     uniffi_wallet_sdk_rs_fn_func_submit_signature(
-        FfiConverterString.lower(state),
-        FfiConverterString.lower(signature),$0)
+        FfiConverterTypeSessionManager.lower(sessionManager),
+        FfiConverterData.lower(signature),$0)
 }
     )
 }
@@ -822,19 +1331,28 @@ private var initializationResult: InitializationResult {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_func_handle_request() != 57070) {
+    if (uniffi_wallet_sdk_rs_checksum_func_handle_request() != 8171) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_wallet_sdk_rs_checksum_func_hello_ffi() != 49556) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_func_initialise_session() != 30313) {
+    if (uniffi_wallet_sdk_rs_checksum_func_initialise_session() != 41897) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_func_submit_signature() != 56190) {
+    if (uniffi_wallet_sdk_rs_checksum_func_submit_response() != 45596) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_wallet_sdk_rs_checksum_func_submit_signature() != 58193) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_wallet_sdk_rs_checksum_func_terminate_session() != 30335) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_wallet_sdk_rs_checksum_method_mdoc_id() != 56888) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_wallet_sdk_rs_checksum_constructor_mdoc_from_cbor() != 23024) {
         return InitializationResult.apiChecksumMismatch
     }
 

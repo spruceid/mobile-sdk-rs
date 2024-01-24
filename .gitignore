@@ -2,3 +2,4 @@
 /generated
 .build
 WalletSdkRs/Package.swift
+.swiftpm
