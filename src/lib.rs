@@ -98,17 +98,8 @@ struct ItemsRequest {
     namespaces: HashMap<String, HashMap<String, bool>>,
 }
 
-// uniffi::custom_newtype!(SessionManager, device::SessionManager);
 #[derive(uniffi::Object)]
 pub struct SessionManager(Mutex<device::SessionManager>);
-
-// #[uniffi::export]
-// impl SessionManager {
-//     #[uniffi::constructor]
-//     fn from_cbor(value: Vec<u8>) -> Arc<Self> {
-//         Arc::new(SessionManager(serde_cbor::from_slice(&value).unwrap()))
-//     }
-// }
 
 #[derive(uniffi::Record)]
 struct RequestData {
