@@ -10,7 +10,7 @@ use isomdl::{
         device_engagement::{CentralClientMode, DeviceRetrievalMethods},
         device_request,
         helpers::NonEmptyMap,
-        BleOptions, DeviceRetrievalMethod, SessionEstablishment,
+        session, BleOptions, DeviceRetrievalMethod, SessionEstablishment,
     },
     presentation::{
         device::{self, Document, SessionManagerEngaged, SessionManagerInit},
@@ -257,19 +257,15 @@ pub enum TerminationError {
 }
 
 #[uniffi::export]
-fn terminate_session() -> Result<String, TerminationError> {
-    use isomdl::definitions::session::{SessionData, Status};
-
-    let msg = SessionData {
+fn terminate_session() -> Result<Vec<u8>, TerminationError> {
+    let msg = session::SessionData {
         data: None,
-        status: Some(Status::SessionTermination),
+        status: Some(session::Status::SessionTermination),
     };
     let msg_bytes = serde_cbor::to_vec(&msg).map_err(|e| TerminationError::Generic {
         value: format!("Could not serialize message bytes: {e:?}"),
     })?;
-    let mut response = hex::encode(msg_bytes);
-    response.insert_str(0, "0x");
-    Ok(response)
+    Ok(msg_bytes)
 }
 
 #[derive(uniffi::Object)]

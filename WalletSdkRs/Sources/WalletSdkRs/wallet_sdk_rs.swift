@@ -1308,8 +1308,8 @@ public func submitSignature(sessionManager: SessionManager, signature: Data) thr
     )
 }
 
-public func terminateSession() throws -> String {
-    return try  FfiConverterString.lift(
+public func terminateSession() throws -> Data {
+    return try  FfiConverterData.lift(
         try rustCallWithError(FfiConverterTypeTerminationError.lift) {
     uniffi_wallet_sdk_rs_fn_func_terminate_session($0)
 }
@@ -1346,7 +1346,7 @@ private var initializationResult: InitializationResult {
     if (uniffi_wallet_sdk_rs_checksum_func_submit_signature() != 58193) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_func_terminate_session() != 30335) {
+    if (uniffi_wallet_sdk_rs_checksum_func_terminate_session() != 35293) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_wallet_sdk_rs_checksum_method_mdoc_id() != 56888) {
