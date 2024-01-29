@@ -109,7 +109,7 @@ publishing {
         release(MavenPublication) {
             groupId = 'com.spruceid.wallet.sdk.rs'
             artifactId = "walletsdkrs"
-            version = '0.0.1'
+            version = System.getenv("VERSION")
 
             afterEvaluate {
                 from components.release
