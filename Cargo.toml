@@ -18,6 +18,14 @@ path = "uniffi-bindgen.rs"
 [dependencies]
 uniffi = { version = "0.25", features = ["cli"] }
 
+isomdl = { git = "https://github.com/spruceid/isomdl", rev = "f7b05df" }
+
+thiserror = "1.0.56"
+hex = "0.4.3"
+serde_cbor = "0.11.2"
+serde_json = "1.0.111"
+uuid = "1.6.1"
+
 [dev-dependencies]
 uniffi = { version = "0.25", features = ["bindgen-tests"] }
 
