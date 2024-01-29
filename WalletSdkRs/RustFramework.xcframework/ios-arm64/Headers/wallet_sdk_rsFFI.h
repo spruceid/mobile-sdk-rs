@@ -63,7 +63,26 @@ typedef struct RustCallStatus {
 typedef void (*UniFfiRustFutureContinuation)(void * _Nonnull, int8_t);
 
 // Scaffolding functions
+void uniffi_wallet_sdk_rs_fn_free_mdoc(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+void*_Nonnull uniffi_wallet_sdk_rs_fn_constructor_mdoc_from_cbor(RustBuffer value, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_wallet_sdk_rs_fn_method_mdoc_id(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+void uniffi_wallet_sdk_rs_fn_free_sessionmanager(void*_Nonnull ptr, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_wallet_sdk_rs_fn_func_handle_request(RustBuffer state, RustBuffer request, RustCallStatus *_Nonnull out_status
+);
 RustBuffer uniffi_wallet_sdk_rs_fn_func_hello_ffi(RustCallStatus *_Nonnull out_status
+    
+);
+RustBuffer uniffi_wallet_sdk_rs_fn_func_initialise_session(void*_Nonnull document, RustBuffer uuid, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_wallet_sdk_rs_fn_func_submit_response(void*_Nonnull session_manager, RustBuffer items_requests, RustBuffer permitted_items, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_wallet_sdk_rs_fn_func_submit_signature(void*_Nonnull session_manager, RustBuffer signature, RustCallStatus *_Nonnull out_status
+);
+RustBuffer uniffi_wallet_sdk_rs_fn_func_terminate_session(RustCallStatus *_Nonnull out_status
     
 );
 RustBuffer ffi_wallet_sdk_rs_rustbuffer_alloc(int32_t size, RustCallStatus *_Nonnull out_status
@@ -180,7 +199,28 @@ void ffi_wallet_sdk_rs_rust_future_free_void(void* _Nonnull handle
 );
 void ffi_wallet_sdk_rs_rust_future_complete_void(void* _Nonnull handle, RustCallStatus *_Nonnull out_status
 );
+uint16_t uniffi_wallet_sdk_rs_checksum_func_handle_request(void
+    
+);
 uint16_t uniffi_wallet_sdk_rs_checksum_func_hello_ffi(void
+    
+);
+uint16_t uniffi_wallet_sdk_rs_checksum_func_initialise_session(void
+    
+);
+uint16_t uniffi_wallet_sdk_rs_checksum_func_submit_response(void
+    
+);
+uint16_t uniffi_wallet_sdk_rs_checksum_func_submit_signature(void
+    
+);
+uint16_t uniffi_wallet_sdk_rs_checksum_func_terminate_session(void
+    
+);
+uint16_t uniffi_wallet_sdk_rs_checksum_method_mdoc_id(void
+    
+);
+uint16_t uniffi_wallet_sdk_rs_checksum_constructor_mdoc_from_cbor(void
     
 );
 uint32_t ffi_wallet_sdk_rs_uniffi_contract_version(void
