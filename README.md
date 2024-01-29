@@ -12,3 +12,8 @@
 └── WalletSdkRs // Contains the iOS library, with all the generated source files
                 // and dylibs, as Git is the package manager of Swift
 ```
+
+## Release
+
+Use the [`release` Github Action](https://github.com/spruceid/wallet-sdk-rs/actions/workflows/release.yml)
+which is a manually triggered action.
