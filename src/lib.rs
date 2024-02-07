@@ -20,7 +20,7 @@ use isomdl::{
 use uuid::Uuid;
 
 #[uniffi::export]
-fn hello_ffi() -> String {
+pub fn hello_ffi() -> String {
     "Hello from Rust!".into()
 }
 
@@ -31,7 +31,7 @@ pub enum SessionError {
 }
 
 #[derive(uniffi::Record)]
-struct SessionData {
+pub struct SessionData {
     state: String,
     qr_code_uri: String,
     ble_ident: String,
@@ -49,7 +49,7 @@ impl UniffiCustomTypeConverter for Uuid {
 }
 
 #[uniffi::export]
-fn initialise_session(document: Arc<MDoc>, uuid: Uuid) -> Result<SessionData, SessionError> {
+pub fn initialise_session(document: Arc<MDoc>, uuid: Uuid) -> Result<SessionData, SessionError> {
     let drms = DeviceRetrievalMethods::new(DeviceRetrievalMethod::BLE(BleOptions {
         peripheral_server_mode: None,
         central_client_mode: Some(CentralClientMode { uuid }),
@@ -93,7 +93,7 @@ pub enum RequestError {
 }
 
 #[derive(uniffi::Record)]
-struct ItemsRequest {
+pub struct ItemsRequest {
     doc_type: String,
     namespaces: HashMap<String, HashMap<String, bool>>,
 }
@@ -102,13 +102,13 @@ struct ItemsRequest {
 pub struct SessionManager(Mutex<device::SessionManager>);
 
 #[derive(uniffi::Record)]
-struct RequestData {
+pub struct RequestData {
     session_manager: Arc<SessionManager>,
     items_requests: Vec<ItemsRequest>,
 }
 
 #[uniffi::export]
-fn handle_request(state: String, request: Vec<u8>) -> Result<RequestData, RequestError> {
+pub fn handle_request(state: String, request: Vec<u8>) -> Result<RequestData, RequestError> {
     let (session_manager, items_requests) = match SessionManagerEngaged::parse(state.to_string()) {
         Ok(sme) => {
             let session_establishment: SessionEstablishment = serde_cbor::from_slice(&request)
@@ -280,7 +280,7 @@ pub enum MDocInitError {
 #[uniffi::export]
 impl MDoc {
     #[uniffi::constructor]
-    fn from_cbor(value: Vec<u8>) -> Result<Arc<Self>, MDocInitError> {
+    pub fn from_cbor(value: Vec<u8>) -> Result<Arc<Self>, MDocInitError> {
         Ok(Arc::new(MDoc(serde_cbor::from_slice(&value).map_err(
             |e| MDocInitError::Generic {
                 value: e.to_string(),
@@ -288,7 +288,7 @@ impl MDoc {
         )?)))
     }
 
-    fn id(&self) -> Uuid {
+    pub fn id(&self) -> Uuid {
         self.0.id
     }
 }
