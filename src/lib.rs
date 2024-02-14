@@ -163,12 +163,12 @@ pub enum ResponseError {
 }
 
 #[derive(uniffi::Record)]
-struct ResponseData {
+pub struct ResponseData {
     pub payload: Vec<u8>,
 }
 
 #[uniffi::export]
-fn submit_response(
+pub fn submit_response(
     session_manager: Arc<SessionManager>,
     items_requests: Vec<ItemsRequest>,
     permitted_items: HashMap<String, HashMap<String, Vec<String>>>,
@@ -223,13 +223,13 @@ pub enum SignatureError {
 }
 
 #[derive(uniffi::Record)]
-struct SignatureData {
+pub struct SignatureData {
     pub state: String,
     pub response: Vec<u8>,
 }
 
 #[uniffi::export]
-fn submit_signature(
+pub fn submit_signature(
     session_manager: Arc<SessionManager>,
     signature: Vec<u8>,
 ) -> Result<SignatureData, SignatureError> {
@@ -257,7 +257,7 @@ pub enum TerminationError {
 }
 
 #[uniffi::export]
-fn terminate_session() -> Result<Vec<u8>, TerminationError> {
+pub fn terminate_session() -> Result<Vec<u8>, TerminationError> {
     let msg = session::SessionData {
         data: None,
         status: Some(session::Status::SessionTermination),
