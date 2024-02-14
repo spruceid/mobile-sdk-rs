@@ -32,9 +32,9 @@ pub enum SessionError {
 
 #[derive(uniffi::Record)]
 pub struct SessionData {
-    state: String,
-    qr_code_uri: String,
-    ble_ident: String,
+    pub state: String,
+    pub qr_code_uri: String,
+    pub ble_ident: String,
 }
 
 uniffi::custom_type!(Uuid, String);
@@ -94,8 +94,8 @@ pub enum RequestError {
 
 #[derive(uniffi::Record)]
 pub struct ItemsRequest {
-    doc_type: String,
-    namespaces: HashMap<String, HashMap<String, bool>>,
+    pub doc_type: String,
+    pub namespaces: HashMap<String, HashMap<String, bool>>,
 }
 
 #[derive(uniffi::Object)]
@@ -103,8 +103,8 @@ pub struct SessionManager(Mutex<device::SessionManager>);
 
 #[derive(uniffi::Record)]
 pub struct RequestData {
-    session_manager: Arc<SessionManager>,
-    items_requests: Vec<ItemsRequest>,
+    pub session_manager: Arc<SessionManager>,
+    pub items_requests: Vec<ItemsRequest>,
 }
 
 #[uniffi::export]
@@ -164,7 +164,7 @@ pub enum ResponseError {
 
 #[derive(uniffi::Record)]
 struct ResponseData {
-    payload: Vec<u8>,
+    pub payload: Vec<u8>,
 }
 
 #[uniffi::export]
@@ -224,8 +224,8 @@ pub enum SignatureError {
 
 #[derive(uniffi::Record)]
 struct SignatureData {
-    state: String,
-    response: Vec<u8>,
+    pub state: String,
+    pub response: Vec<u8>,
 }
 
 #[uniffi::export]
