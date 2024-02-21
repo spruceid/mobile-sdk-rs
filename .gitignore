@@ -2,5 +2,5 @@
 /generated
 .build
 WalletSdkRs/Package.swift
-WalletSdkRs/RustFramework
+WalletSdkRs/RustFramework.xcframework
 .swiftpm
