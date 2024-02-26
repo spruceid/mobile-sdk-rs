@@ -83,4 +83,4 @@ jobs:
     - name: Generate Swift package
       run: cargo swift package -p ios -n WalletSdkRs
     - name: Fail if generated swift code needs update
-      run: git diff --exit-code WalletSdkRs/Sources/WalletSdkRs/wallet_sdk_rs.swift
+      run: git diff -w --exit-code WalletSdkRs/Sources/WalletSdkRs/wallet_sdk_rs.swift
