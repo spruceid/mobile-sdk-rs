@@ -16,7 +16,7 @@ name = "uniffi-bindgen"
 path = "uniffi-bindgen.rs"
 
 [dependencies]
-uniffi = { version = "0.26.1", features = ["cli"] }
+uniffi = { version = "0.25.2", features = ["cli"] }
 
 isomdl = { git = "https://github.com/spruceid/isomdl", rev = "f7b05df" }
 
@@ -27,7 +27,7 @@ serde_json = "1.0.111"
 uuid = "1.6.1"
 
 [dev-dependencies]
-uniffi = { version = "0.26.1", features = ["bindgen-tests"] }
+uniffi = { version = "0.25.2", features = ["bindgen-tests"] }
 
 [build-dependencies]
-uniffi = { version = "0.26.1", features = ["build"] }
+uniffi = { version = "0.25.2", features = ["build"] }
