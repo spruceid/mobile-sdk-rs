@@ -287,7 +287,7 @@ private func uniffiCheckCallStatus(
             }
 
         case CALL_CANCELLED:
-            fatalError("Cancellation not supported yet")
+                throw CancellationError()
 
         default:
             throw UniffiInternalError.unexpectedRustCallStatusCode
@@ -372,16 +372,12 @@ fileprivate struct FfiConverterData: FfiConverterRustBuffer {
 }
 
 
-
-
-public protocol MDocProtocol : AnyObject {
-    
-    func id()  -> Uuid
+public protocol MDocProtocol {
+    func id()   -> Uuid
     
 }
 
-public class MDoc:
-    MDocProtocol {
+public class MDoc: MDocProtocol {
     fileprivate let pointer: UnsafeMutableRawPointer
 
     // TODO: We'd like this to be `private` but for Swifty reasons,
@@ -391,16 +387,13 @@ public class MDoc:
         self.pointer = pointer
     }
 
-    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_wallet_sdk_rs_fn_clone_mdoc(self.pointer, $0) }
-    }
-
     deinit {
         try! rustCall { uniffi_wallet_sdk_rs_fn_free_mdoc(pointer, $0) }
     }
 
     
-    public static func fromCbor(value: Data) throws  -> MDoc {
+
+    public static func fromCbor(value: Data) throws -> MDoc {
         return MDoc(unsafeFromRawPointer: try rustCallWithError(FfiConverterTypeMDocInitError.lift) {
     uniffi_wallet_sdk_rs_fn_constructor_mdoc_from_cbor(
         FfiConverterData.lower(value),$0)
@@ -411,31 +404,22 @@ public class MDoc:
 
     
     
+
     public func id()  -> Uuid {
         return try!  FfiConverterTypeUuid.lift(
             try! 
     rustCall() {
     
-    uniffi_wallet_sdk_rs_fn_method_mdoc_id(self.uniffiClonePointer(), $0
+    uniffi_wallet_sdk_rs_fn_method_mdoc_id(self.pointer, $0
     )
 }
         )
     }
-
 }
 
 public struct FfiConverterTypeMDoc: FfiConverter {
-
     typealias FfiType = UnsafeMutableRawPointer
     typealias SwiftType = MDoc
-
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> MDoc {
-        return MDoc(unsafeFromRawPointer: pointer)
-    }
-
-    public static func lower(_ value: MDoc) -> UnsafeMutableRawPointer {
-        return value.uniffiClonePointer()
-    }
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MDoc {
         let v: UInt64 = try readInt(&buf)
@@ -453,6 +437,14 @@ public struct FfiConverterTypeMDoc: FfiConverter {
         // The Rust code won't compile if a pointer won't fit in a `UInt64`.
         writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
     }
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> MDoc {
+        return MDoc(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: MDoc) -> UnsafeMutableRawPointer {
+        return value.pointer
+    }
 }
 
 
@@ -465,14 +457,11 @@ public func FfiConverterTypeMDoc_lower(_ value: MDoc) -> UnsafeMutableRawPointer
 }
 
 
-
-
-public protocol SessionManagerProtocol : AnyObject {
+public protocol SessionManagerProtocol {
     
 }
 
-public class SessionManager:
-    SessionManagerProtocol {
+public class SessionManager: SessionManagerProtocol {
     fileprivate let pointer: UnsafeMutableRawPointer
 
     // TODO: We'd like this to be `private` but for Swifty reasons,
@@ -480,10 +469,6 @@ public class SessionManager:
     // make it `required` without making it `public`.
     required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
         self.pointer = pointer
-    }
-
-    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_wallet_sdk_rs_fn_clone_sessionmanager(self.pointer, $0) }
     }
 
     deinit {
@@ -494,21 +479,11 @@ public class SessionManager:
 
     
     
-
 }
 
 public struct FfiConverterTypeSessionManager: FfiConverter {
-
     typealias FfiType = UnsafeMutableRawPointer
     typealias SwiftType = SessionManager
-
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> SessionManager {
-        return SessionManager(unsafeFromRawPointer: pointer)
-    }
-
-    public static func lower(_ value: SessionManager) -> UnsafeMutableRawPointer {
-        return value.uniffiClonePointer()
-    }
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SessionManager {
         let v: UInt64 = try readInt(&buf)
@@ -525,6 +500,14 @@ public struct FfiConverterTypeSessionManager: FfiConverter {
         // This fiddling is because `Int` is the thing that's the same size as a pointer.
         // The Rust code won't compile if a pointer won't fit in a `UInt64`.
         writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> SessionManager {
+        return SessionManager(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: SessionManager) -> UnsafeMutableRawPointer {
+        return value.pointer
     }
 }
 
@@ -544,9 +527,7 @@ public struct ItemsRequest {
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(
-        docType: String, 
-        namespaces: [String: [String: Bool]]) {
+    public init(docType: String, namespaces: [String: [String: Bool]]) {
         self.docType = docType
         self.namespaces = namespaces
     }
@@ -573,10 +554,9 @@ extension ItemsRequest: Equatable, Hashable {
 
 public struct FfiConverterTypeItemsRequest: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ItemsRequest {
-        return
-            try ItemsRequest(
-                docType: FfiConverterString.read(from: &buf), 
-                namespaces: FfiConverterDictionaryStringDictionaryStringBool.read(from: &buf)
+        return try ItemsRequest(
+            docType: FfiConverterString.read(from: &buf), 
+            namespaces: FfiConverterDictionaryStringDictionaryStringBool.read(from: &buf)
         )
     }
 
@@ -602,9 +582,7 @@ public struct RequestData {
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(
-        sessionManager: SessionManager, 
-        itemsRequests: [ItemsRequest]) {
+    public init(sessionManager: SessionManager, itemsRequests: [ItemsRequest]) {
         self.sessionManager = sessionManager
         self.itemsRequests = itemsRequests
     }
@@ -614,10 +592,9 @@ public struct RequestData {
 
 public struct FfiConverterTypeRequestData: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RequestData {
-        return
-            try RequestData(
-                sessionManager: FfiConverterTypeSessionManager.read(from: &buf), 
-                itemsRequests: FfiConverterSequenceTypeItemsRequest.read(from: &buf)
+        return try RequestData(
+            sessionManager: FfiConverterTypeSessionManager.read(from: &buf), 
+            itemsRequests: FfiConverterSequenceTypeItemsRequest.read(from: &buf)
         )
     }
 
@@ -642,8 +619,7 @@ public struct ResponseData {
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(
-        payload: Data) {
+    public init(payload: Data) {
         self.payload = payload
     }
 }
@@ -665,9 +641,8 @@ extension ResponseData: Equatable, Hashable {
 
 public struct FfiConverterTypeResponseData: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ResponseData {
-        return
-            try ResponseData(
-                payload: FfiConverterData.read(from: &buf)
+        return try ResponseData(
+            payload: FfiConverterData.read(from: &buf)
         )
     }
 
@@ -693,10 +668,7 @@ public struct SessionData {
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(
-        state: String, 
-        qrCodeUri: String, 
-        bleIdent: String) {
+    public init(state: String, qrCodeUri: String, bleIdent: String) {
         self.state = state
         self.qrCodeUri = qrCodeUri
         self.bleIdent = bleIdent
@@ -728,11 +700,10 @@ extension SessionData: Equatable, Hashable {
 
 public struct FfiConverterTypeSessionData: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SessionData {
-        return
-            try SessionData(
-                state: FfiConverterString.read(from: &buf), 
-                qrCodeUri: FfiConverterString.read(from: &buf), 
-                bleIdent: FfiConverterString.read(from: &buf)
+        return try SessionData(
+            state: FfiConverterString.read(from: &buf), 
+            qrCodeUri: FfiConverterString.read(from: &buf), 
+            bleIdent: FfiConverterString.read(from: &buf)
         )
     }
 
@@ -759,9 +730,7 @@ public struct SignatureData {
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(
-        state: String, 
-        response: Data) {
+    public init(state: String, response: Data) {
         self.state = state
         self.response = response
     }
@@ -788,10 +757,9 @@ extension SignatureData: Equatable, Hashable {
 
 public struct FfiConverterTypeSignatureData: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SignatureData {
-        return
-            try SignatureData(
-                state: FfiConverterString.read(from: &buf), 
-                response: FfiConverterData.read(from: &buf)
+        return try SignatureData(
+            state: FfiConverterString.read(from: &buf), 
+            response: FfiConverterData.read(from: &buf)
         )
     }
 
@@ -810,14 +778,11 @@ public func FfiConverterTypeSignatureData_lower(_ value: SignatureData) -> RustB
     return FfiConverterTypeSignatureData.lower(value)
 }
 
-
 public enum MDocInitError {
 
     
     
-    case Generic(
-        value: String
-    )
+    case Generic(value: String)
 
     fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
         return try FfiConverterTypeMDocInitError.lift(error)
@@ -863,14 +828,11 @@ extension MDocInitError: Equatable, Hashable {}
 
 extension MDocInitError: Error { }
 
-
 public enum RequestError {
 
     
     
-    case Generic(
-        value: String
-    )
+    case Generic(value: String)
 
     fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
         return try FfiConverterTypeRequestError.lift(error)
@@ -916,15 +878,12 @@ extension RequestError: Equatable, Hashable {}
 
 extension RequestError: Error { }
 
-
 public enum ResponseError {
 
     
     
     case MissingSignature
-    case Generic(
-        value: String
-    )
+    case Generic(value: String)
 
     fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
         return try FfiConverterTypeResponseError.lift(error)
@@ -975,14 +934,11 @@ extension ResponseError: Equatable, Hashable {}
 
 extension ResponseError: Error { }
 
-
 public enum SessionError {
 
     
     
-    case Generic(
-        value: String
-    )
+    case Generic(value: String)
 
     fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
         return try FfiConverterTypeSessionError.lift(error)
@@ -1028,15 +984,12 @@ extension SessionError: Equatable, Hashable {}
 
 extension SessionError: Error { }
 
-
 public enum SignatureError {
 
     
     
     case TooManyDocuments
-    case Generic(
-        value: String
-    )
+    case Generic(value: String)
 
     fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
         return try FfiConverterTypeSignatureError.lift(error)
@@ -1087,14 +1040,11 @@ extension SignatureError: Equatable, Hashable {}
 
 extension SignatureError: Error { }
 
-
 public enum TerminationError {
 
     
     
-    case Generic(
-        value: String
-    )
+    case Generic(value: String)
 
     fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
         return try FfiConverterTypeTerminationError.lift(error)
@@ -1309,7 +1259,8 @@ public func FfiConverterTypeUuid_lower(_ value: Uuid) -> RustBuffer {
     return FfiConverterTypeUuid.lower(value)
 }
 
-public func handleRequest(state: String, request: Data) throws  -> RequestData {
+
+public func handleRequest(state: String, request: Data) throws -> RequestData {
     return try  FfiConverterTypeRequestData.lift(
         try rustCallWithError(FfiConverterTypeRequestError.lift) {
     uniffi_wallet_sdk_rs_fn_func_handle_request(
@@ -1318,6 +1269,7 @@ public func handleRequest(state: String, request: Data) throws  -> RequestData {
 }
     )
 }
+
 public func helloFfi()  -> String {
     return try!  FfiConverterString.lift(
         try! rustCall() {
@@ -1325,7 +1277,8 @@ public func helloFfi()  -> String {
 }
     )
 }
-public func initialiseSession(document: MDoc, uuid: Uuid) throws  -> SessionData {
+
+public func initialiseSession(document: MDoc, uuid: Uuid) throws -> SessionData {
     return try  FfiConverterTypeSessionData.lift(
         try rustCallWithError(FfiConverterTypeSessionError.lift) {
     uniffi_wallet_sdk_rs_fn_func_initialise_session(
@@ -1334,7 +1287,8 @@ public func initialiseSession(document: MDoc, uuid: Uuid) throws  -> SessionData
 }
     )
 }
-public func submitResponse(sessionManager: SessionManager, itemsRequests: [ItemsRequest], permittedItems: [String: [String: [String]]]) throws  -> ResponseData {
+
+public func submitResponse(sessionManager: SessionManager, itemsRequests: [ItemsRequest], permittedItems: [String: [String: [String]]]) throws -> ResponseData {
     return try  FfiConverterTypeResponseData.lift(
         try rustCallWithError(FfiConverterTypeResponseError.lift) {
     uniffi_wallet_sdk_rs_fn_func_submit_response(
@@ -1344,7 +1298,8 @@ public func submitResponse(sessionManager: SessionManager, itemsRequests: [Items
 }
     )
 }
-public func submitSignature(sessionManager: SessionManager, signature: Data) throws  -> SignatureData {
+
+public func submitSignature(sessionManager: SessionManager, signature: Data) throws -> SignatureData {
     return try  FfiConverterTypeSignatureData.lift(
         try rustCallWithError(FfiConverterTypeSignatureError.lift) {
     uniffi_wallet_sdk_rs_fn_func_submit_signature(
@@ -1353,7 +1308,8 @@ public func submitSignature(sessionManager: SessionManager, signature: Data) thr
 }
     )
 }
-public func terminateSession() throws  -> Data {
+
+public func terminateSession() throws -> Data {
     return try  FfiConverterData.lift(
         try rustCallWithError(FfiConverterTypeTerminationError.lift) {
     uniffi_wallet_sdk_rs_fn_func_terminate_session($0)
@@ -1370,34 +1326,34 @@ private enum InitializationResult {
 // the code inside is only computed once.
 private var initializationResult: InitializationResult {
     // Get the bindings contract version from our ComponentInterface
-    let bindings_contract_version = 25
+    let bindings_contract_version = 24
     // Get the scaffolding contract version by calling the into the dylib
     let scaffolding_contract_version = ffi_wallet_sdk_rs_uniffi_contract_version()
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_func_handle_request() != 64125) {
+    if (uniffi_wallet_sdk_rs_checksum_func_handle_request() != 8171) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_func_hello_ffi() != 1306) {
+    if (uniffi_wallet_sdk_rs_checksum_func_hello_ffi() != 49556) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_func_initialise_session() != 12691) {
+    if (uniffi_wallet_sdk_rs_checksum_func_initialise_session() != 41897) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_func_submit_response() != 59149) {
+    if (uniffi_wallet_sdk_rs_checksum_func_submit_response() != 45596) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_func_submit_signature() != 1522) {
+    if (uniffi_wallet_sdk_rs_checksum_func_submit_signature() != 58193) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_func_terminate_session() != 5668) {
+    if (uniffi_wallet_sdk_rs_checksum_func_terminate_session() != 35293) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_method_mdoc_id() != 56580) {
+    if (uniffi_wallet_sdk_rs_checksum_method_mdoc_id() != 56888) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_constructor_mdoc_from_cbor() != 230) {
+    if (uniffi_wallet_sdk_rs_checksum_constructor_mdoc_from_cbor() != 23024) {
         return InitializationResult.apiChecksumMismatch
     }
 
