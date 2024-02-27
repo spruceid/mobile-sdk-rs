@@ -1,3 +1,4 @@
 [bindings.kotlin]
 package_name = "com.spruceid.wallet.sdk.rs"
-android = true
+# Disabling Android optimisations due to uniffi tests breaking on missing import android
+android = false

@@ -19,11 +19,6 @@ use isomdl::{
 };
 use uuid::Uuid;
 
-#[uniffi::export]
-fn hello_ffi() -> String {
-    "Hello from Rust!".into()
-}
-
 #[derive(thiserror::Error, uniffi::Error, Debug)]
 pub enum SessionError {
     #[error("{value}")]
