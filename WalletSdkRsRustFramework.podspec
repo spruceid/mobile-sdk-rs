@@ -13,6 +13,6 @@ Pod::Spec.new do |spec|
   spec.ios.deployment_target  = '13.0'
 
   spec.static_framework = true
-  spec.source = { :http => "https://github.com/spruceid/wallet-sdk-rs/releases/download/#{spec.version}/RustFramework.xcframework.zip", :flatten => true }
-  spec.vendored_frameworks = 'RustFramework.xcframework'
+  spec.source = { :http => "https://github.com/spruceid/wallet-sdk-rs/releases/download/#{spec.version}/RustFramework.xcframework.zip" }
+  spec.vendored_frameworks = 'WalletSdkRs/RustFramework.xcframework'
 end

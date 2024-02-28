@@ -14,7 +14,8 @@ Pod::Spec.new do |spec|
 
   spec.static_framework = true
   spec.source        = { :git => "https://spruceid/wallet-sdk-rs.git", :tag => "#{spec.version}" }
-  spec.source_files  = "WalletSdkRs"
+  spec.source_files  = "WalletSdkRs/Sources/WalletSdkRs/*.swift"
+  spec.frameworks = 'Foundation'
 
-  spec.dependency 'WalletSdkRsRustFramework' "#{spec.version}"
+  spec.dependency 'WalletSdkRsRustFramework', "#{spec.version}"
 end
