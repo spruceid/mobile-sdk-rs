@@ -1,5 +1,5 @@
 Pod::Spec.new do |spec|
-  spec.name         = "WalletSdkRsRustFramework"
+  spec.name         = "SpruceIDWalletSdkRsRustFramework"
   spec.version      = "0.0.6"
   spec.summary      = "Rust-generated Framework Swift Wallet SDK."
   spec.description  = <<-DESC
