@@ -70,8 +70,8 @@ jobs:
       env:
         COCOAPODS_TRUNK_TOKEN: ${{ secrets.COCOAPODS_TRUNK_TOKEN }}
       run: |
-        pod trunk push SpruceIDWalletSdkRsRustFramework.podspec
-        pod trunk push SpruceIDWalletSdkRs.podspec
+        pod trunk push SpruceIDWalletSdkRsRustFramework.podspec --synchronous
+        pod trunk push SpruceIDWalletSdkRs.podspec --synchronous
 
   kotlin:
     runs-on: ubuntu-latest
