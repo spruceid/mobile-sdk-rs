@@ -12,6 +12,7 @@ Pod::Spec.new do |spec|
                       }
   spec.author       = { "Spruce Systems, Inc." => "hello@spruceid.com" }
   spec.platform     = :ios
+  spec.swift_version = '5.9'
 
   spec.ios.deployment_target  = '13.0'
 
