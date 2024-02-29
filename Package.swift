@@ -18,7 +18,7 @@ let package = Package(
     ],
     dependencies: [ ],
     targets: [
-        .binaryTarget(name: "RustFramework", url: "https://github.com/spruceid/wallet-sdk-rs/releases/download/0.0.8/RustFramework.xcframework.zip", checksum: "3fe8135f913270b1a1f3b1f795f145f961840a753e58d2aa6cc7b61ba1dd4073"),
+        .binaryTarget(name: "RustFramework", url: "https://github.com/spruceid/wallet-sdk-rs/releases/download/0.0.8/RustFramework.xcframework.zip", checksum: "be620de3f035ed8dcbfec6343a7ca55f72486409c6da8fb77b0ac02bcdd492f9"),
         .target(
             name: "SpruceIDWalletSdkRs",
             dependencies: [
