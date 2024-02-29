@@ -66,6 +66,10 @@ jobs:
         tag: ${{ github.event.inputs.version }}
         name: ${{ github.event.inputs.version }}
 
+    # To have the latest version with --quick
+    - name: Install Cocoapods
+      run: gem install cocoapods
+
     # Using --quick otherwise pod lint will try to download SpruceIDWalletSdkRsRustFramework and it won't be available
     # yet.
     - name: Publish to CocoaPod register
