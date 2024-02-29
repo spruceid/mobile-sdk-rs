@@ -6,7 +6,10 @@ Pod::Spec.new do |spec|
                    Rust layer framework for the Swift Wallet SDK.
                    DESC
   spec.homepage     = "https://github.com/spruceid/wallet-sdk-rs"
-  spec.license      = "MIT OR Apache-2.0"
+  spec.license      = { :type => "MIT & Apache License, Version 2.0", :text => <<-LICENSE
+                          Refer to LICENSE-MIT and LICENSE-APACHE in the repository.
+                        LICENSE
+                      }
   spec.author       = { "Spruce Systems, Inc." => "hello@spruceid.com" }
   spec.platform     = :ios
 
