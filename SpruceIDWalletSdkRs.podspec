@@ -16,7 +16,7 @@ Pod::Spec.new do |spec|
   spec.ios.deployment_target  = '13.0'
 
   spec.static_framework = true
-  spec.source        = { :git => "https://spruceid/wallet-sdk-rs.git", :tag => "#{spec.version}" }
+  spec.source        = { :git => "https://github.com/spruceid/wallet-sdk-rs.git", :tag => "#{spec.version}" }
   spec.source_files  = "WalletSdkRs/Sources/WalletSdkRs/*.swift"
   spec.frameworks = 'Foundation'
 
