@@ -66,12 +66,14 @@ jobs:
         tag: ${{ github.event.inputs.version }}
         name: ${{ github.event.inputs.version }}
 
+    # Using --quick otherwise pod lint will try to download SpruceIDWalletSdkRsRustFramework and it won't be available
+    # yet.
     - name: Publish to CocoaPod register
       env:
         COCOAPODS_TRUNK_TOKEN: ${{ secrets.COCOAPODS_TRUNK_TOKEN }}
       run: |
         pod trunk push SpruceIDWalletSdkRsRustFramework.podspec
-        pod trunk push SpruceIDWalletSdkRs.podspec
+        pod trunk push SpruceIDWalletSdkRs.podspec --quick
 
   kotlin:
     runs-on: ubuntu-latest
