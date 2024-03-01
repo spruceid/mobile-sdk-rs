@@ -35,6 +35,7 @@ jobs:
       with:
         path: ~/.cocoapods/repos
         key: ${{ runner.os }}-cocoapods
+        save-always: true
 
     - uses: taiki-e/install-action@v2
       with:
