@@ -115,5 +115,7 @@ jobs:
         arguments: publish
         build-root-directory: ./kotlin
       env:
+        MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+        MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         VERSION: ${{ github.event.inputs.version }}
