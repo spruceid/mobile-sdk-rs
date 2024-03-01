@@ -114,4 +114,15 @@ publishing {
             }
         }
     }
+    publications {
+        release(MavenPublication) {
+            groupId = 'com.spruceid.wallet.sdk.rs'
+            artifactId = "walletsdkrs"
+            version = System.getenv("VERSION")
+
+            afterEvaluate {
+                from components.release
+            }
+        }
+    }
 }
