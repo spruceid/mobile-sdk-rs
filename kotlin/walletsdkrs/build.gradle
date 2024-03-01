@@ -32,7 +32,6 @@ android {
 }
 
 dependencies {
-
     implementation 'androidx.appcompat:appcompat:1.6.1'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
@@ -104,15 +103,14 @@ publishing {
                 password = System.getenv("GITHUB_TOKEN")
             }
         }
-    }
-    publications {
-        release(MavenPublication) {
-            groupId = 'com.spruceid.wallet.sdk.rs'
-            artifactId = "walletsdkrs"
-            version = System.getenv("VERSION")
-
-            afterEvaluate {
-                from components.release
+        repositories {
+            maven {
+                name = "OSSRH"
+                url = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+                credentials {
+                    username = System.getenv("OSSRH_USERNAME")
+                    password = System.getenv("OSSRH_TOKEN")
+                }
             }
         }
     }

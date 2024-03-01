@@ -3,3 +3,4 @@ walletsdkrs/src
 build
 kls_database.db
 *.hprof
+local.properties
