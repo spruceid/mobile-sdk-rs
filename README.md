@@ -22,3 +22,19 @@
 
 Use the [`release` Github Action](https://github.com/spruceid/wallet-sdk-rs/actions/workflows/release.yml)
 which is a manually triggered action.
+
+## Build
+
+### Kotlin
+
+```bash
+cd kotlin
+./gradlew build
+```
+
+### Swift
+
+```bash
+cargo swift package -p ios -n WalletSdkRs
+```
+> You will need `cargo-swift` which you can install with `cargo install cargo-swift`.
