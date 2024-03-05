@@ -75,6 +75,7 @@ jobs:
 
   kotlin:
     runs-on: ubuntu-latest
+    needs: validation
     defaults:
       run:
         working-directory: ./kotlin
