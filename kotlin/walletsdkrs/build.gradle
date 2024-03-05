@@ -3,6 +3,8 @@ plugins {
     id 'org.jetbrains.kotlin.android'
     id 'com.github.willir.rust.cargo-ndk-android'
     id 'maven-publish'
+    id 'signing'
+    id 'com.gradleup.nmcp'
 }
 
 android {
@@ -28,6 +30,13 @@ android {
     }
     kotlinOptions {
         jvmTarget = '1.8'
+    }
+
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+            withJavadocJar()
+        }
     }
 }
 
@@ -103,16 +112,6 @@ publishing {
                 password = System.getenv("GITHUB_TOKEN")
             }
         }
-        repositories {
-            maven {
-                name = "OSSRH"
-                url = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
-                credentials {
-                    username = System.getenv("MAVEN_USERNAME")
-                    password = System.getenv("MAVEN_TOKEN")
-                }
-            }
-        }
     }
     publications {
         release(MavenPublication) {
@@ -123,6 +122,49 @@ publishing {
             afterEvaluate {
                 from components.release
             }
+
+            pom {
+                packaging = "aar"
+                name.set("walletsdkrs")
+                description.set("Rust layer for SpruceID Wallet SDK")
+                url.set("https://github.com/spruceid/wallet-sdk-rs")
+                licenses {
+                    license {
+                        name.set("MIT License")
+                        url.set("https://opensource.org/license/mit/")
+                    }
+                    license {
+                        name.set("Apache License, Version 2.0")
+                        url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                    }
+                }
+                developers {
+                    developer {
+                        name.set("Spruce Systems, Inc.")
+                        email.set("hello@spruceid.com")
+                    }
+                }
+                scm {
+                    url.set(pom.url.get())
+                    connection.set("scm:git:${url.get()}.git")
+                    developerConnection.set("scm:git:${url.get()}.git")
+                }
+            }
+        }
+    }
+}
+
+signing {
+    useGpgCmd()
+    sign publishing.publications.release
+}
+
+nmcp {
+    afterEvaluate {
+        publish("release") {
+            it.username.set(System.getenv("MAVEN_USERNAME"))
+            it.password.set(System.getenv("MAVEN_PASSWORD"))
+            it.publicationType.set("AUTOMATIC")
         }
     }
 }
