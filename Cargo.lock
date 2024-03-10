@@ -1911,6 +1911,7 @@ version = "0.1.0"
 dependencies = [
  "hex",
  "isomdl",
+ "p256",
  "serde_cbor",
  "serde_json",
  "thiserror",
