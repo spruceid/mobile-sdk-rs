@@ -538,6 +538,79 @@ public func FfiConverterTypeSessionManager_lower(_ value: SessionManager) -> Uns
 }
 
 
+
+
+public protocol SessionManagerEngagedProtocol : AnyObject {
+    
+}
+
+public class SessionManagerEngaged:
+    SessionManagerEngagedProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_wallet_sdk_rs_fn_clone_sessionmanagerengaged(self.pointer, $0) }
+    }
+
+    deinit {
+        try! rustCall { uniffi_wallet_sdk_rs_fn_free_sessionmanagerengaged(pointer, $0) }
+    }
+
+    
+
+    
+    
+
+}
+
+public struct FfiConverterTypeSessionManagerEngaged: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = SessionManagerEngaged
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> SessionManagerEngaged {
+        return SessionManagerEngaged(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: SessionManagerEngaged) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SessionManagerEngaged {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: SessionManagerEngaged, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+public func FfiConverterTypeSessionManagerEngaged_lift(_ pointer: UnsafeMutableRawPointer) throws -> SessionManagerEngaged {
+    return try FfiConverterTypeSessionManagerEngaged.lift(pointer)
+}
+
+public func FfiConverterTypeSessionManagerEngaged_lower(_ value: SessionManagerEngaged) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeSessionManagerEngaged.lower(value)
+}
+
+
 public struct ItemsRequest {
     public var docType: String
     public var namespaces: [String: [String: Bool]]
@@ -637,64 +710,15 @@ public func FfiConverterTypeRequestData_lower(_ value: RequestData) -> RustBuffe
 }
 
 
-public struct ResponseData {
-    public var payload: Data
-
-    // Default memberwise initializers are never public by default, so we
-    // declare one manually.
-    public init(
-        payload: Data) {
-        self.payload = payload
-    }
-}
-
-
-extension ResponseData: Equatable, Hashable {
-    public static func ==(lhs: ResponseData, rhs: ResponseData) -> Bool {
-        if lhs.payload != rhs.payload {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(payload)
-    }
-}
-
-
-public struct FfiConverterTypeResponseData: FfiConverterRustBuffer {
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ResponseData {
-        return
-            try ResponseData(
-                payload: FfiConverterData.read(from: &buf)
-        )
-    }
-
-    public static func write(_ value: ResponseData, into buf: inout [UInt8]) {
-        FfiConverterData.write(value.payload, into: &buf)
-    }
-}
-
-
-public func FfiConverterTypeResponseData_lift(_ buf: RustBuffer) throws -> ResponseData {
-    return try FfiConverterTypeResponseData.lift(buf)
-}
-
-public func FfiConverterTypeResponseData_lower(_ value: ResponseData) -> RustBuffer {
-    return FfiConverterTypeResponseData.lower(value)
-}
-
-
 public struct SessionData {
-    public var state: String
+    public var state: SessionManagerEngaged
     public var qrCodeUri: String
     public var bleIdent: String
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
     public init(
-        state: String, 
+        state: SessionManagerEngaged, 
         qrCodeUri: String, 
         bleIdent: String) {
         self.state = state
@@ -704,40 +728,19 @@ public struct SessionData {
 }
 
 
-extension SessionData: Equatable, Hashable {
-    public static func ==(lhs: SessionData, rhs: SessionData) -> Bool {
-        if lhs.state != rhs.state {
-            return false
-        }
-        if lhs.qrCodeUri != rhs.qrCodeUri {
-            return false
-        }
-        if lhs.bleIdent != rhs.bleIdent {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(state)
-        hasher.combine(qrCodeUri)
-        hasher.combine(bleIdent)
-    }
-}
-
 
 public struct FfiConverterTypeSessionData: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SessionData {
         return
             try SessionData(
-                state: FfiConverterString.read(from: &buf), 
+                state: FfiConverterTypeSessionManagerEngaged.read(from: &buf), 
                 qrCodeUri: FfiConverterString.read(from: &buf), 
                 bleIdent: FfiConverterString.read(from: &buf)
         )
     }
 
     public static func write(_ value: SessionData, into buf: inout [UInt8]) {
-        FfiConverterString.write(value.state, into: &buf)
+        FfiConverterTypeSessionManagerEngaged.write(value.state, into: &buf)
         FfiConverterString.write(value.qrCodeUri, into: &buf)
         FfiConverterString.write(value.bleIdent, into: &buf)
     }
@@ -750,64 +753,6 @@ public func FfiConverterTypeSessionData_lift(_ buf: RustBuffer) throws -> Sessio
 
 public func FfiConverterTypeSessionData_lower(_ value: SessionData) -> RustBuffer {
     return FfiConverterTypeSessionData.lower(value)
-}
-
-
-public struct SignatureData {
-    public var state: String
-    public var response: Data
-
-    // Default memberwise initializers are never public by default, so we
-    // declare one manually.
-    public init(
-        state: String, 
-        response: Data) {
-        self.state = state
-        self.response = response
-    }
-}
-
-
-extension SignatureData: Equatable, Hashable {
-    public static func ==(lhs: SignatureData, rhs: SignatureData) -> Bool {
-        if lhs.state != rhs.state {
-            return false
-        }
-        if lhs.response != rhs.response {
-            return false
-        }
-        return true
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(state)
-        hasher.combine(response)
-    }
-}
-
-
-public struct FfiConverterTypeSignatureData: FfiConverterRustBuffer {
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SignatureData {
-        return
-            try SignatureData(
-                state: FfiConverterString.read(from: &buf), 
-                response: FfiConverterData.read(from: &buf)
-        )
-    }
-
-    public static func write(_ value: SignatureData, into buf: inout [UInt8]) {
-        FfiConverterString.write(value.state, into: &buf)
-        FfiConverterData.write(value.response, into: &buf)
-    }
-}
-
-
-public func FfiConverterTypeSignatureData_lift(_ buf: RustBuffer) throws -> SignatureData {
-    return try FfiConverterTypeSignatureData.lift(buf)
-}
-
-public func FfiConverterTypeSignatureData_lower(_ value: SignatureData) -> RustBuffer {
-    return FfiConverterTypeSignatureData.lower(value)
 }
 
 
@@ -1395,11 +1340,11 @@ public func FfiConverterTypeUuid_lower(_ value: Uuid) -> RustBuffer {
     return FfiConverterTypeUuid.lower(value)
 }
 
-public func handleRequest(state: String, request: Data) throws  -> RequestData {
+public func handleRequest(state: SessionManagerEngaged, request: Data) throws  -> RequestData {
     return try  FfiConverterTypeRequestData.lift(
         try rustCallWithError(FfiConverterTypeRequestError.lift) {
     uniffi_wallet_sdk_rs_fn_func_handle_request(
-        FfiConverterString.lower(state),
+        FfiConverterTypeSessionManagerEngaged.lower(state),
         FfiConverterData.lower(request),$0)
 }
     )
@@ -1429,18 +1374,17 @@ public func sec1ToPkcs8(pem: String) throws  -> String {
 }
     )
 }
-public func submitResponse(sessionManager: SessionManager, itemsRequests: [ItemsRequest], permittedItems: [String: [String: [String]]]) throws  -> ResponseData {
-    return try  FfiConverterTypeResponseData.lift(
+public func submitResponse(sessionManager: SessionManager, permittedItems: [String: [String: [String]]]) throws  -> Data {
+    return try  FfiConverterData.lift(
         try rustCallWithError(FfiConverterTypeResponseError.lift) {
     uniffi_wallet_sdk_rs_fn_func_submit_response(
         FfiConverterTypeSessionManager.lower(sessionManager),
-        FfiConverterSequenceTypeItemsRequest.lower(itemsRequests),
         FfiConverterDictionaryStringDictionaryStringSequenceString.lower(permittedItems),$0)
 }
     )
 }
-public func submitSignature(sessionManager: SessionManager, signature: Data) throws  -> SignatureData {
-    return try  FfiConverterTypeSignatureData.lift(
+public func submitSignature(sessionManager: SessionManager, signature: Data) throws  -> Data {
+    return try  FfiConverterData.lift(
         try rustCallWithError(FfiConverterTypeSignatureError.lift) {
     uniffi_wallet_sdk_rs_fn_func_submit_signature(
         FfiConverterTypeSessionManager.lower(sessionManager),
@@ -1471,7 +1415,7 @@ private var initializationResult: InitializationResult {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_func_handle_request() != 64125) {
+    if (uniffi_wallet_sdk_rs_checksum_func_handle_request() != 59720) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_wallet_sdk_rs_checksum_func_initialise_session() != 12691) {
@@ -1483,10 +1427,10 @@ private var initializationResult: InitializationResult {
     if (uniffi_wallet_sdk_rs_checksum_func_sec1_to_pkcs8() != 35691) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_func_submit_response() != 59149) {
+    if (uniffi_wallet_sdk_rs_checksum_func_submit_response() != 34256) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_func_submit_signature() != 1522) {
+    if (uniffi_wallet_sdk_rs_checksum_func_submit_signature() != 46170) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_wallet_sdk_rs_checksum_func_terminate_session() != 5668) {

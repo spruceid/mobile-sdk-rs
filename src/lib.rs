@@ -1,21 +1,17 @@
 uniffi::setup_scaffolding!();
 
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::HashMap,
     sync::{Arc, Mutex},
 };
 
 use isomdl::{
     definitions::{
         device_engagement::{CentralClientMode, DeviceRetrievalMethods},
-        device_request,
         helpers::NonEmptyMap,
         session, BleOptions, DeviceRetrievalMethod, SessionEstablishment,
     },
-    presentation::{
-        device::{self, Document, SessionManagerEngaged, SessionManagerInit},
-        Stringify,
-    },
+    presentation::device::{self, Document, SessionManagerInit},
 };
 use p256::pkcs8::{DecodePrivateKey, EncodePrivateKey, LineEnding};
 use uuid::Uuid;
@@ -26,9 +22,12 @@ pub enum SessionError {
     Generic { value: String },
 }
 
+#[derive(uniffi::Object)]
+pub struct SessionManagerEngaged(device::SessionManagerEngaged);
+
 #[derive(uniffi::Record)]
 struct SessionData {
-    state: String,
+    state: Arc<SessionManagerEngaged>,
     qr_code_uri: String,
     ble_ident: String,
 }
@@ -70,13 +69,8 @@ fn initialise_session(document: Arc<MDoc>, uuid: Uuid) -> Result<SessionData, Se
         session.qr_engagement().map_err(|e| SessionError::Generic {
             value: format!("Could not generate qr engagement: {e:?}"),
         })?;
-    let state = engaged_state
-        .stringify()
-        .map_err(|e| SessionError::Generic {
-            value: format!("Could not strigify state: {e:?}"),
-        })?;
     Ok(SessionData {
-        state,
+        state: Arc::new(SessionManagerEngaged(engaged_state)),
         qr_code_uri,
         ble_ident,
     })
@@ -95,7 +89,10 @@ struct ItemsRequest {
 }
 
 #[derive(uniffi::Object)]
-pub struct SessionManager(Mutex<device::SessionManager>);
+pub struct SessionManager {
+    inner: Mutex<device::SessionManager>,
+    items_requests: device::RequestedItems,
+}
 
 #[derive(uniffi::Record)]
 struct RequestData {
@@ -104,34 +101,28 @@ struct RequestData {
 }
 
 #[uniffi::export]
-fn handle_request(state: String, request: Vec<u8>) -> Result<RequestData, RequestError> {
-    let (session_manager, items_requests) = match SessionManagerEngaged::parse(state.to_string()) {
-        Ok(sme) => {
-            let session_establishment: SessionEstablishment = serde_cbor::from_slice(&request)
-                .map_err(|e| RequestError::Generic {
-                    value: format!("Could not deserialize request: {e:?}"),
-                })?;
-            sme.process_session_establishment(session_establishment)
-                .map_err(|e| RequestError::Generic {
-                    value: format!("Could not process process session establishment: {e:?}"),
-                })?
-        }
-        Err(_) => {
-            let mut sm = device::SessionManager::parse(state.to_string()).map_err(|e| {
-                RequestError::Generic {
-                    value: format!("Could not parse session manager state: {e:?}"),
-                }
+fn handle_request(
+    state: Arc<SessionManagerEngaged>,
+    request: Vec<u8>,
+) -> Result<RequestData, RequestError> {
+    let (session_manager, items_requests) = {
+        let session_establishment: SessionEstablishment = serde_cbor::from_slice(&request)
+            .map_err(|e| RequestError::Generic {
+                value: format!("Could not deserialize request: {e:?}"),
             })?;
-            let req = sm
-                .handle_request(&request)
-                .map_err(|e| RequestError::Generic {
-                    value: format!("Could not handle request: {e:?}"),
-                })?;
-            (sm, req)
-        }
+        state
+            .0
+            .clone()
+            .process_session_establishment(session_establishment)
+            .map_err(|e| RequestError::Generic {
+                value: format!("Could not process process session establishment: {e:?}"),
+            })?
     };
     Ok(RequestData {
-        session_manager: Arc::new(SessionManager(Mutex::new(session_manager))),
+        session_manager: Arc::new(SessionManager {
+            inner: Mutex::new(session_manager),
+            items_requests: items_requests.clone(),
+        }),
         items_requests: items_requests
             .into_iter()
             .map(|req| ItemsRequest {
@@ -158,17 +149,11 @@ pub enum ResponseError {
     Generic { value: String },
 }
 
-#[derive(uniffi::Record)]
-struct ResponseData {
-    payload: Vec<u8>,
-}
-
 #[uniffi::export]
 fn submit_response(
     session_manager: Arc<SessionManager>,
-    items_requests: Vec<ItemsRequest>,
     permitted_items: HashMap<String, HashMap<String, Vec<String>>>,
-) -> Result<ResponseData, ResponseError> {
+) -> Result<Vec<u8>, ResponseError> {
     let permitted = permitted_items
         .into_iter()
         .map(|(doc_type, namespaces)| {
@@ -176,38 +161,13 @@ fn submit_response(
             (doc_type, ns)
         })
         .collect();
-    let mut session_manager = session_manager.0.lock().unwrap();
-    session_manager.prepare_response(
-        &items_requests
-            .into_iter()
-            .map(|req| device_request::ItemsRequest {
-                doc_type: req.doc_type,
-                namespaces: req
-                    .namespaces
-                    .into_iter()
-                    .map(|(ns, ir)| {
-                        (
-                            ns,
-                            ir.into_iter()
-                                .collect::<BTreeMap<_, _>>()
-                                .try_into()
-                                .unwrap(),
-                        )
-                    })
-                    .collect::<BTreeMap<_, _>>()
-                    .try_into()
-                    .unwrap(),
-                request_info: None,
-            })
-            .collect(),
-        permitted,
-    );
-    let payload = session_manager
+    let mut session_manager_inner = session_manager.inner.lock().unwrap();
+    session_manager_inner.prepare_response(&session_manager.items_requests, permitted);
+    Ok(session_manager_inner
         .get_next_signature_payload()
         .map(|(_, payload)| payload)
         .ok_or(ResponseError::MissingSignature)?
-        .to_vec();
-    Ok(ResponseData { payload })
+        .to_vec())
 }
 
 #[derive(thiserror::Error, uniffi::Error, Debug)]
@@ -218,32 +178,20 @@ pub enum SignatureError {
     Generic { value: String },
 }
 
-#[derive(uniffi::Record)]
-struct SignatureData {
-    state: String,
-    response: Vec<u8>,
-}
-
 #[uniffi::export]
 fn submit_signature(
     session_manager: Arc<SessionManager>,
     signature: Vec<u8>,
-) -> Result<SignatureData, SignatureError> {
-    let mut session_manager = session_manager.0.lock().unwrap();
+) -> Result<Vec<u8>, SignatureError> {
+    let mut session_manager = session_manager.inner.lock().unwrap();
     session_manager
         .submit_next_signature(signature)
         .map_err(|e| SignatureError::Generic {
             value: format!("Could not submit next signature: {e:?}"),
         })?;
-    let response = session_manager
+    session_manager
         .retrieve_response()
-        .ok_or(SignatureError::TooManyDocuments)?;
-    let state = session_manager
-        .stringify()
-        .map_err(|e| SignatureError::Generic {
-            value: format!("Could not stringify session: {e:?}"),
-        })?;
-    Ok(SignatureData { state, response })
+        .ok_or(SignatureError::TooManyDocuments)
 }
 
 #[derive(thiserror::Error, uniffi::Error, Debug)]
@@ -331,6 +279,15 @@ fn pkcs8_to_sec1(pem: String) -> Result<String, KeyTransformationError> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
+    use base64::prelude::*;
+    use isomdl::{
+        definitions::device_request::{self, DataElements},
+        presentation::reader,
+    };
+    use p256::ecdsa::signature::Signer;
+
     use super::*;
 
     #[test]
@@ -339,10 +296,60 @@ mod tests {
         let pkcs8 = include_str!("../tests/res/pkcs8.pem").to_string();
         assert_eq!(sec1_to_pkcs8(sec1).unwrap(), pkcs8);
     }
+
     #[test]
     fn pkcs8_to_sec1_() {
         let sec1 = include_str!("../tests/res/sec1.pem").to_string();
         let pkcs8 = include_str!("../tests/res/pkcs8.pem").to_string();
         assert_eq!(pkcs8_to_sec1(pkcs8).unwrap(), sec1);
+    }
+
+    #[test]
+    fn end_to_end_ble_presentment() {
+        let mdoc_b64 = include_str!("../tests/res/mdoc.b64");
+        let mdoc_bytes = BASE64_STANDARD.decode(mdoc_b64).unwrap();
+        let mdoc = MDoc::from_cbor(mdoc_bytes).unwrap();
+        let key: p256::ecdsa::SigningKey =
+            p256::SecretKey::from_sec1_pem(include_str!("../tests/res/sec1.pem"))
+                .unwrap()
+                .into();
+        let session_data = initialise_session(mdoc, Uuid::new_v4()).unwrap();
+        let namespaces: device_request::Namespaces = [(
+            "org.iso.18013.5.1".to_string(),
+            [
+                ("given_name".to_string(), true),
+                ("family_name".to_string(), false),
+            ]
+            .into_iter()
+            .collect::<BTreeMap<String, bool>>()
+            .try_into()
+            .unwrap(),
+        )]
+        .into_iter()
+        .collect::<BTreeMap<String, DataElements>>()
+        .try_into()
+        .unwrap();
+        let (mut reader_session_manager, request, _ble_ident) =
+            reader::SessionManager::establish_session(session_data.qr_code_uri, namespaces.clone())
+                .unwrap();
+        // let request = reader_session_manager.new_request(namespaces).unwrap();
+        let request_data = handle_request(session_data.state, request).unwrap();
+        let permitted_items = [(
+            "org.iso.18013.5.1.mDL".to_string(),
+            [(
+                "org.iso.18013.5.1".to_string(),
+                vec!["given_name".to_string()],
+            )]
+            .into_iter()
+            .collect(),
+        )]
+        .into_iter()
+        .collect();
+        let signing_payload =
+            submit_response(request_data.session_manager.clone(), permitted_items).unwrap();
+        let signature: p256::ecdsa::Signature = key.sign(&signing_payload);
+        let response =
+            submit_signature(request_data.session_manager, signature.to_bytes().to_vec()).unwrap();
+        reader_session_manager.handle_response(&response).unwrap();
     }
 }
