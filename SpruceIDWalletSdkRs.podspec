@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name         = "SpruceIDWalletSdkRs"
-  spec.version      = "0.0.24"
+  spec.version      = "0.0.25"
   spec.summary      = "Rust-generated Swift Wallet SDK."
   spec.description  = <<-DESC
                    Rust layer for the Swift Wallet SDK.
