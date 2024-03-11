@@ -172,6 +172,8 @@ fn submit_response(
 
 #[derive(thiserror::Error, uniffi::Error, Debug)]
 pub enum SignatureError {
+    #[error("Invalid DER signature: {value}")]
+    InvalidSignature { value: String },
     #[error("there were more documents to sign, but we only expected to sign 1!")]
     TooManyDocuments,
     #[error("{value}")]
@@ -181,11 +183,16 @@ pub enum SignatureError {
 #[uniffi::export]
 fn submit_signature(
     session_manager: Arc<SessionManager>,
-    signature: Vec<u8>,
+    der_signature: Vec<u8>,
 ) -> Result<Vec<u8>, SignatureError> {
+    let signature = p256::ecdsa::Signature::from_der(&der_signature).map_err(|e| {
+        SignatureError::InvalidSignature {
+            value: e.to_string(),
+        }
+    })?;
     let mut session_manager = session_manager.inner.lock().unwrap();
     session_manager
-        .submit_next_signature(signature)
+        .submit_next_signature(signature.to_bytes().to_vec())
         .map_err(|e| SignatureError::Generic {
             value: format!("Could not submit next signature: {e:?}"),
         })?;
@@ -286,7 +293,7 @@ mod tests {
         definitions::device_request::{self, DataElements},
         presentation::reader,
     };
-    use p256::ecdsa::signature::Signer;
+    use p256::ecdsa::signature::{SignatureEncoding, Signer};
 
     use super::*;
 
@@ -349,7 +356,7 @@ mod tests {
             submit_response(request_data.session_manager.clone(), permitted_items).unwrap();
         let signature: p256::ecdsa::Signature = key.sign(&signing_payload);
         let response =
-            submit_signature(request_data.session_manager, signature.to_bytes().to_vec()).unwrap();
+            submit_signature(request_data.session_manager, signature.to_der().to_vec()).unwrap();
         reader_session_manager.handle_response(&response).unwrap();
     }
 }
