@@ -1064,6 +1064,9 @@ public enum SignatureError {
 
     
     
+    case InvalidSignature(
+        value: String
+    )
     case TooManyDocuments
     case Generic(
         value: String
@@ -1085,8 +1088,11 @@ public struct FfiConverterTypeSignatureError: FfiConverterRustBuffer {
         
 
         
-        case 1: return .TooManyDocuments
-        case 2: return .Generic(
+        case 1: return .InvalidSignature(
+            value: try FfiConverterString.read(from: &buf)
+            )
+        case 2: return .TooManyDocuments
+        case 3: return .Generic(
             value: try FfiConverterString.read(from: &buf)
             )
 
@@ -1101,12 +1107,17 @@ public struct FfiConverterTypeSignatureError: FfiConverterRustBuffer {
 
         
         
-        case .TooManyDocuments:
+        case let .InvalidSignature(value):
             writeInt(&buf, Int32(1))
+            FfiConverterString.write(value, into: &buf)
+            
+        
+        case .TooManyDocuments:
+            writeInt(&buf, Int32(2))
         
         
         case let .Generic(value):
-            writeInt(&buf, Int32(2))
+            writeInt(&buf, Int32(3))
             FfiConverterString.write(value, into: &buf)
             
         }
@@ -1383,12 +1394,12 @@ public func submitResponse(sessionManager: SessionManager, permittedItems: [Stri
 }
     )
 }
-public func submitSignature(sessionManager: SessionManager, signature: Data) throws  -> Data {
+public func submitSignature(sessionManager: SessionManager, derSignature: Data) throws  -> Data {
     return try  FfiConverterData.lift(
         try rustCallWithError(FfiConverterTypeSignatureError.lift) {
     uniffi_wallet_sdk_rs_fn_func_submit_signature(
         FfiConverterTypeSessionManager.lower(sessionManager),
-        FfiConverterData.lower(signature),$0)
+        FfiConverterData.lower(derSignature),$0)
 }
     )
 }
@@ -1430,7 +1441,7 @@ private var initializationResult: InitializationResult {
     if (uniffi_wallet_sdk_rs_checksum_func_submit_response() != 34256) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_func_submit_signature() != 46170) {
+    if (uniffi_wallet_sdk_rs_checksum_func_submit_signature() != 46429) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_wallet_sdk_rs_checksum_func_terminate_session() != 5668) {
