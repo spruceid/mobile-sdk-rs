@@ -811,6 +811,92 @@ public func FfiConverterTypeSignatureData_lower(_ value: SignatureData) -> RustB
 }
 
 
+public enum KeyTransformationError {
+
+    
+    
+    case ToPkcs8(
+        value: String
+    )
+    case FromPkcs8(
+        value: String
+    )
+    case FromSec1(
+        value: String
+    )
+    case ToSec1(
+        value: String
+    )
+
+    fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
+        return try FfiConverterTypeKeyTransformationError.lift(error)
+    }
+}
+
+
+public struct FfiConverterTypeKeyTransformationError: FfiConverterRustBuffer {
+    typealias SwiftType = KeyTransformationError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> KeyTransformationError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .ToPkcs8(
+            value: try FfiConverterString.read(from: &buf)
+            )
+        case 2: return .FromPkcs8(
+            value: try FfiConverterString.read(from: &buf)
+            )
+        case 3: return .FromSec1(
+            value: try FfiConverterString.read(from: &buf)
+            )
+        case 4: return .ToSec1(
+            value: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: KeyTransformationError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case let .ToPkcs8(value):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(value, into: &buf)
+            
+        
+        case let .FromPkcs8(value):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(value, into: &buf)
+            
+        
+        case let .FromSec1(value):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(value, into: &buf)
+            
+        
+        case let .ToSec1(value):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(value, into: &buf)
+            
+        }
+    }
+}
+
+
+extension KeyTransformationError: Equatable, Hashable {}
+
+extension KeyTransformationError: Error { }
+
+
 public enum MDocInitError {
 
     
@@ -1327,6 +1413,22 @@ public func initialiseSession(document: MDoc, uuid: Uuid) throws  -> SessionData
 }
     )
 }
+public func pkcs8ToSec1(pem: String) throws  -> String {
+    return try  FfiConverterString.lift(
+        try rustCallWithError(FfiConverterTypeKeyTransformationError.lift) {
+    uniffi_wallet_sdk_rs_fn_func_pkcs8_to_sec1(
+        FfiConverterString.lower(pem),$0)
+}
+    )
+}
+public func sec1ToPkcs8(pem: String) throws  -> String {
+    return try  FfiConverterString.lift(
+        try rustCallWithError(FfiConverterTypeKeyTransformationError.lift) {
+    uniffi_wallet_sdk_rs_fn_func_sec1_to_pkcs8(
+        FfiConverterString.lower(pem),$0)
+}
+    )
+}
 public func submitResponse(sessionManager: SessionManager, itemsRequests: [ItemsRequest], permittedItems: [String: [String: [String]]]) throws  -> ResponseData {
     return try  FfiConverterTypeResponseData.lift(
         try rustCallWithError(FfiConverterTypeResponseError.lift) {
@@ -1373,6 +1475,12 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_wallet_sdk_rs_checksum_func_initialise_session() != 12691) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_wallet_sdk_rs_checksum_func_pkcs8_to_sec1() != 59517) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_wallet_sdk_rs_checksum_func_sec1_to_pkcs8() != 35691) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_wallet_sdk_rs_checksum_func_submit_response() != 59149) {

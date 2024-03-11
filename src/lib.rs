@@ -17,6 +17,7 @@ use isomdl::{
         Stringify,
     },
 };
+use p256::pkcs8::{DecodePrivateKey, EncodePrivateKey, LineEnding};
 use uuid::Uuid;
 
 #[derive(thiserror::Error, uniffi::Error, Debug)]
@@ -285,5 +286,63 @@ impl MDoc {
 
     fn id(&self) -> Uuid {
         self.0.id
+    }
+}
+
+#[derive(thiserror::Error, uniffi::Error, Debug)]
+pub enum KeyTransformationError {
+    #[error("{value}")]
+    ToPKCS8 { value: String },
+    #[error("{value}")]
+    FromPKCS8 { value: String },
+    #[error("{value}")]
+    FromSEC1 { value: String },
+    #[error("{value}")]
+    ToSEC1 { value: String },
+}
+
+#[uniffi::export]
+fn sec1_to_pkcs8(pem: String) -> Result<String, KeyTransformationError> {
+    let key =
+        p256::SecretKey::from_sec1_pem(&pem).map_err(|e| KeyTransformationError::FromSEC1 {
+            value: e.to_string(),
+        })?;
+    Ok(key
+        .to_pkcs8_pem(LineEnding::default())
+        .map_err(|e| KeyTransformationError::ToPKCS8 {
+            value: e.to_string(),
+        })?
+        .to_string())
+}
+
+#[uniffi::export]
+fn pkcs8_to_sec1(pem: String) -> Result<String, KeyTransformationError> {
+    let key =
+        p256::SecretKey::from_pkcs8_pem(&pem).map_err(|e| KeyTransformationError::FromPKCS8 {
+            value: e.to_string(),
+        })?;
+    Ok(key
+        .to_sec1_pem(LineEnding::default())
+        .map_err(|e| KeyTransformationError::ToSEC1 {
+            value: e.to_string(),
+        })?
+        .to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sec1_to_pkcs8_() {
+        let sec1 = include_str!("../tests/res/sec1.pem").to_string();
+        let pkcs8 = include_str!("../tests/res/pkcs8.pem").to_string();
+        assert_eq!(sec1_to_pkcs8(sec1).unwrap(), pkcs8);
+    }
+    #[test]
+    fn pkcs8_to_sec1_() {
+        let sec1 = include_str!("../tests/res/sec1.pem").to_string();
+        let pkcs8 = include_str!("../tests/res/pkcs8.pem").to_string();
+        assert_eq!(pkcs8_to_sec1(pkcs8).unwrap(), sec1);
     }
 }
