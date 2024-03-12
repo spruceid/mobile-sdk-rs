@@ -13,7 +13,6 @@ use isomdl::{
     },
     presentation::device::{self, Document, SessionManagerInit},
 };
-use p256::pkcs8::{DecodePrivateKey, EncodePrivateKey, LineEnding};
 use uuid::Uuid;
 
 #[derive(thiserror::Error, uniffi::Error, Debug)]
