@@ -755,29 +755,23 @@ public func FfiConverterTypeSessionData_lower(_ value: SessionData) -> RustBuffe
     return FfiConverterTypeSessionData.lower(value)
 }
 
-
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 public enum KeyTransformationError {
-
     
-    
-    case ToPkcs8(
+    case toPkcs8(
         value: String
     )
-    case FromPkcs8(
+    case fromPkcs8(
         value: String
     )
-    case FromSec1(
+    case fromSec1(
         value: String
     )
-    case ToSec1(
+    case toSec1(
         value: String
     )
-
-    fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
-        return try FfiConverterTypeKeyTransformationError.lift(error)
-    }
 }
-
 
 public struct FfiConverterTypeKeyTransformationError: FfiConverterRustBuffer {
     typealias SwiftType = KeyTransformationError
@@ -785,50 +779,47 @@ public struct FfiConverterTypeKeyTransformationError: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> KeyTransformationError {
         let variant: Int32 = try readInt(&buf)
         switch variant {
-
         
-
+        case 1: return .toPkcs8(
+            value: try FfiConverterString.read(from: &buf)
+        )
         
-        case 1: return .ToPkcs8(
+        case 2: return .fromPkcs8(
             value: try FfiConverterString.read(from: &buf)
-            )
-        case 2: return .FromPkcs8(
+        )
+        
+        case 3: return .fromSec1(
             value: try FfiConverterString.read(from: &buf)
-            )
-        case 3: return .FromSec1(
+        )
+        
+        case 4: return .toSec1(
             value: try FfiConverterString.read(from: &buf)
-            )
-        case 4: return .ToSec1(
-            value: try FfiConverterString.read(from: &buf)
-            )
-
-         default: throw UniffiInternalError.unexpectedEnumCase
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
     public static func write(_ value: KeyTransformationError, into buf: inout [UInt8]) {
         switch value {
-
-        
-
         
         
-        case let .ToPkcs8(value):
+        case let .toPkcs8(value):
             writeInt(&buf, Int32(1))
             FfiConverterString.write(value, into: &buf)
             
         
-        case let .FromPkcs8(value):
+        case let .fromPkcs8(value):
             writeInt(&buf, Int32(2))
             FfiConverterString.write(value, into: &buf)
             
         
-        case let .FromSec1(value):
+        case let .fromSec1(value):
             writeInt(&buf, Int32(3))
             FfiConverterString.write(value, into: &buf)
             
         
-        case let .ToSec1(value):
+        case let .toSec1(value):
             writeInt(&buf, Int32(4))
             FfiConverterString.write(value, into: &buf)
             
@@ -837,9 +828,18 @@ public struct FfiConverterTypeKeyTransformationError: FfiConverterRustBuffer {
 }
 
 
+public func FfiConverterTypeKeyTransformationError_lift(_ buf: RustBuffer) throws -> KeyTransformationError {
+    return try FfiConverterTypeKeyTransformationError.lift(buf)
+}
+
+public func FfiConverterTypeKeyTransformationError_lower(_ value: KeyTransformationError) -> RustBuffer {
+    return FfiConverterTypeKeyTransformationError.lower(value)
+}
+
+
 extension KeyTransformationError: Equatable, Hashable {}
 
-extension KeyTransformationError: Error { }
+
 
 
 public enum MDocInitError {
@@ -1369,22 +1369,6 @@ public func initialiseSession(document: MDoc, uuid: Uuid) throws  -> SessionData
 }
     )
 }
-public func pkcs8ToSec1(pem: String) throws  -> String {
-    return try  FfiConverterString.lift(
-        try rustCallWithError(FfiConverterTypeKeyTransformationError.lift) {
-    uniffi_wallet_sdk_rs_fn_func_pkcs8_to_sec1(
-        FfiConverterString.lower(pem),$0)
-}
-    )
-}
-public func sec1ToPkcs8(pem: String) throws  -> String {
-    return try  FfiConverterString.lift(
-        try rustCallWithError(FfiConverterTypeKeyTransformationError.lift) {
-    uniffi_wallet_sdk_rs_fn_func_sec1_to_pkcs8(
-        FfiConverterString.lower(pem),$0)
-}
-    )
-}
 public func submitResponse(sessionManager: SessionManager, permittedItems: [String: [String: [String]]]) throws  -> Data {
     return try  FfiConverterData.lift(
         try rustCallWithError(FfiConverterTypeResponseError.lift) {
@@ -1430,12 +1414,6 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_wallet_sdk_rs_checksum_func_initialise_session() != 12691) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_wallet_sdk_rs_checksum_func_pkcs8_to_sec1() != 59517) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_wallet_sdk_rs_checksum_func_sec1_to_pkcs8() != 35691) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_wallet_sdk_rs_checksum_func_submit_response() != 34256) {
