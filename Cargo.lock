@@ -808,7 +808,7 @@ dependencies = [
 [[package]]
 name = "isomdl"
 version = "0.1.0"
-source = "git+https://github.com/spruceid/isomdl?rev=21235af#21235aff4caae14952ef42027a1d0488c94ebdee"
+source = "git+https://github.com/spruceid/isomdl?rev=b4d0019#b4d001998e5fc0eff49ba3422d689122ee7db4a7"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -845,7 +845,7 @@ dependencies = [
 [[package]]
 name = "isomdl-macros"
 version = "0.1.0"
-source = "git+https://github.com/spruceid/isomdl?rev=21235af#21235aff4caae14952ef42027a1d0488c94ebdee"
+source = "git+https://github.com/spruceid/isomdl?rev=b4d0019#b4d001998e5fc0eff49ba3422d689122ee7db4a7"
 dependencies = [
  "proc-macro2",
  "quote",
