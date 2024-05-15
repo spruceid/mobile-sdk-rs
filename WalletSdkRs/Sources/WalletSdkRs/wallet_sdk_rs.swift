@@ -381,6 +381,19 @@ fileprivate class UniffiHandleMap<T> {
 // Public interface members begin here.
 
 
+fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
+    typealias FfiType = UInt64
+    typealias SwiftType = UInt64
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt64 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
 fileprivate struct FfiConverterBool : FfiConverter {
     typealias FfiType = Int8
     typealias SwiftType = Bool
@@ -752,6 +765,160 @@ public func FfiConverterTypeSessionManagerEngaged_lower(_ value: SessionManagerE
 }
 
 
+/**
+ * Information about the verified credential.
+ */
+public struct CredentialInfo {
+    /**
+     * The credential title that should be displayed on the success screen.
+     */
+    public var title: String
+    /**
+     * The image that should be displayed on the success screen.
+     */
+    public var image: Data
+    /**
+     * The claims decoded from the credential.
+     */
+    public var claims: [String: ClaimValue]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The credential title that should be displayed on the success screen.
+         */title: String, 
+        /**
+         * The image that should be displayed on the success screen.
+         */image: Data, 
+        /**
+         * The claims decoded from the credential.
+         */claims: [String: ClaimValue]) {
+        self.title = title
+        self.image = image
+        self.claims = claims
+    }
+}
+
+
+
+extension CredentialInfo: Equatable, Hashable {
+    public static func ==(lhs: CredentialInfo, rhs: CredentialInfo) -> Bool {
+        if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.image != rhs.image {
+            return false
+        }
+        if lhs.claims != rhs.claims {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(title)
+        hasher.combine(image)
+        hasher.combine(claims)
+    }
+}
+
+
+public struct FfiConverterTypeCredentialInfo: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CredentialInfo {
+        return
+            try CredentialInfo(
+                title: FfiConverterString.read(from: &buf), 
+                image: FfiConverterData.read(from: &buf), 
+                claims: FfiConverterDictionaryStringTypeClaimValue.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CredentialInfo, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterData.write(value.image, into: &buf)
+        FfiConverterDictionaryStringTypeClaimValue.write(value.claims, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeCredentialInfo_lift(_ buf: RustBuffer) throws -> CredentialInfo {
+    return try FfiConverterTypeCredentialInfo.lift(buf)
+}
+
+public func FfiConverterTypeCredentialInfo_lower(_ value: CredentialInfo) -> RustBuffer {
+    return FfiConverterTypeCredentialInfo.lower(value)
+}
+
+
+/**
+ * A verification failure with a code and reason.
+ */
+public struct Failure {
+    public var code: UInt64
+    public var reason: String
+    public var details: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(code: UInt64, reason: String, details: String) {
+        self.code = code
+        self.reason = reason
+        self.details = details
+    }
+}
+
+
+
+extension Failure: Equatable, Hashable {
+    public static func ==(lhs: Failure, rhs: Failure) -> Bool {
+        if lhs.code != rhs.code {
+            return false
+        }
+        if lhs.reason != rhs.reason {
+            return false
+        }
+        if lhs.details != rhs.details {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(code)
+        hasher.combine(reason)
+        hasher.combine(details)
+    }
+}
+
+
+public struct FfiConverterTypeFailure: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Failure {
+        return
+            try Failure(
+                code: FfiConverterUInt64.read(from: &buf), 
+                reason: FfiConverterString.read(from: &buf), 
+                details: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: Failure, into buf: inout [UInt8]) {
+        FfiConverterUInt64.write(value.code, into: &buf)
+        FfiConverterString.write(value.reason, into: &buf)
+        FfiConverterString.write(value.details, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeFailure_lift(_ buf: RustBuffer) throws -> Failure {
+    return try FfiConverterTypeFailure.lift(buf)
+}
+
+public func FfiConverterTypeFailure_lower(_ value: Failure) -> RustBuffer {
+    return FfiConverterTypeFailure.lower(value)
+}
+
+
 public struct ItemsRequest {
     public var docType: String
     public var namespaces: [String: [String: Bool]]
@@ -892,6 +1059,76 @@ public func FfiConverterTypeSessionData_lower(_ value: SessionData) -> RustBuffe
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+/**
+ * Credential claim values.
+ */
+
+public enum ClaimValue {
+    
+    /**
+     * Any text claim that doesn't need special formatting.
+     */
+    case text(value: String
+    )
+    /**
+     * A date claim in the format `[year]-[month]-[day]`.
+     */
+    case date(value: String
+    )
+}
+
+
+public struct FfiConverterTypeClaimValue: FfiConverterRustBuffer {
+    typealias SwiftType = ClaimValue
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ClaimValue {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .text(value: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 2: return .date(value: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ClaimValue, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .text(value):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(value, into: &buf)
+            
+        
+        case let .date(value):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(value, into: &buf)
+            
+        }
+    }
+}
+
+
+public func FfiConverterTypeClaimValue_lift(_ buf: RustBuffer) throws -> ClaimValue {
+    return try FfiConverterTypeClaimValue.lift(buf)
+}
+
+public func FfiConverterTypeClaimValue_lower(_ value: ClaimValue) -> RustBuffer {
+    return FfiConverterTypeClaimValue.lower(value)
+}
+
+
+
+extension ClaimValue: Equatable, Hashable {}
+
+
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
 public enum KeyTransformationError {
     
@@ -1018,6 +1255,77 @@ public struct FfiConverterTypeMDocInitError: FfiConverterRustBuffer {
 extension MDocInitError: Equatable, Hashable {}
 
 extension MDocInitError: Error { }
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+/**
+ * The outcome of attempting to verify a credential.
+ */
+
+public enum Outcome {
+    
+    /**
+     * The credential was successfully verified.
+     */
+    case verified(credentialInfo: CredentialInfo
+    )
+    /**
+     * The credential could not be verified.
+     */
+    case unverified(credentialInfo: CredentialInfo?, failure: Failure
+    )
+}
+
+
+public struct FfiConverterTypeOutcome: FfiConverterRustBuffer {
+    typealias SwiftType = Outcome
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Outcome {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .verified(credentialInfo: try FfiConverterTypeCredentialInfo.read(from: &buf)
+        )
+        
+        case 2: return .unverified(credentialInfo: try FfiConverterOptionTypeCredentialInfo.read(from: &buf), failure: try FfiConverterTypeFailure.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: Outcome, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .verified(credentialInfo):
+            writeInt(&buf, Int32(1))
+            FfiConverterTypeCredentialInfo.write(credentialInfo, into: &buf)
+            
+        
+        case let .unverified(credentialInfo,failure):
+            writeInt(&buf, Int32(2))
+            FfiConverterOptionTypeCredentialInfo.write(credentialInfo, into: &buf)
+            FfiConverterTypeFailure.write(failure, into: &buf)
+            
+        }
+    }
+}
+
+
+public func FfiConverterTypeOutcome_lift(_ buf: RustBuffer) throws -> Outcome {
+    return try FfiConverterTypeOutcome.lift(buf)
+}
+
+public func FfiConverterTypeOutcome_lower(_ value: Outcome) -> RustBuffer {
+    return FfiConverterTypeOutcome.lower(value)
+}
+
+
+
+extension Outcome: Equatable, Hashable {}
+
+
 
 
 public enum RequestError {
@@ -1281,6 +1589,85 @@ extension TerminationError: Equatable, Hashable {}
 
 extension TerminationError: Error { }
 
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
+public enum VerificationResult {
+    
+    case success
+    case failure(cause: String
+    )
+}
+
+
+public struct FfiConverterTypeVerificationResult: FfiConverterRustBuffer {
+    typealias SwiftType = VerificationResult
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> VerificationResult {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .success
+        
+        case 2: return .failure(cause: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: VerificationResult, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .success:
+            writeInt(&buf, Int32(1))
+        
+        
+        case let .failure(cause):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(cause, into: &buf)
+            
+        }
+    }
+}
+
+
+public func FfiConverterTypeVerificationResult_lift(_ buf: RustBuffer) throws -> VerificationResult {
+    return try FfiConverterTypeVerificationResult.lift(buf)
+}
+
+public func FfiConverterTypeVerificationResult_lower(_ value: VerificationResult) -> RustBuffer {
+    return FfiConverterTypeVerificationResult.lower(value)
+}
+
+
+
+extension VerificationResult: Equatable, Hashable {}
+
+
+
+fileprivate struct FfiConverterOptionTypeCredentialInfo: FfiConverterRustBuffer {
+    typealias SwiftType = CredentialInfo?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCredentialInfo.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCredentialInfo.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
 fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [String]
 
@@ -1342,6 +1729,29 @@ fileprivate struct FfiConverterDictionaryStringBool: FfiConverterRustBuffer {
         for _ in 0..<len {
             let key = try FfiConverterString.read(from: &buf)
             let value = try FfiConverterBool.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
+    }
+}
+
+fileprivate struct FfiConverterDictionaryStringTypeClaimValue: FfiConverterRustBuffer {
+    public static func write(_ value: [String: ClaimValue], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterString.write(key, into: &buf)
+            FfiConverterTypeClaimValue.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String: ClaimValue] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [String: ClaimValue]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0..<len {
+            let key = try FfiConverterString.read(from: &buf)
+            let value = try FfiConverterTypeClaimValue.read(from: &buf)
             dict[key] = value
         }
         return dict
