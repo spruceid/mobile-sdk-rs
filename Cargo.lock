@@ -403,6 +403,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "cose-rs"
+version = "0.1.0"
+source = "git+https://github.com/spruceid/cose-rs?rev=877d6c4#877d6c4772def9433b03b334be5b3d014a49479a"
+dependencies = [
+ "fmul-to-int",
+ "p256",
+ "p384",
+ "serde",
+ "serde_bytes",
+ "serde_cbor",
+ "signature",
+ "thiserror",
+ "time",
+]
+
+[[package]]
 name = "cpufeatures"
 version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -531,7 +547,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1a467a65c5e759bce6e65eaf91cc29f466cdc57cb65777bd646872a8a1fd4de"
 dependencies = [
  "const-oid 0.9.6",
- "der_derive",
+ "der_derive 0.6.1",
  "flagset",
  "pem-rfc7468 0.6.0",
  "zeroize",
@@ -544,6 +560,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fffa369a668c8af7dbf8b5e56c9f744fbd399949ed171606040001947de40b1c"
 dependencies = [
  "const-oid 0.9.6",
+ "der_derive 0.7.2",
+ "flagset",
  "pem-rfc7468 0.7.0",
  "zeroize",
 ]
@@ -558,6 +576,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "der_derive"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5fe87ce4529967e0ba1dcf8450bab64d97dfd5010a6256187ffe2e43e6f0e049"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.48",
 ]
 
 [[package]]
@@ -682,6 +711,12 @@ name = "flagset"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d52a7e408202050813e6f1d9addadcaafef3dca7530c7ddfb005d4081cce6779"
+
+[[package]]
+name = "fmul-to-int"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e908e7364e86facdaa817799fc60024e127390000069707f3c9214acd3fc3177"
 
 [[package]]
 name = "fs-err"
@@ -817,7 +852,7 @@ dependencies = [
  "base64 0.13.1",
  "clap",
  "clap-stdin",
- "cose-rs",
+ "cose-rs 0.1.0 (git+https://github.com/spruceid/cose-rs?rev=4104505)",
  "ecdsa",
  "elliptic-curve",
  "hex-literal",
@@ -838,7 +873,7 @@ dependencies = [
  "thiserror",
  "time",
  "uuid",
- "x509-cert",
+ "x509-cert 0.1.1",
  "zeroize",
 ]
 
@@ -994,6 +1029,12 @@ dependencies = [
  "smallvec",
  "zeroize",
 ]
+
+[[package]]
+name = "num-conv"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "51d515d32fb182ee37cda2ccdcb92950d6a3c2893aa280e540671c2cd0f3b1d9"
 
 [[package]]
 name = "num-derive"
@@ -1648,12 +1689,13 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.3.31"
+version = "0.3.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f657ba42c3f86e7680e53c8cd3af8abbe56b5491790b46e22e19c0d57463583e"
+checksum = "5dfd88e563464686c916c7e46e623e520ddc6d79fa6641390f2e3fa86e83e885"
 dependencies = [
  "deranged",
  "itoa",
+ "num-conv",
  "powerfmt",
  "serde",
  "time-core",
@@ -1668,10 +1710,11 @@ checksum = "ef927ca75afb808a4d64dd374f00a2adf8d0fcff8e7b184af886c3c87ec4a3f3"
 
 [[package]]
 name = "time-macros"
-version = "0.2.16"
+version = "0.2.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26197e33420244aeb70c3e8c78376ca46571bc4e701e4791c2cd9f57dcb3a43f"
+checksum = "3f252a68540fde3a3877aeea552b832b40ab9a69e318efd078774a01ddee1ccf"
 dependencies = [
+ "num-conv",
  "time-core",
 ]
 
@@ -1682,6 +1725,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2c9d3793400a45f954c52e73d068316d76b6f4e36977e3fcebb13a2721e80237"
 dependencies = [
  "crunchy",
+]
+
+[[package]]
+name = "tls_codec"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b5e78c9c330f8c85b2bae7c8368f2739157db9991235123aa1b15ef9502bfb6a"
+dependencies = [
+ "tls_codec_derive",
+ "zeroize",
+]
+
+[[package]]
+name = "tls_codec_derive"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8d9ef545650e79f30233c0003bcc2504d7efac6dad25fca40744de773fe2049c"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.48",
 ]
 
 [[package]]
@@ -1915,6 +1979,7 @@ name = "wallet-sdk-rs"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.0",
+ "cose-rs 0.1.0 (git+https://github.com/spruceid/cose-rs?rev=877d6c4)",
  "hex",
  "isomdl",
  "p256",
@@ -1923,6 +1988,7 @@ dependencies = [
  "thiserror",
  "uniffi",
  "uuid",
+ "x509-cert 0.2.5",
 ]
 
 [[package]]
@@ -2070,6 +2136,18 @@ dependencies = [
  "der 0.6.1",
  "flagset",
  "spki 0.6.0",
+]
+
+[[package]]
+name = "x509-cert"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1301e935010a701ae5f8655edc0ad17c44bad3ac5ce8c39185f75453b720ae94"
+dependencies = [
+ "const-oid 0.9.6",
+ "der 0.7.8",
+ "spki 0.7.3",
+ "tls_codec",
 ]
 
 [[package]]

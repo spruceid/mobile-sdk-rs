@@ -1,3 +1,6 @@
+mod credentials;
+pub use credentials::*;
+
 uniffi::setup_scaffolding!();
 
 use std::{
