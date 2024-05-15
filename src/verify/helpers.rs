@@ -1,10 +1,13 @@
 use std::time::SystemTime;
 
-use uniffi::deps::{
-  anyhow::{bail, Context, Result},
-  log
+use crate::{
+    anyhow::{bail, Context, Result},
+    outcome::{ClaimValue, Failure},
 };
-use cose_rs::CoseSign1;
+use cose_rs::{cwt::ClaimsSet, CoseSign1};
+use serde_cbor::Value;
+use time::Date;
+use time_macros::format_description;
 use x509_cert::{
     der::{oid::AssociatedOid, Decode},
     ext::pkix::{CrlDistributionPoints, KeyUsage},
@@ -48,7 +51,7 @@ pub fn extract_extensions(certificate: &Certificate) -> Result<(KeyUsage, CrlDis
             CrlDistributionPoints::OID => crl_dp = Some(&extension.extn_value),
             oid if extension.critical => bail!("unexpected critical extension: {oid}"),
             oid => {
-                log::debug!("skipping certificate extension {oid}")
+                crate::log::debug!("skipping certificate extension {oid}")
             }
         }
     }
@@ -70,7 +73,36 @@ pub fn extract_extensions(certificate: &Certificate) -> Result<(KeyUsage, CrlDis
     Ok((key_usage, crl_dp))
 }
 
-pub fn check_validity(validity: &Validity) -> Result<()> {
+// TODO: Use treeldr instead of manual parsing?
+pub trait Claim: Sized {
+    const CWT_LABEL: i32;
+    const LABEL: &'static str;
+
+    fn from_claims(claims: &ClaimsSet) -> crate::outcome::Result<Self> {
+        claims
+            .get_i(Self::CWT_LABEL)
+            .ok_or_else(|| Failure::missing_claim(Self::LABEL))
+            .and_then(Self::from_value)
+    }
+
+    /// Parse date strings of the form "YYYY-MM-DD".
+    fn parse_datestr(value: &Value) -> crate::outcome::Result<ClaimValue> {
+        let date_str = match value {
+            Value::Text(t) => t,
+            _ => return Err(Failure::malformed_claim(Self::LABEL, value, "wrong type")),
+        };
+        let format = format_description!("[year]-[month]-[day]");
+        Date::parse(date_str, format)
+            .map_err(|e| Failure::malformed_claim(Self::LABEL, value, e))
+            .map(|_| ClaimValue::Date {
+                value: date_str.clone(),
+            })
+    }
+
+    fn from_value(value: &Value) -> crate::outcome::Result<Self>;
+}
+
+pub fn check_validity(validity: &Validity) -> crate::anyhow::Result<()> {
     let nbf = validity.not_before.to_system_time();
     let exp = validity.not_after.to_system_time();
 

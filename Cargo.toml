@@ -29,6 +29,12 @@ uuid = { version = "1.6.1", features = ["v4"]}
 cose-rs = { git = "https://github.com/spruceid/cose-rs", rev = "877d6c4", features = [
     "time",
 ] }
+miniz_oxide = "0.7.2"
+num-bigint = "0.4.4"
+num-traits = "0.2.19"
+signature = "2.2.0"
+time = { version = "0.3.36", features = ["macros", "formatting", "parsing"] }
+time-macros = "0.2.18"
 x509-cert = { version = "0.2.5" }
 
 [dev-dependencies]
