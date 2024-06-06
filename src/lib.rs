@@ -1,5 +1,7 @@
 uniffi::setup_scaffolding!();
 
+pub mod storage_manager;
+
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},

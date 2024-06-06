@@ -1234,6 +1234,87 @@ extension SignatureError: Equatable, Hashable {}
 extension SignatureError: Error { }
 
 
+/**
+ * Enum: StorageManagerError
+ *
+ * Represents errors that may occur during storage management operations
+ */
+public enum StorageManagerError {
+
+    
+    
+    /**
+     * This error happens when the key value could not be used with the underlying
+     * storage system on the device
+     */
+    case InvalidLookupKey
+    /**
+     * This error occurrs when we can retrieve a value, but could not decrypt it
+     */
+    case CouldNotDecryptValue
+    /**
+     * The underlying device has no more storage available
+     */
+    case StorageFull
+    /**
+     * During storage manager initialization, it must create a new encryption key.  This
+     * error is raised when that key could not be created.
+     */
+    case CouldNotMakeKey
+}
+
+
+public struct FfiConverterTypeStorageManagerError: FfiConverterRustBuffer {
+    typealias SwiftType = StorageManagerError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> StorageManagerError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .InvalidLookupKey
+        case 2: return .CouldNotDecryptValue
+        case 3: return .StorageFull
+        case 4: return .CouldNotMakeKey
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: StorageManagerError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case .InvalidLookupKey:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .CouldNotDecryptValue:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .StorageFull:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .CouldNotMakeKey:
+            writeInt(&buf, Int32(4))
+        
+        }
+    }
+}
+
+
+extension StorageManagerError: Equatable, Hashable {}
+
+extension StorageManagerError: Error { }
+
+
 public enum TerminationError {
 
     
@@ -1280,6 +1361,207 @@ public struct FfiConverterTypeTerminationError: FfiConverterRustBuffer {
 extension TerminationError: Equatable, Hashable {}
 
 extension TerminationError: Error { }
+
+
+
+
+/**
+ * Interface: StorageManagerInterface
+ *
+ * The StorageManagerInterface provides access to functions defined in Kotlin and Swift for
+ * managing persistent storage on the device.
+ *
+ * When dealing with UniFFI exported functions and objects, this will need to be Boxed as:
+ * Box<dyn StorageManagerInterface>
+ *
+ * We use the older callback_interface to keep the required version level of our Android API
+ * low.
+ */
+public protocol StorageManagerInterface : AnyObject {
+    
+    /**
+     * Function: add
+     *
+     * Adds a key-value pair to storage.  Should the key already exist, the value will be
+     * replaced
+     *
+     * Arguments:
+     * key - The key to add
+     * value - The value to add under the key.
+     */
+    func add(key: Key, value: Value) throws 
+    
+    /**
+     * Function: get
+     *
+     * Callback function pointer to native (kotlin/swift) code for
+     * getting a key.
+     */
+    func get(key: Key) throws  -> Value?
+    
+    /**
+     * Function: remove
+     *
+     * Callback function pointer to native (kotlin/swift) code for
+     * removing a key.  This referenced function MUST be idempotent.  In
+     * particular, it must treat removing a non-existent key as a normal and
+     * expected circumstance, simply returning () and not an error.
+     */
+    func remove(key: Key) throws 
+    
+}
+
+// Magic number for the Rust proxy to call using the same mechanism as every other method,
+// to free the callback once it's dropped by Rust.
+private let IDX_CALLBACK_FREE: Int32 = 0
+// Callback return codes
+private let UNIFFI_CALLBACK_SUCCESS: Int32 = 0
+private let UNIFFI_CALLBACK_ERROR: Int32 = 1
+private let UNIFFI_CALLBACK_UNEXPECTED_ERROR: Int32 = 2
+
+// Put the implementation in a struct so we don't pollute the top-level namespace
+fileprivate struct UniffiCallbackInterfaceStorageManagerInterface {
+
+    // Create the VTable using a series of closures.
+    // Swift automatically converts these into C callback functions.
+    static var vtable: UniffiVTableCallbackInterfaceStorageManagerInterface = UniffiVTableCallbackInterfaceStorageManagerInterface(
+        add: { (
+            uniffiHandle: UInt64,
+            key: RustBuffer,
+            value: RustBuffer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterCallbackInterfaceStorageManagerInterface.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return try uniffiObj.add(
+                     key: try FfiConverterTypeKey.lift(key),
+                     value: try FfiConverterTypeValue.lift(value)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCallWithError(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn,
+                lowerError: FfiConverterTypeStorageManagerError.lower
+            )
+        },
+        get: { (
+            uniffiHandle: UInt64,
+            key: RustBuffer,
+            uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> Value? in
+                guard let uniffiObj = try? FfiConverterCallbackInterfaceStorageManagerInterface.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return try uniffiObj.get(
+                     key: try FfiConverterTypeKey.lift(key)
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterOptionTypeValue.lower($0) }
+            uniffiTraitInterfaceCallWithError(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn,
+                lowerError: FfiConverterTypeStorageManagerError.lower
+            )
+        },
+        remove: { (
+            uniffiHandle: UInt64,
+            key: RustBuffer,
+            uniffiOutReturn: UnsafeMutableRawPointer,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> () in
+                guard let uniffiObj = try? FfiConverterCallbackInterfaceStorageManagerInterface.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return try uniffiObj.remove(
+                     key: try FfiConverterTypeKey.lift(key)
+                )
+            }
+
+            
+            let writeReturn = { () }
+            uniffiTraitInterfaceCallWithError(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn,
+                lowerError: FfiConverterTypeStorageManagerError.lower
+            )
+        },
+        uniffiFree: { (uniffiHandle: UInt64) -> () in
+            let result = try? FfiConverterCallbackInterfaceStorageManagerInterface.handleMap.remove(handle: uniffiHandle)
+            if result == nil {
+                print("Uniffi callback interface StorageManagerInterface: handle missing in uniffiFree")
+            }
+        }
+    )
+}
+
+private func uniffiCallbackInitStorageManagerInterface() {
+    uniffi_wallet_sdk_rs_fn_init_callback_vtable_storagemanagerinterface(&UniffiCallbackInterfaceStorageManagerInterface.vtable)
+}
+
+// FfiConverter protocol for callback interfaces
+fileprivate struct FfiConverterCallbackInterfaceStorageManagerInterface {
+    fileprivate static var handleMap = UniffiHandleMap<StorageManagerInterface>()
+}
+
+extension FfiConverterCallbackInterfaceStorageManagerInterface : FfiConverter {
+    typealias SwiftType = StorageManagerInterface
+    typealias FfiType = UInt64
+
+    public static func lift(_ handle: UInt64) throws -> SwiftType {
+        try handleMap.get(handle: handle)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        let handle: UInt64 = try readInt(&buf)
+        return try lift(handle)
+    }
+
+    public static func lower(_ v: SwiftType) -> UInt64 {
+        return handleMap.insert(obj: v)
+    }
+
+    public static func write(_ v: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(v))
+    }
+}
+
+fileprivate struct FfiConverterOptionTypeValue: FfiConverterRustBuffer {
+    typealias SwiftType = Value?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeValue.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeValue.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
 
 fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [String]
@@ -1422,6 +1704,40 @@ fileprivate struct FfiConverterDictionaryStringDictionaryStringSequenceString: F
  * Typealias from the type name used in the UDL file to the builtin type.  This
  * is needed because the UDL type name is used in function/method signatures.
  */
+public typealias Key = String
+public struct FfiConverterTypeKey: FfiConverter {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Key {
+        return try FfiConverterString.read(from: &buf)
+    }
+
+    public static func write(_ value: Key, into buf: inout [UInt8]) {
+        return FfiConverterString.write(value, into: &buf)
+    }
+
+    public static func lift(_ value: RustBuffer) throws -> Key {
+        return try FfiConverterString.lift(value)
+    }
+
+    public static func lower(_ value: Key) -> RustBuffer {
+        return FfiConverterString.lower(value)
+    }
+}
+
+
+public func FfiConverterTypeKey_lift(_ value: RustBuffer) throws -> Key {
+    return try FfiConverterTypeKey.lift(value)
+}
+
+public func FfiConverterTypeKey_lower(_ value: Key) -> RustBuffer {
+    return FfiConverterTypeKey.lower(value)
+}
+
+
+
+/**
+ * Typealias from the type name used in the UDL file to the builtin type.  This
+ * is needed because the UDL type name is used in function/method signatures.
+ */
 public typealias Uuid = String
 public struct FfiConverterTypeUuid: FfiConverter {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Uuid {
@@ -1448,6 +1764,40 @@ public func FfiConverterTypeUuid_lift(_ value: RustBuffer) throws -> Uuid {
 
 public func FfiConverterTypeUuid_lower(_ value: Uuid) -> RustBuffer {
     return FfiConverterTypeUuid.lower(value)
+}
+
+
+
+/**
+ * Typealias from the type name used in the UDL file to the builtin type.  This
+ * is needed because the UDL type name is used in function/method signatures.
+ */
+public typealias Value = String
+public struct FfiConverterTypeValue: FfiConverter {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Value {
+        return try FfiConverterString.read(from: &buf)
+    }
+
+    public static func write(_ value: Value, into buf: inout [UInt8]) {
+        return FfiConverterString.write(value, into: &buf)
+    }
+
+    public static func lift(_ value: RustBuffer) throws -> Value {
+        return try FfiConverterString.lift(value)
+    }
+
+    public static func lower(_ value: Value) -> RustBuffer {
+        return FfiConverterString.lower(value)
+    }
+}
+
+
+public func FfiConverterTypeValue_lift(_ value: RustBuffer) throws -> Value {
+    return try FfiConverterTypeValue.lift(value)
+}
+
+public func FfiConverterTypeValue_lower(_ value: Value) -> RustBuffer {
+    return FfiConverterTypeValue.lower(value)
 }
 
 public func handleRequest(state: SessionManagerEngaged, request: Data)throws  -> RequestData {
@@ -1525,7 +1875,17 @@ private var initializationResult: InitializationResult {
     if (uniffi_wallet_sdk_rs_checksum_constructor_mdoc_from_cbor() != 56494) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_wallet_sdk_rs_checksum_method_storagemanagerinterface_add() != 15426) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_wallet_sdk_rs_checksum_method_storagemanagerinterface_get() != 30659) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_wallet_sdk_rs_checksum_method_storagemanagerinterface_remove() != 14768) {
+        return InitializationResult.apiChecksumMismatch
+    }
 
+    uniffiCallbackInitStorageManagerInterface()
     return InitializationResult.ok
 }
 
