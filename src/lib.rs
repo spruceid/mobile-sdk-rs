@@ -1,6 +1,5 @@
 uniffi::setup_scaffolding!();
 
-pub mod either;
 pub mod storage_manager;
 
 use std::{
