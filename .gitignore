@@ -5,3 +5,4 @@ WalletSdkRs/Package.swift
 WalletSdkRs/RustFramework*
 .swiftpm
 jna-*.jar
+*~
