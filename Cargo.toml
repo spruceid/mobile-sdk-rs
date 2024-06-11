@@ -18,7 +18,7 @@ path = "uniffi-bindgen.rs"
 [dependencies]
 uniffi = { version = "0.27.1", features = ["cli"] }
 
-isomdl = { git = "https://github.com/spruceid/isomdl", rev = "b4d0019" }
+isomdl = { git = "https://github.com/spruceid/isomdl", rev = "1f4f762" }
 
 thiserror = "1.0.56"
 hex = "0.4.3"

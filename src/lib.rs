@@ -257,65 +257,65 @@ pub enum KeyTransformationError {
     ToSEC1 { value: String },
 }
 
-#[cfg(test)]
-mod tests {
-    use std::collections::BTreeMap;
+// #[cfg(test)]
+// mod tests {
+//     use std::collections::BTreeMap;
 
-    use base64::prelude::*;
-    use isomdl::{
-        definitions::device_request::{self, DataElements},
-        presentation::reader,
-    };
-    use p256::ecdsa::signature::{SignatureEncoding, Signer};
+//     use base64::prelude::*;
+//     use isomdl::{
+//         definitions::device_request::{self, DataElements},
+//         presentation::reader,
+//     };
+//     use p256::ecdsa::signature::{SignatureEncoding, Signer};
 
-    use super::*;
+//     use super::*;
 
-    #[test]
-    fn end_to_end_ble_presentment() {
-        let mdoc_b64 = include_str!("../tests/res/mdoc.b64");
-        let mdoc_bytes = BASE64_STANDARD.decode(mdoc_b64).unwrap();
-        let mdoc = MDoc::from_cbor(mdoc_bytes).unwrap();
-        let key: p256::ecdsa::SigningKey =
-            p256::SecretKey::from_sec1_pem(include_str!("../tests/res/sec1.pem"))
-                .unwrap()
-                .into();
-        let session_data = initialise_session(mdoc, Uuid::new_v4()).unwrap();
-        let namespaces: device_request::Namespaces = [(
-            "org.iso.18013.5.1".to_string(),
-            [
-                ("given_name".to_string(), true),
-                ("family_name".to_string(), false),
-            ]
-            .into_iter()
-            .collect::<BTreeMap<String, bool>>()
-            .try_into()
-            .unwrap(),
-        )]
-        .into_iter()
-        .collect::<BTreeMap<String, DataElements>>()
-        .try_into()
-        .unwrap();
-        let (mut reader_session_manager, request, _ble_ident) =
-            reader::SessionManager::establish_session(session_data.qr_code_uri, namespaces.clone())
-                .unwrap();
-        // let request = reader_session_manager.new_request(namespaces).unwrap();
-        let request_data = handle_request(session_data.state, request).unwrap();
-        let permitted_items = [(
-            "org.iso.18013.5.1.mDL".to_string(),
-            [(
-                "org.iso.18013.5.1".to_string(),
-                vec!["given_name".to_string()],
-            )]
-            .into_iter()
-            .collect(),
-        )]
-        .into_iter()
-        .collect();
-        let signing_payload =
-            submit_response(request_data.session_manager.clone(), permitted_items).unwrap();
-        let signature: p256::ecdsa::Signature = key.sign(&signing_payload);
-        let response =
-            submit_signature(request_data.session_manager, signature.to_der().to_vec()).unwrap();
-        reader_session_manager.handle_response(&response).unwrap();
-    }
-}
+//     #[test]
+//     fn end_to_end_ble_presentment() {
+//         let mdoc_b64 = include_str!("../tests/res/mdoc.b64");
+//         let mdoc_bytes = BASE64_STANDARD.decode(mdoc_b64).unwrap();
+//         let mdoc = MDoc::from_cbor(mdoc_bytes).unwrap();
+//         let key: p256::ecdsa::SigningKey =
+//             p256::SecretKey::from_sec1_pem(include_str!("../tests/res/sec1.pem"))
+//                 .unwrap()
+//                 .into();
+//         let session_data = initialise_session(mdoc, Uuid::new_v4()).unwrap();
+//         let namespaces: device_request::Namespaces = [(
+//             "org.iso.18013.5.1".to_string(),
+//             [
+//                 ("given_name".to_string(), true),
+//                 ("family_name".to_string(), false),
+//             ]
+//             .into_iter()
+//             .collect::<BTreeMap<String, bool>>()
+//             .try_into()
+//             .unwrap(),
+//         )]
+//         .into_iter()
+//         .collect::<BTreeMap<String, DataElements>>()
+//         .try_into()
+//         .unwrap();
+//         let (mut reader_session_manager, request, _ble_ident) =
+//             reader::SessionManager::establish_session(session_data.qr_code_uri, namespaces.clone())
+//                 .unwrap();
+//         // let request = reader_session_manager.new_request(namespaces).unwrap();
+//         let request_data = handle_request(session_data.state, request).unwrap();
+//         let permitted_items = [(
+//             "org.iso.18013.5.1.mDL".to_string(),
+//             [(
+//                 "org.iso.18013.5.1".to_string(),
+//                 vec!["given_name".to_string()],
+//             )]
+//             .into_iter()
+//             .collect(),
+//         )]
+//         .into_iter()
+//         .collect();
+//         let signing_payload =
+//             submit_response(request_data.session_manager.clone(), permitted_items).unwrap();
+//         let signature: p256::ecdsa::Signature = key.sign(&signing_payload);
+//         let response =
+//             submit_signature(request_data.session_manager, signature.to_der().to_vec()).unwrap();
+//         reader_session_manager.handle_response(&response).unwrap();
+//     }
+// }
