@@ -1,6 +1,7 @@
 uniffi::setup_scaffolding!();
 
 pub mod storage_manager;
+pub mod reader;
 
 use std::{
     collections::HashMap,

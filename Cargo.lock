@@ -1992,10 +1992,12 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 name = "wallet-sdk-rs"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "base64 0.22.0",
  "hex",
  "isomdl",
  "p256",
+ "pem-rfc7468 0.7.0",
  "serde_cbor",
  "serde_json",
  "thiserror",

@@ -16,6 +16,8 @@ name = "uniffi-bindgen"
 path = "uniffi-bindgen.rs"
 
 [dependencies]
+anyhow = "1.0.66"
+pem-rfc7468 = "0.7.0"
 uniffi = { version = "0.27.1", features = ["cli"] }
 
 isomdl = { git = "https://github.com/spruceid/isomdl", rev = "1f4f762" }
