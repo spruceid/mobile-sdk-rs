@@ -1,5 +1,6 @@
 uniffi::setup_scaffolding!();
 
+pub mod mdl_reader;
 pub mod storage_manager;
 
 use std::{
@@ -265,6 +266,7 @@ mod tests {
     use isomdl::{
         definitions::{
             device_request::{self, DataElements},
+            validated_response,
             x509::trust_anchor::TrustAnchorRegistry,
         },
         presentation::reader,
@@ -274,7 +276,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn end_to_end_ble_presentment() {
+    fn end_to_end_ble_presentment_holder() {
         let mdoc_b64 = include_str!("../tests/res/mdoc.b64");
         let mdoc_bytes = BASE64_STANDARD.decode(mdoc_b64).unwrap();
         let mdoc = MDoc::from_cbor(mdoc_bytes).unwrap();
@@ -329,10 +331,70 @@ mod tests {
         let response =
             submit_signature(request_data.session_manager, signature.to_der().to_vec()).unwrap();
         // Root cert is expired
-        let mut errors = reader_session_manager.handle_response(&response).errors;
+        let res = reader_session_manager.handle_response(&response);
+        let mut errors = res.errors;
         let (k, v) = errors.pop_first().unwrap();
         assert_eq!(k, "certificate_errors");
         assert_eq!(v.as_array().unwrap().len(), 1);
         assert_eq!(errors, BTreeMap::default());
+        // Not using assert_eq! because Status doesn't implement Debug
+        if let validated_response::Status::Invalid = res.issuer_authentication {
+        } else {
+            panic!("issuer_authentication should be invalid");
+        }
+    }
+
+    #[test]
+    fn end_to_end_ble_presentment_holder_reader() {
+        let mdoc_b64 = include_str!("../tests/res/mdoc.b64");
+        let mdoc_bytes = BASE64_STANDARD.decode(mdoc_b64).unwrap();
+        let mdoc = MDoc::from_cbor(mdoc_bytes).unwrap();
+        let key: p256::ecdsa::SigningKey =
+            p256::SecretKey::from_sec1_pem(include_str!("../tests/res/sec1.pem"))
+                .unwrap()
+                .into();
+        let session_data = initialise_session(mdoc, Uuid::new_v4()).unwrap();
+        let namespaces = [(
+            "org.iso.18013.5.1".to_string(),
+            [
+                ("given_name".to_string(), true),
+                ("family_name".to_string(), false),
+            ]
+            .into_iter()
+            .collect(),
+        )]
+        .into_iter()
+        .collect();
+        let reader_session_data = mdl_reader::establish_session(
+            session_data.qr_code_uri,
+            namespaces,
+            Some(vec![
+                include_str!("../tests/res/issuer-cert.pem").to_string()
+            ]),
+        )
+        .unwrap();
+        // let request = reader_session_manager.new_request(namespaces).unwrap();
+        let request_data = handle_request(session_data.state, reader_session_data.request).unwrap();
+        let permitted_items = [(
+            "org.iso.18013.5.1.mDL".to_string(),
+            [(
+                "org.iso.18013.5.1".to_string(),
+                vec!["given_name".to_string()],
+            )]
+            .into_iter()
+            .collect(),
+        )]
+        .into_iter()
+        .collect();
+        let signing_payload =
+            submit_response(request_data.session_manager.clone(), permitted_items).unwrap();
+        let signature: p256::ecdsa::Signature = key.sign(&signing_payload);
+        let response =
+            submit_signature(request_data.session_manager, signature.to_der().to_vec()).unwrap();
+        // Root cert is expired
+        assert_eq!(
+            mdl_reader::handle_response(reader_session_data.state, response).unwrap_err(),
+            mdl_reader::MDLReaderResponseError::InvalidIssuerAuthentication
+        );
     }
 }

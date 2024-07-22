@@ -458,6 +458,99 @@ fileprivate struct FfiConverterData: FfiConverterRustBuffer {
 
 
 
+public protocol MdlSessionManagerProtocol : AnyObject {
+    
+}
+
+open class MdlSessionManager:
+    MdlSessionManagerProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_wallet_sdk_rs_fn_clone_mdlsessionmanager(self.pointer, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_wallet_sdk_rs_fn_free_mdlsessionmanager(pointer, $0) }
+    }
+
+    
+
+    
+
+}
+
+public struct FfiConverterTypeMDLSessionManager: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = MdlSessionManager
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> MdlSessionManager {
+        return MdlSessionManager(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: MdlSessionManager) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdlSessionManager {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: MdlSessionManager, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+public func FfiConverterTypeMDLSessionManager_lift(_ pointer: UnsafeMutableRawPointer) throws -> MdlSessionManager {
+    return try FfiConverterTypeMDLSessionManager.lift(pointer)
+}
+
+public func FfiConverterTypeMDLSessionManager_lower(_ value: MdlSessionManager) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeMDLSessionManager.lower(value)
+}
+
+
+
+
 public protocol MDocProtocol : AnyObject {
     
     func id()  -> Uuid
@@ -809,6 +902,131 @@ public func FfiConverterTypeItemsRequest_lower(_ value: ItemsRequest) -> RustBuf
 }
 
 
+public struct MdlReaderRequest {
+    public var state: MdlSessionManager
+    public var request: Data
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(state: MdlSessionManager, request: Data) {
+        self.state = state
+        self.request = request
+    }
+}
+
+
+
+public struct FfiConverterTypeMDLReaderRequest: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdlReaderRequest {
+        return
+            try MdlReaderRequest(
+                state: FfiConverterTypeMDLSessionManager.read(from: &buf), 
+                request: FfiConverterData.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: MdlReaderRequest, into buf: inout [UInt8]) {
+        FfiConverterTypeMDLSessionManager.write(value.state, into: &buf)
+        FfiConverterData.write(value.request, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeMDLReaderRequest_lift(_ buf: RustBuffer) throws -> MdlReaderRequest {
+    return try FfiConverterTypeMDLReaderRequest.lift(buf)
+}
+
+public func FfiConverterTypeMDLReaderRequest_lower(_ value: MdlReaderRequest) -> RustBuffer {
+    return FfiConverterTypeMDLReaderRequest.lower(value)
+}
+
+
+public struct MdlReaderResponseData {
+    public var state: MdlSessionManager
+    public var verifiedResponse: [String: [String: [String]]]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(state: MdlSessionManager, verifiedResponse: [String: [String: [String]]]) {
+        self.state = state
+        self.verifiedResponse = verifiedResponse
+    }
+}
+
+
+
+public struct FfiConverterTypeMDLReaderResponseData: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdlReaderResponseData {
+        return
+            try MdlReaderResponseData(
+                state: FfiConverterTypeMDLSessionManager.read(from: &buf), 
+                verifiedResponse: FfiConverterDictionaryStringDictionaryStringSequenceString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: MdlReaderResponseData, into buf: inout [UInt8]) {
+        FfiConverterTypeMDLSessionManager.write(value.state, into: &buf)
+        FfiConverterDictionaryStringDictionaryStringSequenceString.write(value.verifiedResponse, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeMDLReaderResponseData_lift(_ buf: RustBuffer) throws -> MdlReaderResponseData {
+    return try FfiConverterTypeMDLReaderResponseData.lift(buf)
+}
+
+public func FfiConverterTypeMDLReaderResponseData_lower(_ value: MdlReaderResponseData) -> RustBuffer {
+    return FfiConverterTypeMDLReaderResponseData.lower(value)
+}
+
+
+public struct MdlReaderSessionData {
+    public var state: MdlSessionManager
+    public var uuid: Uuid
+    public var request: Data
+    public var bleIdent: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(state: MdlSessionManager, uuid: Uuid, request: Data, bleIdent: String) {
+        self.state = state
+        self.uuid = uuid
+        self.request = request
+        self.bleIdent = bleIdent
+    }
+}
+
+
+
+public struct FfiConverterTypeMDLReaderSessionData: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdlReaderSessionData {
+        return
+            try MdlReaderSessionData(
+                state: FfiConverterTypeMDLSessionManager.read(from: &buf), 
+                uuid: FfiConverterTypeUuid.read(from: &buf), 
+                request: FfiConverterData.read(from: &buf), 
+                bleIdent: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: MdlReaderSessionData, into buf: inout [UInt8]) {
+        FfiConverterTypeMDLSessionManager.write(value.state, into: &buf)
+        FfiConverterTypeUuid.write(value.uuid, into: &buf)
+        FfiConverterData.write(value.request, into: &buf)
+        FfiConverterString.write(value.bleIdent, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeMDLReaderSessionData_lift(_ buf: RustBuffer) throws -> MdlReaderSessionData {
+    return try FfiConverterTypeMDLReaderSessionData.lift(buf)
+}
+
+public func FfiConverterTypeMDLReaderSessionData_lower(_ value: MdlReaderSessionData) -> RustBuffer {
+    return FfiConverterTypeMDLReaderSessionData.lower(value)
+}
+
+
 public struct RequestData {
     public var sessionManager: SessionManager
     public var itemsRequests: [ItemsRequest]
@@ -970,6 +1188,174 @@ public func FfiConverterTypeKeyTransformationError_lower(_ value: KeyTransformat
 extension KeyTransformationError: Equatable, Hashable {}
 
 
+
+
+public enum MdlReaderRequestBuildError {
+
+    
+    
+    case Generic(value: String
+    )
+}
+
+
+public struct FfiConverterTypeMDLReaderRequestBuildError: FfiConverterRustBuffer {
+    typealias SwiftType = MdlReaderRequestBuildError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdlReaderRequestBuildError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .Generic(
+            value: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: MdlReaderRequestBuildError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case let .Generic(value):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(value, into: &buf)
+            
+        }
+    }
+}
+
+
+extension MdlReaderRequestBuildError: Equatable, Hashable {}
+
+extension MdlReaderRequestBuildError: Error { }
+
+
+public enum MdlReaderResponseError {
+
+    
+    
+    case InvalidDecryption
+    case InvalidParsing
+    case InvalidIssuerAuthentication
+    case InvalidDeviceAuthentication
+    case Generic(value: String
+    )
+}
+
+
+public struct FfiConverterTypeMDLReaderResponseError: FfiConverterRustBuffer {
+    typealias SwiftType = MdlReaderResponseError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdlReaderResponseError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .InvalidDecryption
+        case 2: return .InvalidParsing
+        case 3: return .InvalidIssuerAuthentication
+        case 4: return .InvalidDeviceAuthentication
+        case 5: return .Generic(
+            value: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: MdlReaderResponseError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case .InvalidDecryption:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .InvalidParsing:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .InvalidIssuerAuthentication:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .InvalidDeviceAuthentication:
+            writeInt(&buf, Int32(4))
+        
+        
+        case let .Generic(value):
+            writeInt(&buf, Int32(5))
+            FfiConverterString.write(value, into: &buf)
+            
+        }
+    }
+}
+
+
+extension MdlReaderResponseError: Equatable, Hashable {}
+
+extension MdlReaderResponseError: Error { }
+
+
+public enum MdlReaderSessionError {
+
+    
+    
+    case Generic(value: String
+    )
+}
+
+
+public struct FfiConverterTypeMDLReaderSessionError: FfiConverterRustBuffer {
+    typealias SwiftType = MdlReaderSessionError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdlReaderSessionError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .Generic(
+            value: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: MdlReaderSessionError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case let .Generic(value):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(value, into: &buf)
+            
+        }
+    }
+}
+
+
+extension MdlReaderSessionError: Equatable, Hashable {}
+
+extension MdlReaderSessionError: Error { }
 
 
 public enum MDocInitError {
@@ -1542,6 +1928,27 @@ extension FfiConverterCallbackInterfaceStorageManagerInterface : FfiConverter {
     }
 }
 
+fileprivate struct FfiConverterOptionSequenceString: FfiConverterRustBuffer {
+    typealias SwiftType = [String]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceString.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceString.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
 fileprivate struct FfiConverterOptionTypeValue: FfiConverterRustBuffer {
     typealias SwiftType = Value?
 
@@ -1800,6 +2207,15 @@ public func FfiConverterTypeValue_lower(_ value: Value) -> RustBuffer {
     return FfiConverterTypeValue.lower(value)
 }
 
+public func establishSession(uri: String, requestedItems: [String: [String: Bool]], trustAnchorRegistry: [String]?)throws  -> MdlReaderSessionData {
+    return try  FfiConverterTypeMDLReaderSessionData.lift(try rustCallWithError(FfiConverterTypeMDLReaderSessionError.lift) {
+    uniffi_wallet_sdk_rs_fn_func_establish_session(
+        FfiConverterString.lower(uri),
+        FfiConverterDictionaryStringDictionaryStringBool.lower(requestedItems),
+        FfiConverterOptionSequenceString.lower(trustAnchorRegistry),$0
+    )
+})
+}
 public func handleRequest(state: SessionManagerEngaged, request: Data)throws  -> RequestData {
     return try  FfiConverterTypeRequestData.lift(try rustCallWithError(FfiConverterTypeRequestError.lift) {
     uniffi_wallet_sdk_rs_fn_func_handle_request(
@@ -1808,11 +2224,27 @@ public func handleRequest(state: SessionManagerEngaged, request: Data)throws  ->
     )
 })
 }
+public func handleResponse(state: MdlSessionManager, response: Data)throws  -> MdlReaderResponseData {
+    return try  FfiConverterTypeMDLReaderResponseData.lift(try rustCallWithError(FfiConverterTypeMDLReaderResponseError.lift) {
+    uniffi_wallet_sdk_rs_fn_func_handle_response(
+        FfiConverterTypeMDLSessionManager.lower(state),
+        FfiConverterData.lower(response),$0
+    )
+})
+}
 public func initialiseSession(document: MDoc, uuid: Uuid)throws  -> SessionData {
     return try  FfiConverterTypeSessionData.lift(try rustCallWithError(FfiConverterTypeSessionError.lift) {
     uniffi_wallet_sdk_rs_fn_func_initialise_session(
         FfiConverterTypeMDoc.lower(document),
         FfiConverterTypeUuid.lower(uuid),$0
+    )
+})
+}
+public func newRequest(state: MdlSessionManager, requestedItems: [String: [String: Bool]])throws  -> MdlReaderRequest {
+    return try  FfiConverterTypeMDLReaderRequest.lift(try rustCallWithError(FfiConverterTypeMDLReaderRequestBuildError.lift) {
+    uniffi_wallet_sdk_rs_fn_func_new_request(
+        FfiConverterTypeMDLSessionManager.lower(state),
+        FfiConverterDictionaryStringDictionaryStringBool.lower(requestedItems),$0
     )
 })
 }
@@ -1854,10 +2286,19 @@ private var initializationResult: InitializationResult {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
+    if (uniffi_wallet_sdk_rs_checksum_func_establish_session() != 37251) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_wallet_sdk_rs_checksum_func_handle_request() != 47905) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_wallet_sdk_rs_checksum_func_handle_response() != 14089) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_wallet_sdk_rs_checksum_func_initialise_session() != 18213) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_wallet_sdk_rs_checksum_func_new_request() != 20896) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_wallet_sdk_rs_checksum_func_submit_response() != 17438) {
