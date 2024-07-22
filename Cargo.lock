@@ -6232,6 +6232,7 @@ name = "w3c-vc-barcodes"
 version = "0.1.0"
 source = "git+https://github.com/spruceid/w3c-vc-barcodes?rev=372ff39#372ff392c5e4d309bb47d1976b7acff8c80374a8"
 dependencies = [
+<<<<<<< HEAD
  "cbor-ld",
  "csv",
  "iref",
@@ -6241,6 +6242,15 @@ dependencies = [
  "sha2 0.10.8",
  "ssi",
  "static-iref",
+=======
+ "base64 0.22.0",
+ "hex",
+ "isomdl",
+ "p256",
+ "pem-rfc7468 0.7.0",
+ "serde_cbor",
+ "serde_json",
+>>>>>>> 0885014 (Add mDL reader functions)
  "thiserror",
 ]
 
