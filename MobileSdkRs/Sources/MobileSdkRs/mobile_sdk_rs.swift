@@ -384,6 +384,19 @@ fileprivate class UniffiHandleMap<T> {
 // Public interface members begin here.
 
 
+fileprivate struct FfiConverterInt64: FfiConverterPrimitive {
+    typealias FfiType = Int64
+    typealias SwiftType = Int64
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Int64 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: Int64, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
 fileprivate struct FfiConverterBool : FfiConverter {
     typealias FfiType = Int8
     typealias SwiftType = Bool
@@ -946,11 +959,11 @@ public func FfiConverterTypeMDLReaderRequest_lower(_ value: MdlReaderRequest) ->
 
 public struct MdlReaderResponseData {
     public var state: MdlSessionManager
-    public var verifiedResponse: [String: [String: [String]]]
+    public var verifiedResponse: [String: [String: [String: MDocItem]]]
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(state: MdlSessionManager, verifiedResponse: [String: [String: [String]]]) {
+    public init(state: MdlSessionManager, verifiedResponse: [String: [String: [String: MDocItem]]]) {
         self.state = state
         self.verifiedResponse = verifiedResponse
     }
@@ -963,13 +976,13 @@ public struct FfiConverterTypeMDLReaderResponseData: FfiConverterRustBuffer {
         return
             try MdlReaderResponseData(
                 state: FfiConverterTypeMDLSessionManager.read(from: &buf), 
-                verifiedResponse: FfiConverterDictionaryStringDictionaryStringSequenceString.read(from: &buf)
+                verifiedResponse: FfiConverterDictionaryStringDictionaryStringDictionaryStringTypeMDocItem.read(from: &buf)
         )
     }
 
     public static func write(_ value: MdlReaderResponseData, into buf: inout [UInt8]) {
         FfiConverterTypeMDLSessionManager.write(value.state, into: &buf)
-        FfiConverterDictionaryStringDictionaryStringSequenceString.write(value.verifiedResponse, into: &buf)
+        FfiConverterDictionaryStringDictionaryStringDictionaryStringTypeMDocItem.write(value.verifiedResponse, into: &buf)
     }
 }
 
@@ -1412,6 +1425,97 @@ extension MDocInitError: Foundation.LocalizedError {
         String(reflecting: self)
     }
 }
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
+public enum MDocItem {
+    
+    case text(String
+    )
+    case bool(Bool
+    )
+    case integer(Int64
+    )
+    case map([String: MDocItem]
+    )
+    case array([MDocItem]
+    )
+}
+
+
+public struct FfiConverterTypeMDocItem: FfiConverterRustBuffer {
+    typealias SwiftType = MDocItem
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MDocItem {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .text(try FfiConverterString.read(from: &buf)
+        )
+        
+        case 2: return .bool(try FfiConverterBool.read(from: &buf)
+        )
+        
+        case 3: return .integer(try FfiConverterInt64.read(from: &buf)
+        )
+        
+        case 4: return .map(try FfiConverterDictionaryStringTypeMDocItem.read(from: &buf)
+        )
+        
+        case 5: return .array(try FfiConverterSequenceTypeMDocItem.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: MDocItem, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .text(v1):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(v1, into: &buf)
+            
+        
+        case let .bool(v1):
+            writeInt(&buf, Int32(2))
+            FfiConverterBool.write(v1, into: &buf)
+            
+        
+        case let .integer(v1):
+            writeInt(&buf, Int32(3))
+            FfiConverterInt64.write(v1, into: &buf)
+            
+        
+        case let .map(v1):
+            writeInt(&buf, Int32(4))
+            FfiConverterDictionaryStringTypeMDocItem.write(v1, into: &buf)
+            
+        
+        case let .array(v1):
+            writeInt(&buf, Int32(5))
+            FfiConverterSequenceTypeMDocItem.write(v1, into: &buf)
+            
+        }
+    }
+}
+
+
+public func FfiConverterTypeMDocItem_lift(_ buf: RustBuffer) throws -> MDocItem {
+    return try FfiConverterTypeMDocItem.lift(buf)
+}
+
+public func FfiConverterTypeMDocItem_lower(_ value: MDocItem) -> RustBuffer {
+    return FfiConverterTypeMDocItem.lower(value)
+}
+
+
+
+extension MDocItem: Equatable, Hashable {}
+
+
 
 
 public enum RequestError {
@@ -2368,6 +2472,7 @@ fileprivate struct FfiConverterSequenceTypeItemsRequest: FfiConverterRustBuffer 
     }
 }
 
+<<<<<<< HEAD:MobileSdkRs/Sources/MobileSdkRs/mobile_sdk_rs.swift
 fileprivate struct FfiConverterSequenceTypeKey: FfiConverterRustBuffer {
     typealias SwiftType = [Key]
 
@@ -2385,6 +2490,25 @@ fileprivate struct FfiConverterSequenceTypeKey: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeKey.read(from: &buf))
+=======
+fileprivate struct FfiConverterSequenceTypeMDocItem: FfiConverterRustBuffer {
+    typealias SwiftType = [MDocItem]
+
+    public static func write(_ value: [MDocItem], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeMDocItem.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [MDocItem] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [MDocItem]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeMDocItem.read(from: &buf))
+>>>>>>> 90981a7 (Fix returned mdoc data):WalletSdkRs/Sources/WalletSdkRs/wallet_sdk_rs.swift
         }
         return seq
     }
@@ -2407,6 +2531,29 @@ fileprivate struct FfiConverterDictionaryStringBool: FfiConverterRustBuffer {
         for _ in 0..<len {
             let key = try FfiConverterString.read(from: &buf)
             let value = try FfiConverterBool.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
+    }
+}
+
+fileprivate struct FfiConverterDictionaryStringTypeMDocItem: FfiConverterRustBuffer {
+    public static func write(_ value: [String: MDocItem], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterString.write(key, into: &buf)
+            FfiConverterTypeMDocItem.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String: MDocItem] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [String: MDocItem]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0..<len {
+            let key = try FfiConverterString.read(from: &buf)
+            let value = try FfiConverterTypeMDocItem.read(from: &buf)
             dict[key] = value
         }
         return dict
@@ -2459,6 +2606,29 @@ fileprivate struct FfiConverterDictionaryStringDictionaryStringBool: FfiConverte
     }
 }
 
+fileprivate struct FfiConverterDictionaryStringDictionaryStringTypeMDocItem: FfiConverterRustBuffer {
+    public static func write(_ value: [String: [String: MDocItem]], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterString.write(key, into: &buf)
+            FfiConverterDictionaryStringTypeMDocItem.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String: [String: MDocItem]] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [String: [String: MDocItem]]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0..<len {
+            let key = try FfiConverterString.read(from: &buf)
+            let value = try FfiConverterDictionaryStringTypeMDocItem.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
+    }
+}
+
 fileprivate struct FfiConverterDictionaryStringDictionaryStringSequenceString: FfiConverterRustBuffer {
     public static func write(_ value: [String: [String: [String]]], into buf: inout [UInt8]) {
         let len = Int32(value.count)
@@ -2476,6 +2646,29 @@ fileprivate struct FfiConverterDictionaryStringDictionaryStringSequenceString: F
         for _ in 0..<len {
             let key = try FfiConverterString.read(from: &buf)
             let value = try FfiConverterDictionaryStringSequenceString.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
+    }
+}
+
+fileprivate struct FfiConverterDictionaryStringDictionaryStringDictionaryStringTypeMDocItem: FfiConverterRustBuffer {
+    public static func write(_ value: [String: [String: [String: MDocItem]]], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterString.write(key, into: &buf)
+            FfiConverterDictionaryStringDictionaryStringTypeMDocItem.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String: [String: [String: MDocItem]]] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [String: [String: [String: MDocItem]]]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0..<len {
+            let key = try FfiConverterString.read(from: &buf)
+            let value = try FfiConverterDictionaryStringDictionaryStringTypeMDocItem.read(from: &buf)
             dict[key] = value
         }
         return dict
