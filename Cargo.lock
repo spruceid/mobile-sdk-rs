@@ -1996,6 +1996,7 @@ dependencies = [
  "hex",
  "isomdl",
  "p256",
+ "pem-rfc7468 0.7.0",
  "serde_cbor",
  "serde_json",
  "thiserror",
