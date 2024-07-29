@@ -97,6 +97,7 @@ pub fn establish_session(
                 value: "the device did not transmit a central client uuid".to_string(),
             })?;
 
+    // TODO this must be wrong -- it's encoded as a hex string, but then advertised as raw bytes
     let mut ble_ident = hex::encode(ble_ident);
     ble_ident.insert_str(0, "0x");
 
