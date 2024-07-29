@@ -189,10 +189,45 @@ pub enum MDLReaderResponseError {
     Generic { value: String },
 }
 
+#[derive(uniffi::Enum, Debug)]
+pub enum MDocItem {
+    Text(String),
+    Bool(bool),
+    Integer(i64),
+    // Bytes(Vec<u8>), // already converted in string
+    Map(HashMap<String, MDocItem>),
+    Array(Vec<MDocItem>),
+    // Image(Vec<u8>) maybe?
+}
+
+impl From<serde_json::Value> for MDocItem {
+    fn from(value: serde_json::Value) -> Self {
+        match value {
+            serde_json::Value::Null => unreachable!("No null allowed in namespaces"),
+            serde_json::Value::Bool(b) => Self::Bool(b),
+            serde_json::Value::Number(n) => {
+                if let Some(i) = n.as_i64() {
+                    Self::Integer(i)
+                } else {
+                    unreachable!("Only integers allowed in namespaces")
+                }
+            }
+            serde_json::Value::String(s) => Self::Text(s),
+            serde_json::Value::Array(a) => {
+                Self::Array(a.iter().map(|o| Into::<Self>::into(o.clone())).collect())
+            }
+            serde_json::Value::Object(m) => Self::Map(
+                m.iter()
+                    .map(|(k, v)| (k.clone(), Into::<Self>::into(v.clone())))
+                    .collect(),
+            ),
+        }
+    }
+}
 #[derive(uniffi::Record, Debug)]
 pub struct MDLReaderResponseData {
     state: Arc<MDLSessionManager>,
-    verified_response: HashMap<String, HashMap<String, Vec<String>>>,
+    verified_response: HashMap<String, HashMap<String, HashMap<String, MDocItem>>>,
 }
 
 #[uniffi::export]
@@ -231,22 +266,11 @@ pub fn handle_response(
                 let namespaces: Result<_, _> = namespaces
                     .into_iter()
                     .map(|(namespace, items)| {
-                        if let Some(items) = items.as_array() {
-                            let items: Result<_, _> = items
+                        if let Some(items) = items.as_object() {
+                            let items = items
                                 .iter()
-                                .map(|i| {
-                                    if let Some(i) = i.as_str() {
-                                        Ok(i.to_string())
-                                    } else {
-                                        Err(MDLReaderResponseError::Generic {
-                                            value: "Item not string".to_string(),
-                                        })
-                                    }
-                                })
+                                .map(|(item, value)| (item.clone(), value.clone().into()))
                                 .collect();
-                            let items = items.map_err(|e| MDLReaderResponseError::Generic {
-                                value: format!("Item no string: {e:?}"),
-                            })?;
                             Ok((namespace.to_string(), items))
                         } else {
                             Err(MDLReaderResponseError::Generic {
