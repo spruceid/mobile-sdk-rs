@@ -7,8 +7,8 @@ import Foundation
 // Depending on the consumer's build setup, the low-level FFI code
 // might be in a separate module, or it might be compiled inline into
 // this module. This is a bit of light hackery to work with both.
-#if canImport(wallet_sdk_rsFFI)
-import wallet_sdk_rsFFI
+#if canImport(mobile_sdk_rsFFI)
+import mobile_sdk_rsFFI
 #endif
 
 fileprivate extension RustBuffer {
@@ -25,13 +25,13 @@ fileprivate extension RustBuffer {
     }
 
     static func from(_ ptr: UnsafeBufferPointer<UInt8>) -> RustBuffer {
-        try! rustCall { ffi_wallet_sdk_rs_rustbuffer_from_bytes(ForeignBytes(bufferPointer: ptr), $0) }
+        try! rustCall { ffi_mobile_sdk_rs_rustbuffer_from_bytes(ForeignBytes(bufferPointer: ptr), $0) }
     }
 
     // Frees the buffer in place.
     // The buffer must not be used after this is called.
     func deallocate() {
-        try! rustCall { ffi_wallet_sdk_rs_rustbuffer_free(self, $0) }
+        try! rustCall { ffi_mobile_sdk_rs_rustbuffer_free(self, $0) }
     }
 }
 
@@ -490,7 +490,7 @@ open class MDoc:
     }
 
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_wallet_sdk_rs_fn_clone_mdoc(self.pointer, $0) }
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_mdoc(self.pointer, $0) }
     }
     // No primary constructor declared for this class.
 
@@ -499,13 +499,13 @@ open class MDoc:
             return
         }
 
-        try! rustCall { uniffi_wallet_sdk_rs_fn_free_mdoc(pointer, $0) }
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_mdoc(pointer, $0) }
     }
 
     
 public static func fromCbor(value: Data)throws  -> MDoc {
     return try  FfiConverterTypeMDoc.lift(try rustCallWithError(FfiConverterTypeMDocInitError.lift) {
-    uniffi_wallet_sdk_rs_fn_constructor_mdoc_from_cbor(
+    uniffi_mobile_sdk_rs_fn_constructor_mdoc_from_cbor(
         FfiConverterData.lower(value),$0
     )
 })
@@ -515,7 +515,7 @@ public static func fromCbor(value: Data)throws  -> MDoc {
     
 open func id() -> Uuid {
     return try!  FfiConverterTypeUuid.lift(try! rustCall() {
-    uniffi_wallet_sdk_rs_fn_method_mdoc_id(self.uniffiClonePointer(),$0
+    uniffi_mobile_sdk_rs_fn_method_mdoc_id(self.uniffiClonePointer(),$0
     )
 })
 }
@@ -598,7 +598,7 @@ open class SessionManager:
     }
 
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_wallet_sdk_rs_fn_clone_sessionmanager(self.pointer, $0) }
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_sessionmanager(self.pointer, $0) }
     }
     // No primary constructor declared for this class.
 
@@ -607,7 +607,7 @@ open class SessionManager:
             return
         }
 
-        try! rustCall { uniffi_wallet_sdk_rs_fn_free_sessionmanager(pointer, $0) }
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_sessionmanager(pointer, $0) }
     }
 
     
@@ -691,7 +691,7 @@ open class SessionManagerEngaged:
     }
 
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_wallet_sdk_rs_fn_clone_sessionmanagerengaged(self.pointer, $0) }
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_sessionmanagerengaged(self.pointer, $0) }
     }
     // No primary constructor declared for this class.
 
@@ -700,7 +700,7 @@ open class SessionManagerEngaged:
             return
         }
 
-        try! rustCall { uniffi_wallet_sdk_rs_fn_free_sessionmanagerengaged(pointer, $0) }
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_sessionmanagerengaged(pointer, $0) }
     }
 
     
@@ -1512,7 +1512,7 @@ fileprivate struct UniffiCallbackInterfaceStorageManagerInterface {
 }
 
 private func uniffiCallbackInitStorageManagerInterface() {
-    uniffi_wallet_sdk_rs_fn_init_callback_vtable_storagemanagerinterface(&UniffiCallbackInterfaceStorageManagerInterface.vtable)
+    uniffi_mobile_sdk_rs_fn_init_callback_vtable_storagemanagerinterface(&UniffiCallbackInterfaceStorageManagerInterface.vtable)
 }
 
 // FfiConverter protocol for callback interfaces
@@ -1802,7 +1802,7 @@ public func FfiConverterTypeValue_lower(_ value: Value) -> RustBuffer {
 
 public func handleRequest(state: SessionManagerEngaged, request: Data)throws  -> RequestData {
     return try  FfiConverterTypeRequestData.lift(try rustCallWithError(FfiConverterTypeRequestError.lift) {
-    uniffi_wallet_sdk_rs_fn_func_handle_request(
+    uniffi_mobile_sdk_rs_fn_func_handle_request(
         FfiConverterTypeSessionManagerEngaged.lower(state),
         FfiConverterData.lower(request),$0
     )
@@ -1810,7 +1810,7 @@ public func handleRequest(state: SessionManagerEngaged, request: Data)throws  ->
 }
 public func initialiseSession(document: MDoc, uuid: Uuid)throws  -> SessionData {
     return try  FfiConverterTypeSessionData.lift(try rustCallWithError(FfiConverterTypeSessionError.lift) {
-    uniffi_wallet_sdk_rs_fn_func_initialise_session(
+    uniffi_mobile_sdk_rs_fn_func_initialise_session(
         FfiConverterTypeMDoc.lower(document),
         FfiConverterTypeUuid.lower(uuid),$0
     )
@@ -1818,7 +1818,7 @@ public func initialiseSession(document: MDoc, uuid: Uuid)throws  -> SessionData 
 }
 public func submitResponse(sessionManager: SessionManager, permittedItems: [String: [String: [String]]])throws  -> Data {
     return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeResponseError.lift) {
-    uniffi_wallet_sdk_rs_fn_func_submit_response(
+    uniffi_mobile_sdk_rs_fn_func_submit_response(
         FfiConverterTypeSessionManager.lower(sessionManager),
         FfiConverterDictionaryStringDictionaryStringSequenceString.lower(permittedItems),$0
     )
@@ -1826,7 +1826,7 @@ public func submitResponse(sessionManager: SessionManager, permittedItems: [Stri
 }
 public func submitSignature(sessionManager: SessionManager, derSignature: Data)throws  -> Data {
     return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeSignatureError.lift) {
-    uniffi_wallet_sdk_rs_fn_func_submit_signature(
+    uniffi_mobile_sdk_rs_fn_func_submit_signature(
         FfiConverterTypeSessionManager.lower(sessionManager),
         FfiConverterData.lower(derSignature),$0
     )
@@ -1834,7 +1834,7 @@ public func submitSignature(sessionManager: SessionManager, derSignature: Data)t
 }
 public func terminateSession()throws  -> Data {
     return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeTerminationError.lift) {
-    uniffi_wallet_sdk_rs_fn_func_terminate_session($0
+    uniffi_mobile_sdk_rs_fn_func_terminate_session($0
     )
 })
 }
@@ -1850,38 +1850,38 @@ private var initializationResult: InitializationResult {
     // Get the bindings contract version from our ComponentInterface
     let bindings_contract_version = 26
     // Get the scaffolding contract version by calling the into the dylib
-    let scaffolding_contract_version = ffi_wallet_sdk_rs_uniffi_contract_version()
+    let scaffolding_contract_version = ffi_mobile_sdk_rs_uniffi_contract_version()
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_func_handle_request() != 47905) {
+    if (uniffi_mobile_sdk_rs_checksum_func_handle_request() != 26058) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_func_initialise_session() != 18213) {
+    if (uniffi_mobile_sdk_rs_checksum_func_initialise_session() != 57560) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_func_submit_response() != 17438) {
+    if (uniffi_mobile_sdk_rs_checksum_func_submit_response() != 50547) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_func_submit_signature() != 63797) {
+    if (uniffi_mobile_sdk_rs_checksum_func_submit_signature() != 17097) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_func_terminate_session() != 5668) {
+    if (uniffi_mobile_sdk_rs_checksum_func_terminate_session() != 25700) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_method_mdoc_id() != 56580) {
+    if (uniffi_mobile_sdk_rs_checksum_method_mdoc_id() != 4321) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_constructor_mdoc_from_cbor() != 56494) {
+    if (uniffi_mobile_sdk_rs_checksum_constructor_mdoc_from_cbor() != 43984) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_method_storagemanagerinterface_add() != 15426) {
+    if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_add() != 57440) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_method_storagemanagerinterface_get() != 30659) {
+    if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_get() != 12195) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_method_storagemanagerinterface_remove() != 14768) {
+    if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_remove() != 54584) {
         return InitializationResult.apiChecksumMismatch
     }
 

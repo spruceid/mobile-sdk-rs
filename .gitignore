@@ -1,8 +1,8 @@
 /target
 /generated
 .build
-WalletSdkRs/Package.swift
-WalletSdkRs/RustFramework*
+MobileSdkRs/Package.swift
+MobileSdkRs/RustFramework*
 .swiftpm
 jna-*.jar
 *~

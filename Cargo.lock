@@ -1007,6 +1007,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
 
 [[package]]
+name = "mobile-sdk-rs"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.0",
+ "hex",
+ "isomdl",
+ "p256",
+ "serde_cbor",
+ "serde_json",
+ "thiserror",
+ "uniffi",
+ "uuid",
+]
+
+[[package]]
 name = "multibase"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1987,21 +2002,6 @@ name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
-
-[[package]]
-name = "wallet-sdk-rs"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.0",
- "hex",
- "isomdl",
- "p256",
- "serde_cbor",
- "serde_json",
- "thiserror",
- "uniffi",
- "uuid",
-]
 
 [[package]]
 name = "wasi"

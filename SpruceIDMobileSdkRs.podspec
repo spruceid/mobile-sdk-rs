@@ -1,11 +1,11 @@
 Pod::Spec.new do |spec|
-  spec.name         = "SpruceIDWalletSdkRs"
+  spec.name         = "SpruceIDMobileSdkRs"
   spec.version      = "0.0.25"
-  spec.summary      = "Rust-generated Swift Wallet SDK."
+  spec.summary      = "Rust-generated Swift Mobile SDK."
   spec.description  = <<-DESC
-                   Rust layer for the Swift Wallet SDK.
+                   Rust layer for the Swift Mobile SDK.
                    DESC
-  spec.homepage     = "https://github.com/spruceid/wallet-sdk-rs"
+  spec.homepage     = "https://github.com/spruceid/mobile-sdk-rs"
   spec.license      = { :type => "MIT & Apache License, Version 2.0", :text => <<-LICENSE
                           Refer to LICENSE-MIT and LICENSE-APACHE in the repository.
                         LICENSE
@@ -17,9 +17,9 @@ Pod::Spec.new do |spec|
   spec.ios.deployment_target  = '13.0'
 
   spec.static_framework = true
-  spec.source        = { :git => "https://github.com/spruceid/wallet-sdk-rs.git", :tag => "#{spec.version}" }
-  spec.source_files  = "WalletSdkRs/Sources/WalletSdkRs/*.swift"
+  spec.source        = { :git => "https://github.com/spruceid/mobile-sdk-rs.git", :tag => "#{spec.version}" }
+  spec.source_files  = "MobileSdkRs/Sources/MobileSdkRs/*.swift"
   spec.frameworks = 'Foundation'
 
-  spec.dependency 'SpruceIDWalletSdkRsRustFramework', "#{spec.version}"
+  spec.dependency 'SpruceIDMobileSdkRsRustFramework', "#{spec.version}"
 end

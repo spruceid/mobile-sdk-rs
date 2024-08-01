@@ -1,4 +1,4 @@
-package com.spruceid.wallet.sdk.rs
+package com.spruceid.mobile.sdk.rs
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4

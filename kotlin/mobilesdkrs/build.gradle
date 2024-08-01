@@ -8,7 +8,7 @@ plugins {
 }
 
 android {
-    namespace 'com.spruceid.wallet.sdk.rs'
+    namespace 'com.spruceid.mobile.sdk.rs'
     compileSdk 34
 
     defaultConfig {
@@ -83,7 +83,7 @@ tasks.register('bindGen', Exec) {
     workingDir "../../"
     if (Os.isFamily(Os.FAMILY_WINDOWS)) {
         commandLine("cmd", "/c",
-                "cargo build && " + "cargo run --bin uniffi-bindgen generate --library target\\debug\\libwallet_sdk_rs.dll " + "--language kotlin " + "--out-dir " + outDir.replace('/', '\\'))
+                "cargo build && " + "cargo run --bin uniffi-bindgen generate --library target\\debug\\libmobile_sdk_rs.dll " + "--language kotlin " + "--out-dir " + outDir.replace('/', '\\'))
     } else {
         def extension
         if (Os.isFamily(Os.FAMILY_MAC)) {
@@ -95,7 +95,7 @@ tasks.register('bindGen', Exec) {
                 """\
                 cargo build && \
                 cargo run --bin uniffi-bindgen generate \
-                --library target/debug/libwallet_sdk_rs.$extension \
+                --library target/debug/libmobile_sdk_rs.$extension \
                 --language kotlin \
                 --out-dir $outDir
                 """)
@@ -106,7 +106,7 @@ publishing {
     repositories {
         maven {
             name = "GitHubPackages"
-            url = "https://maven.pkg.github.com/spruceid/wallet-sdk-rs"
+            url = "https://maven.pkg.github.com/spruceid/mobile-sdk-rs"
             credentials {
                 username = System.getenv("GITHUB_ACTOR")
                 password = System.getenv("GITHUB_TOKEN")
@@ -115,8 +115,8 @@ publishing {
     }
     publications {
         release(MavenPublication) {
-            groupId = 'com.spruceid.wallet.sdk.rs'
-            artifactId = "walletsdkrs"
+            groupId = 'com.spruceid.mobile.sdk.rs'
+            artifactId = "mobilesdkrs"
             version = System.getenv("VERSION")
 
             afterEvaluate {
@@ -125,9 +125,9 @@ publishing {
 
             pom {
                 packaging = "aar"
-                name.set("walletsdkrs")
-                description.set("Rust layer for SpruceID Wallet SDK")
-                url.set("https://github.com/spruceid/wallet-sdk-rs")
+                name.set("mobilesdkrs")
+                description.set("Rust layer for SpruceID Mobile SDK")
+                url.set("https://github.com/spruceid/mobile-sdk-rs")
                 licenses {
                     license {
                         name.set("MIT License")
