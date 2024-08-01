@@ -7,8 +7,8 @@ import Foundation
 // Depending on the consumer's build setup, the low-level FFI code
 // might be in a separate module, or it might be compiled inline into
 // this module. This is a bit of light hackery to work with both.
-#if canImport(wallet_sdk_rsFFI)
-import wallet_sdk_rsFFI
+#if canImport(mobile_sdk_rsFFI)
+import mobile_sdk_rsFFI
 #endif
 
 fileprivate extension RustBuffer {
@@ -25,13 +25,13 @@ fileprivate extension RustBuffer {
     }
 
     static func from(_ ptr: UnsafeBufferPointer<UInt8>) -> RustBuffer {
-        try! rustCall { ffi_wallet_sdk_rs_rustbuffer_from_bytes(ForeignBytes(bufferPointer: ptr), $0) }
+        try! rustCall { ffi_mobile_sdk_rs_rustbuffer_from_bytes(ForeignBytes(bufferPointer: ptr), $0) }
     }
 
     // Frees the buffer in place.
     // The buffer must not be used after this is called.
     func deallocate() {
-        try! rustCall { ffi_wallet_sdk_rs_rustbuffer_free(self, $0) }
+        try! rustCall { ffi_mobile_sdk_rs_rustbuffer_free(self, $0) }
     }
 }
 
@@ -153,7 +153,7 @@ fileprivate func writeDouble(_ writer: inout [UInt8], _ value: Double) {
 }
 
 // Protocol for types that transfer other types across the FFI. This is
-// analogous go the Rust trait of the same name.
+// analogous to the Rust trait of the same name.
 fileprivate protocol FfiConverter {
     associatedtype FfiType
     associatedtype SwiftType
@@ -253,18 +253,19 @@ fileprivate extension RustCallStatus {
 }
 
 private func rustCall<T>(_ callback: (UnsafeMutablePointer<RustCallStatus>) -> T) throws -> T {
-    try makeRustCall(callback, errorHandler: nil)
+    let neverThrow: ((RustBuffer) throws -> Never)? = nil
+    return try makeRustCall(callback, errorHandler: neverThrow)
 }
 
-private func rustCallWithError<T>(
-    _ errorHandler: @escaping (RustBuffer) throws -> Error,
+private func rustCallWithError<T, E: Swift.Error>(
+    _ errorHandler: @escaping (RustBuffer) throws -> E,
     _ callback: (UnsafeMutablePointer<RustCallStatus>) -> T) throws -> T {
     try makeRustCall(callback, errorHandler: errorHandler)
 }
 
-private func makeRustCall<T>(
+private func makeRustCall<T, E: Swift.Error>(
     _ callback: (UnsafeMutablePointer<RustCallStatus>) -> T,
-    errorHandler: ((RustBuffer) throws -> Error)?
+    errorHandler: ((RustBuffer) throws -> E)?
 ) throws -> T {
     uniffiEnsureInitialized()
     var callStatus = RustCallStatus.init()
@@ -273,9 +274,9 @@ private func makeRustCall<T>(
     return returnedVal
 }
 
-private func uniffiCheckCallStatus(
+private func uniffiCheckCallStatus<E: Swift.Error>(
     callStatus: RustCallStatus,
-    errorHandler: ((RustBuffer) throws -> Error)?
+    errorHandler: ((RustBuffer) throws -> E)?
 ) throws {
     switch callStatus.code {
         case CALL_SUCCESS:
@@ -490,7 +491,7 @@ open class MDoc:
     }
 
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_wallet_sdk_rs_fn_clone_mdoc(self.pointer, $0) }
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_mdoc(self.pointer, $0) }
     }
     // No primary constructor declared for this class.
 
@@ -499,13 +500,13 @@ open class MDoc:
             return
         }
 
-        try! rustCall { uniffi_wallet_sdk_rs_fn_free_mdoc(pointer, $0) }
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_mdoc(pointer, $0) }
     }
 
     
 public static func fromCbor(value: Data)throws  -> MDoc {
     return try  FfiConverterTypeMDoc.lift(try rustCallWithError(FfiConverterTypeMDocInitError.lift) {
-    uniffi_wallet_sdk_rs_fn_constructor_mdoc_from_cbor(
+    uniffi_mobile_sdk_rs_fn_constructor_mdoc_from_cbor(
         FfiConverterData.lower(value),$0
     )
 })
@@ -515,7 +516,7 @@ public static func fromCbor(value: Data)throws  -> MDoc {
     
 open func id() -> Uuid {
     return try!  FfiConverterTypeUuid.lift(try! rustCall() {
-    uniffi_wallet_sdk_rs_fn_method_mdoc_id(self.uniffiClonePointer(),$0
+    uniffi_mobile_sdk_rs_fn_method_mdoc_id(self.uniffiClonePointer(),$0
     )
 })
 }
@@ -598,7 +599,7 @@ open class SessionManager:
     }
 
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_wallet_sdk_rs_fn_clone_sessionmanager(self.pointer, $0) }
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_sessionmanager(self.pointer, $0) }
     }
     // No primary constructor declared for this class.
 
@@ -607,7 +608,7 @@ open class SessionManager:
             return
         }
 
-        try! rustCall { uniffi_wallet_sdk_rs_fn_free_sessionmanager(pointer, $0) }
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_sessionmanager(pointer, $0) }
     }
 
     
@@ -691,7 +692,7 @@ open class SessionManagerEngaged:
     }
 
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_wallet_sdk_rs_fn_clone_sessionmanagerengaged(self.pointer, $0) }
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_sessionmanagerengaged(self.pointer, $0) }
     }
     // No primary constructor declared for this class.
 
@@ -700,7 +701,7 @@ open class SessionManagerEngaged:
             return
         }
 
-        try! rustCall { uniffi_wallet_sdk_rs_fn_free_sessionmanagerengaged(pointer, $0) }
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_sessionmanagerengaged(pointer, $0) }
     }
 
     
@@ -890,18 +891,18 @@ public func FfiConverterTypeSessionData_lower(_ value: SessionData) -> RustBuffe
     return FfiConverterTypeSessionData.lower(value)
 }
 
-// Note that we don't yet support `indirect` for enums.
-// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
 public enum KeyTransformationError {
+
     
-    case toPkcs8(value: String
+    
+    case ToPkcs8(value: String
     )
-    case fromPkcs8(value: String
+    case FromPkcs8(value: String
     )
-    case fromSec1(value: String
+    case FromSec1(value: String
     )
-    case toSec1(value: String
+    case ToSec1(value: String
     )
 }
 
@@ -912,43 +913,50 @@ public struct FfiConverterTypeKeyTransformationError: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> KeyTransformationError {
         let variant: Int32 = try readInt(&buf)
         switch variant {
+
         
-        case 1: return .toPkcs8(value: try FfiConverterString.read(from: &buf)
-        )
+
         
-        case 2: return .fromPkcs8(value: try FfiConverterString.read(from: &buf)
-        )
-        
-        case 3: return .fromSec1(value: try FfiConverterString.read(from: &buf)
-        )
-        
-        case 4: return .toSec1(value: try FfiConverterString.read(from: &buf)
-        )
-        
-        default: throw UniffiInternalError.unexpectedEnumCase
+        case 1: return .ToPkcs8(
+            value: try FfiConverterString.read(from: &buf)
+            )
+        case 2: return .FromPkcs8(
+            value: try FfiConverterString.read(from: &buf)
+            )
+        case 3: return .FromSec1(
+            value: try FfiConverterString.read(from: &buf)
+            )
+        case 4: return .ToSec1(
+            value: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
     public static func write(_ value: KeyTransformationError, into buf: inout [UInt8]) {
         switch value {
+
+        
+
         
         
-        case let .toPkcs8(value):
+        case let .ToPkcs8(value):
             writeInt(&buf, Int32(1))
             FfiConverterString.write(value, into: &buf)
             
         
-        case let .fromPkcs8(value):
+        case let .FromPkcs8(value):
             writeInt(&buf, Int32(2))
             FfiConverterString.write(value, into: &buf)
             
         
-        case let .fromSec1(value):
+        case let .FromSec1(value):
             writeInt(&buf, Int32(3))
             FfiConverterString.write(value, into: &buf)
             
         
-        case let .toSec1(value):
+        case let .ToSec1(value):
             writeInt(&buf, Int32(4))
             FfiConverterString.write(value, into: &buf)
             
@@ -957,19 +965,13 @@ public struct FfiConverterTypeKeyTransformationError: FfiConverterRustBuffer {
 }
 
 
-public func FfiConverterTypeKeyTransformationError_lift(_ buf: RustBuffer) throws -> KeyTransformationError {
-    return try FfiConverterTypeKeyTransformationError.lift(buf)
-}
-
-public func FfiConverterTypeKeyTransformationError_lower(_ value: KeyTransformationError) -> RustBuffer {
-    return FfiConverterTypeKeyTransformationError.lower(value)
-}
-
-
-
 extension KeyTransformationError: Equatable, Hashable {}
 
-
+extension KeyTransformationError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 public enum MDocInitError {
@@ -1017,7 +1019,11 @@ public struct FfiConverterTypeMDocInitError: FfiConverterRustBuffer {
 
 extension MDocInitError: Equatable, Hashable {}
 
-extension MDocInitError: Error { }
+extension MDocInitError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 public enum RequestError {
@@ -1065,7 +1071,11 @@ public struct FfiConverterTypeRequestError: FfiConverterRustBuffer {
 
 extension RequestError: Equatable, Hashable {}
 
-extension RequestError: Error { }
+extension RequestError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 public enum ResponseError {
@@ -1119,7 +1129,11 @@ public struct FfiConverterTypeResponseError: FfiConverterRustBuffer {
 
 extension ResponseError: Equatable, Hashable {}
 
-extension ResponseError: Error { }
+extension ResponseError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 public enum SessionError {
@@ -1167,7 +1181,11 @@ public struct FfiConverterTypeSessionError: FfiConverterRustBuffer {
 
 extension SessionError: Equatable, Hashable {}
 
-extension SessionError: Error { }
+extension SessionError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 public enum SignatureError {
@@ -1231,7 +1249,11 @@ public struct FfiConverterTypeSignatureError: FfiConverterRustBuffer {
 
 extension SignatureError: Equatable, Hashable {}
 
-extension SignatureError: Error { }
+extension SignatureError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 /**
@@ -1312,7 +1334,11 @@ public struct FfiConverterTypeStorageManagerError: FfiConverterRustBuffer {
 
 extension StorageManagerError: Equatable, Hashable {}
 
-extension StorageManagerError: Error { }
+extension StorageManagerError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 public enum TerminationError {
@@ -1360,7 +1386,11 @@ public struct FfiConverterTypeTerminationError: FfiConverterRustBuffer {
 
 extension TerminationError: Equatable, Hashable {}
 
-extension TerminationError: Error { }
+extension TerminationError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 
@@ -1512,7 +1542,7 @@ fileprivate struct UniffiCallbackInterfaceStorageManagerInterface {
 }
 
 private func uniffiCallbackInitStorageManagerInterface() {
-    uniffi_wallet_sdk_rs_fn_init_callback_vtable_storagemanagerinterface(&UniffiCallbackInterfaceStorageManagerInterface.vtable)
+    uniffi_mobile_sdk_rs_fn_init_callback_vtable_storagemanagerinterface(&UniffiCallbackInterfaceStorageManagerInterface.vtable)
 }
 
 // FfiConverter protocol for callback interfaces
@@ -1802,7 +1832,7 @@ public func FfiConverterTypeValue_lower(_ value: Value) -> RustBuffer {
 
 public func handleRequest(state: SessionManagerEngaged, request: Data)throws  -> RequestData {
     return try  FfiConverterTypeRequestData.lift(try rustCallWithError(FfiConverterTypeRequestError.lift) {
-    uniffi_wallet_sdk_rs_fn_func_handle_request(
+    uniffi_mobile_sdk_rs_fn_func_handle_request(
         FfiConverterTypeSessionManagerEngaged.lower(state),
         FfiConverterData.lower(request),$0
     )
@@ -1810,7 +1840,7 @@ public func handleRequest(state: SessionManagerEngaged, request: Data)throws  ->
 }
 public func initialiseSession(document: MDoc, uuid: Uuid)throws  -> SessionData {
     return try  FfiConverterTypeSessionData.lift(try rustCallWithError(FfiConverterTypeSessionError.lift) {
-    uniffi_wallet_sdk_rs_fn_func_initialise_session(
+    uniffi_mobile_sdk_rs_fn_func_initialise_session(
         FfiConverterTypeMDoc.lower(document),
         FfiConverterTypeUuid.lower(uuid),$0
     )
@@ -1818,7 +1848,7 @@ public func initialiseSession(document: MDoc, uuid: Uuid)throws  -> SessionData 
 }
 public func submitResponse(sessionManager: SessionManager, permittedItems: [String: [String: [String]]])throws  -> Data {
     return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeResponseError.lift) {
-    uniffi_wallet_sdk_rs_fn_func_submit_response(
+    uniffi_mobile_sdk_rs_fn_func_submit_response(
         FfiConverterTypeSessionManager.lower(sessionManager),
         FfiConverterDictionaryStringDictionaryStringSequenceString.lower(permittedItems),$0
     )
@@ -1826,7 +1856,7 @@ public func submitResponse(sessionManager: SessionManager, permittedItems: [Stri
 }
 public func submitSignature(sessionManager: SessionManager, derSignature: Data)throws  -> Data {
     return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeSignatureError.lift) {
-    uniffi_wallet_sdk_rs_fn_func_submit_signature(
+    uniffi_mobile_sdk_rs_fn_func_submit_signature(
         FfiConverterTypeSessionManager.lower(sessionManager),
         FfiConverterData.lower(derSignature),$0
     )
@@ -1834,7 +1864,7 @@ public func submitSignature(sessionManager: SessionManager, derSignature: Data)t
 }
 public func terminateSession()throws  -> Data {
     return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeTerminationError.lift) {
-    uniffi_wallet_sdk_rs_fn_func_terminate_session($0
+    uniffi_mobile_sdk_rs_fn_func_terminate_session($0
     )
 })
 }
@@ -1844,50 +1874,50 @@ private enum InitializationResult {
     case contractVersionMismatch
     case apiChecksumMismatch
 }
-// Use a global variables to perform the versioning checks. Swift ensures that
+// Use a global variable to perform the versioning checks. Swift ensures that
 // the code inside is only computed once.
-private var initializationResult: InitializationResult {
+private var initializationResult: InitializationResult = {
     // Get the bindings contract version from our ComponentInterface
     let bindings_contract_version = 26
     // Get the scaffolding contract version by calling the into the dylib
-    let scaffolding_contract_version = ffi_wallet_sdk_rs_uniffi_contract_version()
+    let scaffolding_contract_version = ffi_mobile_sdk_rs_uniffi_contract_version()
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_func_handle_request() != 47905) {
+    if (uniffi_mobile_sdk_rs_checksum_func_handle_request() != 26058) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_func_initialise_session() != 18213) {
+    if (uniffi_mobile_sdk_rs_checksum_func_initialise_session() != 57560) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_func_submit_response() != 17438) {
+    if (uniffi_mobile_sdk_rs_checksum_func_submit_response() != 50547) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_func_submit_signature() != 63797) {
+    if (uniffi_mobile_sdk_rs_checksum_func_submit_signature() != 17097) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_func_terminate_session() != 5668) {
+    if (uniffi_mobile_sdk_rs_checksum_func_terminate_session() != 25700) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_method_mdoc_id() != 56580) {
+    if (uniffi_mobile_sdk_rs_checksum_method_mdoc_id() != 4321) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_constructor_mdoc_from_cbor() != 56494) {
+    if (uniffi_mobile_sdk_rs_checksum_constructor_mdoc_from_cbor() != 43984) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_method_storagemanagerinterface_add() != 15426) {
+    if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_add() != 57440) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_method_storagemanagerinterface_get() != 30659) {
+    if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_get() != 12195) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_wallet_sdk_rs_checksum_method_storagemanagerinterface_remove() != 14768) {
+    if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_remove() != 54584) {
         return InitializationResult.apiChecksumMismatch
     }
 
     uniffiCallbackInitStorageManagerInterface()
     return InitializationResult.ok
-}
+}()
 
 private func uniffiEnsureInitialized() {
     switch initializationResult {

@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "WalletSdkRs"
-include(":walletsdkrs")
+rootProject.name = "MobileSdkRs"
+include(":mobilesdkrs")
