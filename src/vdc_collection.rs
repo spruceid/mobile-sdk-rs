@@ -21,9 +21,7 @@ struct Credential {
     id: String, // Probably a UUID, perhaps we should make it one?
     format: CredentialFormat,
     ctype: CredentialType,
-    tags: Vec<String>, // Arbitrary string tags.
-    payload: Vec<u8>,  // The actual credential.
-    dirty: bool,       // Has this been modified since it was read from storage?
+    payload: Vec<u8>, // The actual credential.
 }
 
 impl Credential {
@@ -33,45 +31,18 @@ impl Credential {
         format: CredentialFormat,
         ctype: CredentialType,
         payload: Vec<u8>,
-        dirty: bool,
     ) -> Credential {
         Credential {
             id: id.to_string(),
             format,
             ctype,
-            tags: Vec::new(),
             payload,
-            dirty,
-        }
-    }
-
-    /// Check whether a credential has a specific tag.
-    fn contains_tag(&self, tag: &str) -> bool {
-        for t in self.tags.iter() {
-            if t == tag {
-                return true;
-            }
-        }
-
-        false
-    }
-
-    /// Add a tag to a credential.
-    fn add_tag(&mut self, tag: &str) {
-        if !self.contains_tag(tag) {
-            self.tags.push(tag.to_string());
-            self.dirty = true;
         }
     }
 
     /// Store a credential in secure storage if it has been modified.
     fn write_to_secure_storage(&mut self) {
-        if self.dirty {
-            println!("Write {}", self.id);
-            // TODO: implement.
-
-            self.dirty = false;
-        }
+        // TODO: implement.
     }
 
     /// Dump the contents of a credential.
@@ -89,10 +60,6 @@ impl Credential {
             CredentialType::Iso18013_5_1mDl => println!("ISO 18013.5.1 mDL"),
             CredentialType::VehicleTitle => println!("Vehicle Title"),
             CredentialType::Other(x) => println!("Other ({})", x),
-        }
-        println!("    tags:");
-        for t in self.tags.clone() {
-            println!("        {t}");
         }
         if self.payload.is_empty() {
             println!("    payload:  missing?");
@@ -121,8 +88,7 @@ impl VdcCollection {
         ctype: CredentialType,
         payload: Vec<u8>,
     ) {
-        self.list
-            .push(Credential::new(id, format, ctype, payload, true));
+        self.list.push(Credential::new(id, format, ctype, payload));
     }
 
     /// Load a credential from secure storage to the set.
@@ -145,14 +111,6 @@ impl VdcCollection {
         }
     }
 
-    /// Add a tag to a credential.
-    pub fn add_tag(&mut self, id: &str, tag: &str) {
-        match self.list.iter_mut().find(|cred| cred.id == id) {
-            Some(x) => x.add_tag(tag),
-            None => println!("no match"),
-        }
-    }
-
     /// Get a list of all the credentials.
     pub fn all_entries(&mut self) -> Vec<String> {
         let mut r = Vec::new();
@@ -170,19 +128,6 @@ impl VdcCollection {
 
         for cred in self.list.iter_mut() {
             if cred.ctype == ctype {
-                r.push(cred.id.clone());
-            }
-        }
-
-        r
-    }
-
-    /// Get a list of all the credentials with a specific tag.
-    pub fn all_entries_by_tag(&mut self, tag: &str) -> Vec<String> {
-        let mut r = Vec::new();
-
-        for cred in self.list.iter_mut() {
-            if cred.contains_tag(tag) {
                 r.push(cred.id.clone());
             }
         }
