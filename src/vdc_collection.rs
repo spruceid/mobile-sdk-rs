@@ -1,9 +1,9 @@
 /// Supported credential formats.
 #[derive(PartialEq)]
 pub enum CredentialFormat {
-    MDoc,
-    W3cJwtVc,
-    W3cJwtVcJsonld,
+    MsoMdoc,
+    JwtVcJson,
+    LdpVc,
     Other(String), // For ease of expansion.
 }
 
@@ -50,9 +50,9 @@ impl Credential {
         println!("Credential {}", self.id);
         print!("    format:   ");
         match &self.format {
-            CredentialFormat::MDoc => println!("MDoc"),
-            CredentialFormat::W3cJwtVc => println!("W3C JWT VC"),
-            CredentialFormat::W3cJwtVcJsonld => println!("W3C JWT VC JSON LD"),
+            CredentialFormat::MsoMdoc => println!("MDoc"),
+            CredentialFormat::JwtVcJson => println!("W3C JWT VC"),
+            CredentialFormat::LdpVc => println!("W3C JWT VC JSON LD"),
             CredentialFormat::Other(x) => println!("Other ({})", x),
         }
         print!("    type:     ");
