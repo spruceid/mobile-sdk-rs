@@ -60,7 +60,12 @@ pub trait StorageManagerInterface: Send + Sync {
     ///
     /// Callback function pointer to native (kotlin/swift) code for
     /// getting a key.
-    fn get(&self, key: Key) -> Result<Option<Value>, StorageManagerError>;
+    fn get(&self, key: Key) -> Result<Value, StorageManagerError>;
+
+    /// Function: list
+    ///
+    /// Callback function pointer for listing available keys.
+    fn list(&self) -> Vec<Key>;
 
     /// Function: list
     ///
