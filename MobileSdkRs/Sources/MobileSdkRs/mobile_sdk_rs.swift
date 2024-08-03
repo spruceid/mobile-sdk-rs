@@ -1427,7 +1427,14 @@ public protocol StorageManagerInterface : AnyObject {
      * Callback function pointer to native (kotlin/swift) code for
      * getting a key.
      */
-    func get(key: Key) throws  -> Value?
+    func get(key: Key) throws  -> Value
+
+    /**
+     * Function: list
+     *
+     * Callback function pointer for listing available keys.
+     */
+    func list()  -> [Key]
     
     /**
      * Function: remove
@@ -1489,7 +1496,7 @@ fileprivate struct UniffiCallbackInterfaceStorageManagerInterface {
             uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
         ) in
             let makeCall = {
-                () throws -> Value? in
+                () throws -> Value in
                 guard let uniffiObj = try? FfiConverterCallbackInterfaceStorageManagerInterface.handleMap.get(handle: uniffiHandle) else {
                     throw UniffiInternalError.unexpectedStaleHandle
                 }
@@ -1499,12 +1506,34 @@ fileprivate struct UniffiCallbackInterfaceStorageManagerInterface {
             }
 
             
-            let writeReturn = { uniffiOutReturn.pointee = FfiConverterOptionTypeValue.lower($0) }
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterTypeValue.lower($0) }
             uniffiTraitInterfaceCallWithError(
                 callStatus: uniffiCallStatus,
                 makeCall: makeCall,
                 writeReturn: writeReturn,
                 lowerError: FfiConverterTypeStorageManagerError.lower
+            )
+        },
+        list: { (
+            uniffiHandle: UInt64,
+            uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+               () throws [Key] in
+               guard let uniffiObj = try? FfiConverterCallbackInterfaceStorageManagerInterface.handleMap.get(handle: uniffiHandle) else {
+                  throw UniffiInternalError.unexpectedStaleHandle
+               }
+               return uniffiObj.list(
+               )
+            }
+
+
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterSequenceTypeKey.lower($0) }
+            uniffiTraitInterfaceCall(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn
             )
         },
         remove: { (
@@ -1572,27 +1601,6 @@ extension FfiConverterCallbackInterfaceStorageManagerInterface : FfiConverter {
     }
 }
 
-fileprivate struct FfiConverterOptionTypeValue: FfiConverterRustBuffer {
-    typealias SwiftType = Value?
-
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
-        guard let value = value else {
-            writeInt(&buf, Int8(0))
-            return
-        }
-        writeInt(&buf, Int8(1))
-        FfiConverterTypeValue.write(value, into: &buf)
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
-        switch try readInt(&buf) as Int8 {
-        case 0: return nil
-        case 1: return try FfiConverterTypeValue.read(from: &buf)
-        default: throw UniffiInternalError.unexpectedOptionalTag
-        }
-    }
-}
-
 fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [String]
 
@@ -1636,6 +1644,27 @@ fileprivate struct FfiConverterSequenceTypeItemsRequest: FfiConverterRustBuffer 
         return seq
     }
 }
+
+fileprivate struct FfiConverterSequenceTypeKey: FfiConverterRustBuffer {
+   typealias SwiftType [Key]
+
+   public static func write(_ value: [Key], into buf: inout [UInt8]) {
+      let len = Int32(value.count)
+      writeInt(&buf, len)
+      for item in value {
+         FfiConverterTypeKey.write(item, into: &buf)
+      }
+   }
+
+   public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Key] {
+      let len = Int32 try readInt(&buf)
+      var seq = [Key]()
+      seq.reserveCapacity(Int(len))
+      for _ in 0 ..< len {
+         seq.append(try FfiConverterTypeKey.read(from: &buf))
+      }
+      return seq
+   }
 
 fileprivate struct FfiConverterDictionaryStringBool: FfiConverterRustBuffer {
     public static func write(_ value: [String: Bool], into buf: inout [UInt8]) {
@@ -1802,22 +1831,22 @@ public func FfiConverterTypeUuid_lower(_ value: Uuid) -> RustBuffer {
  * Typealias from the type name used in the UDL file to the builtin type.  This
  * is needed because the UDL type name is used in function/method signatures.
  */
-public typealias Value = String
+public typealias Value = Data
 public struct FfiConverterTypeValue: FfiConverter {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Value {
-        return try FfiConverterString.read(from: &buf)
+        return try FfiConverterData.read(from: &buf)
     }
 
     public static func write(_ value: Value, into buf: inout [UInt8]) {
-        return FfiConverterString.write(value, into: &buf)
+        return FfiConverterData.write(value, into: &buf)
     }
 
     public static func lift(_ value: RustBuffer) throws -> Value {
-        return try FfiConverterString.lift(value)
+        return try FfiConverterData.lift(value)
     }
 
     public static func lower(_ value: Value) -> RustBuffer {
-        return FfiConverterString.lower(value)
+        return FfiConverterData.lower(value)
     }
 }
 
@@ -1887,7 +1916,10 @@ private var initializationResult: InitializationResult = {
     if (uniffi_mobile_sdk_rs_checksum_func_handle_request() != 26058) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_func_initialise_session() != 57560) {
+    if (uniffi_mobile_sdk_rs_checksum_func_initialise_session() != 60217) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_func_submit_response() != 38907) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_func_submit_response() != 50547) {
@@ -1908,10 +1940,10 @@ private var initializationResult: InitializationResult = {
     if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_add() != 57440) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_get() != 12195) {
+    if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_get() != 5002) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_remove() != 54584) {
+    if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_remove() != 46691) {
         return InitializationResult.apiChecksumMismatch
     }
 
