@@ -1520,7 +1520,7 @@ fileprivate struct UniffiCallbackInterfaceStorageManagerInterface {
             uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
         ) in
             let makeCall = {
-                () throws [Key] in
+                () throws -> [Key] in
                 guard let uniffiObj = try? FfiConverterCallbackInterfaceStorageManagerInterface.handleMap.get(handle: uniffiHandle) else {
                     throw UniffiInternalError.unexpectedStaleHandle
                 }
@@ -1657,14 +1657,15 @@ fileprivate struct FfiConverterSequenceTypeKey: FfiConverterRustBuffer {
     }
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Key] {
-       let len = Int32 try readInt(&buf)
-       var seq = [Key]()
-       seq.reserveCapacity(Int(len))
-       for _ in 0 ..< len {
-           seq.append(try FfiConverterTypeKey.read(from: &buf))
-       }
-       return seq
-   }
+        let len: Int32 = try readInt(&buf)
+        var seq = [Key]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeKey.read(from: &buf))
+        }
+        return seq
+    }
+}
 
 fileprivate struct FfiConverterDictionaryStringBool: FfiConverterRustBuffer {
     public static func write(_ value: [String: Bool], into buf: inout [UInt8]) {
