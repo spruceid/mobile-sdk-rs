@@ -1,5 +1,8 @@
+use super::storage_manager::*;
+use serde_derive::{Deserialize, Serialize};
+
 /// Supported credential formats.
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub enum CredentialFormat {
     MsoMdoc,
     JwtVcJson,
@@ -8,16 +11,16 @@ pub enum CredentialFormat {
 }
 
 /// Supported credential types.
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub enum CredentialType {
     Iso18013_5_1mDl,
     VehicleTitle,
     Other(String), // For ease of expansion.
 }
 
-/// An individual credential.  These are mainly for internal use; access to them should go through `VdcCollection`,
-/// below.
-struct Credential {
+/// An individual credential.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Credential {
     id: String, // Probably a UUID, perhaps we should make it one?
     format: CredentialFormat,
     ctype: CredentialType,
@@ -39,45 +42,19 @@ impl Credential {
             payload,
         }
     }
-
-    /// Store a credential in secure storage if it has been modified.
-    fn write_to_secure_storage(&mut self) {
-        // TODO: implement.
-    }
-
-    /// Dump the contents of a credential.
-    fn dump(&self) {
-        println!("Credential {}", self.id);
-        print!("    format:   ");
-        match &self.format {
-            CredentialFormat::MsoMdoc => println!("MDoc"),
-            CredentialFormat::JwtVcJson => println!("W3C JWT VC"),
-            CredentialFormat::LdpVc => println!("W3C JWT VC JSON LD"),
-            CredentialFormat::Other(x) => println!("Other ({})", x),
-        }
-        print!("    type:     ");
-        match &self.ctype {
-            CredentialType::Iso18013_5_1mDl => println!("ISO 18013.5.1 mDL"),
-            CredentialType::VehicleTitle => println!("Vehicle Title"),
-            CredentialType::Other(x) => println!("Other ({})", x),
-        }
-        if self.payload.is_empty() {
-            println!("    payload:  missing?");
-        }
-    }
 }
 
 /// Verifiable Digital Credential Collection
 ///
 /// This is the main interface to credentials.
 pub struct VdcCollection {
-    list: Vec<Credential>,
+    storage: Box<dyn StorageManagerInterface>,
 }
 
 impl VdcCollection {
     /// Create a new credential set.
-    pub fn new() -> VdcCollection {
-        VdcCollection { list: Vec::new() }
+    pub fn new(engine: Box<dyn StorageManagerInterface>) -> VdcCollection {
+        VdcCollection { storage: engine }
     }
 
     /// Add a credential to the set.
@@ -88,64 +65,66 @@ impl VdcCollection {
         ctype: CredentialType,
         payload: Vec<u8>,
     ) {
-        self.list.push(Credential::new(id, format, ctype, payload));
+        let val;
+
+        match serde_cbor::to_vec(&Credential::new(id, format, ctype, payload)) {
+            Ok(x) => val = x,
+            Err(_) => return,
+        }
+
+        match self.storage.add(Key(id.to_string()), Value(val)) {
+            Ok(()) => {}
+            Err(x) => println!("error adding credential: {x}"),
+        }
     }
 
-    /// Load a credential from secure storage to the set.
-    pub fn load_from_secure_storage(&mut self, path: &str) {
-        // TODO: Implement.
-        // Set dirty flag to false.
-        println!("Save credential to {path}");
-    }
+    /// Get a credential from the store.
+    pub fn get(&mut self, id: &str) -> Option<Credential> {
+        let raw;
 
-    /// Load all credentials from secure storage.
-    pub fn load_all_from_secure_storage(&mut self) {
-        // TODO: Implement.
-        // Iterate over available files calling self.load_from_secure_storage().
-    }
+        match self.storage.get(Key(id.to_string())) {
+            Ok(x) => raw = x.0,
+            Err(_) => return None,
+        }
 
-    /// Save all credentials to secure storage.
-    pub fn save_all_to_secure_storage(&mut self) {
-        for cred in self.list.iter_mut() {
-            cred.write_to_secure_storage(); // Will only actually write if the dirty flag is set.
+        match serde_cbor::de::from_slice(&raw) {
+            Ok(x) => Some(x),
+            Err(_) => None,
         }
     }
 
     /// Get a list of all the credentials.
-    pub fn all_entries(&mut self) -> Vec<String> {
-        let mut r = Vec::new();
-
-        for cred in self.list.iter_mut() {
-            r.push(cred.id.clone());
-        }
-
-        r
+    pub fn all_entries(&mut self) -> Vec<Key> {
+        self.storage.list()
     }
 
     /// Get a list of all the credentials that match a specified type.
     pub fn all_entries_by_type(&mut self, ctype: CredentialType) -> Vec<String> {
         let mut r = Vec::new();
 
-        for cred in self.list.iter_mut() {
-            if cred.ctype == ctype {
-                r.push(cred.id.clone());
+        for key in self.all_entries() {
+            let cred = self.get(&key.0);
+
+            match cred {
+                Some(x) => {
+                    if x.ctype == ctype {
+                        r.push(key.0);
+                    }
+                }
+                None => {}
             }
         }
 
         r
     }
 
-    /// Write all modified credentials to secure storage.
-    pub fn write_to_secure_storage(&mut self) {
-        for cred in self.list.iter_mut() {
-            cred.write_to_secure_storage();
-        }
-    }
-
     /// Dump the contents of the credential set to the logger.
     pub fn dump(&mut self) {
-        for cred in self.list.iter_mut() {
-            cred.dump();
+        for key in self.all_entries() {
+            match self.get(&key.0) {
+                Some(x) => println!("{:?}", x),
+                None => {}
+            }
         }
     }
 }

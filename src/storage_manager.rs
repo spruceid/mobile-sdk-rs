@@ -1,10 +1,10 @@
 use thiserror::Error;
 
 uniffi::custom_newtype!(Key, String);
-pub struct Key(String);
+pub struct Key(pub String);
 
-uniffi::custom_newtype!(Value, String);
-pub struct Value(String);
+uniffi::custom_newtype!(Value, Vec<u8>);
+pub struct Value(pub Vec<u8>);
 
 /// Enum: StorageManagerError
 ///
@@ -56,7 +56,12 @@ pub trait StorageManagerInterface: Send + Sync {
     ///
     /// Callback function pointer to native (kotlin/swift) code for
     /// getting a key.
-    fn get(&self, key: Key) -> Result<Option<Value>, StorageManagerError>;
+    fn get(&self, key: Key) -> Result<Value, StorageManagerError>;
+
+    /// Function: list
+    ///
+    /// Callback function pointer for listing available keys.
+    fn list(&self) -> Vec<Key>;
 
     /// Function: remove
     ///
