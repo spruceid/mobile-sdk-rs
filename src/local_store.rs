@@ -40,7 +40,7 @@ impl StorageManagerInterface for LocalStore {
             match f {
                 Ok(x) => match x.file_name().to_str() {
                     Some(x) => keys.push(Key(x.to_string())),
-                    None => {},
+                    None => {}
                 },
                 Err(_) => {}
             }
