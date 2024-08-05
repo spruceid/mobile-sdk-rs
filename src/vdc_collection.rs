@@ -53,6 +53,13 @@ pub struct VdcCollection {
     storage: Box<dyn StorageManagerInterface>,
 }
 
+pub enum VdcCollectionError {
+    SerializeFailed,
+    DeserializeFailed,
+    StoreFailed,
+    LoadFailed,
+}
+
 impl VdcCollection {
     /// Create a new credential set.
     pub fn new(engine: Box<dyn StorageManagerInterface>) -> VdcCollection {
@@ -60,32 +67,38 @@ impl VdcCollection {
     }
 
     /// Add a credential to the set.
-    pub fn add(&self, id: Uuid, format: CredentialFormat, ctype: CredentialType, payload: Vec<u8>) {
+    pub fn add(
+        &self,
+        id: Uuid,
+        format: CredentialFormat,
+        ctype: CredentialType,
+        payload: Vec<u8>,
+    ) -> Result<(), VdcCollectionError> {
         let val;
 
         match serde_cbor::to_vec(&Credential::new(id, format, ctype, payload)) {
             Ok(x) => val = x,
-            Err(_) => return,
+            Err(_) => return Err(VdcCollectionError::SerializeFailed),
         }
 
         match self.storage.add(Key(id.to_string()), Value(val)) {
-            Ok(()) => {}
-            Err(x) => println!("error adding credential: {x}"),
+            Ok(()) => Ok(()),
+            Err(_) => Err(VdcCollectionError::StoreFailed),
         }
     }
 
     /// Get a credential from the store.
-    pub fn get(&self, id: &str) -> Option<Credential> {
+    pub fn get(&self, id: &str) -> Result<Credential, VdcCollectionError> {
         let raw;
 
         match self.storage.get(Key(id.to_string())) {
             Ok(x) => raw = x.0,
-            Err(_) => return None,
+            Err(_) => return Err(VdcCollectionError::LoadFailed),
         }
 
         match serde_cbor::de::from_slice(&raw) {
-            Ok(x) => Some(x),
-            Err(_) => None,
+            Ok(x) => Ok(x),
+            Err(_) => Err(VdcCollectionError::DeserializeFailed),
         }
     }
 
@@ -102,12 +115,12 @@ impl VdcCollection {
             let cred = self.get(&key.0);
 
             match cred {
-                Some(x) => {
+                Ok(x) => {
                     if x.ctype == ctype {
                         r.push(key.0);
                     }
                 }
-                None => {}
+                Err(_) => {}
             }
         }
 
@@ -120,8 +133,8 @@ impl VdcCollection {
         span.in_scope(|| {
             for key in self.all_entries() {
                 match self.get(&key.0) {
-                    Some(x) => info!("{:?}", x),
-                    None => {}
+                    Ok(x) => info!("{:?}", x),
+                    Err(_) => {}
                 }
             }
         });
