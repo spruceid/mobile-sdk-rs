@@ -3409,6 +3409,7 @@ dependencies = [
  "p256",
  "serde",
  "serde_cbor",
+ "serde_derive",
  "serde_json",
  "ssi",
  "thiserror",

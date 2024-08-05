@@ -23,6 +23,7 @@ p256 = { version = "0.13.2", features = ["pkcs8"] }
 serde = { version = "1.0.204", features = ["derive"] }
 serde_cbor = "0.11.2"
 serde_json = "1.0.111"
+serde_derive = "1.0.204"
 ssi = { version = "0.8.1", features = ["secp256r1", "secp384r1"] }
 thiserror = "1.0.56"
 tracing = "0.1.40"
