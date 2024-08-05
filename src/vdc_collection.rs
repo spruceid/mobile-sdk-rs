@@ -74,12 +74,10 @@ impl VdcCollection {
         ctype: CredentialType,
         payload: Vec<u8>,
     ) -> Result<(), VdcCollectionError> {
-        let val;
-
-        match serde_cbor::to_vec(&Credential::new(id, format, ctype, payload)) {
-            Ok(x) => val = x,
+        let val = match serde_cbor::to_vec(&Credential::new(id, format, ctype, payload)) {
+            Ok(x) => x,
             Err(_) => return Err(VdcCollectionError::SerializeFailed),
-        }
+        };
 
         match self.storage.add(Key(id.to_string()), Value(val)) {
             Ok(()) => Ok(()),
@@ -89,12 +87,10 @@ impl VdcCollection {
 
     /// Get a credential from the store.
     pub fn get(&self, id: &str) -> Result<Credential, VdcCollectionError> {
-        let raw;
-
-        match self.storage.get(Key(id.to_string())) {
-            Ok(x) => raw = x.0,
+        let raw = match self.storage.get(Key(id.to_string())) {
+            Ok(x) => x.0,
             Err(_) => return Err(VdcCollectionError::LoadFailed),
-        }
+        };
 
         match serde_cbor::de::from_slice(&raw) {
             Ok(x) => Ok(x),
@@ -114,13 +110,10 @@ impl VdcCollection {
         for key in self.all_entries() {
             let cred = self.get(&key.0);
 
-            match cred {
-                Ok(x) => {
-                    if x.ctype == ctype {
-                        r.push(key.0);
-                    }
+            if let Ok(x) = cred {
+                if x.ctype == ctype {
+                    r.push(key.0);
                 }
-                Err(_) => {}
             }
         }
 
@@ -132,9 +125,8 @@ impl VdcCollection {
         let span = info_span!("All Credentials");
         span.in_scope(|| {
             for key in self.all_entries() {
-                match self.get(&key.0) {
-                    Ok(x) => info!("{:?}", x),
-                    Err(_) => {}
+                if let Ok(x) = self.get(&key.0) {
+                    info!("{:?}", x);
                 }
             }
         });
