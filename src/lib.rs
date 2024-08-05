@@ -1,8 +1,8 @@
 uniffi::setup_scaffolding!();
 
+pub mod local_store;
 pub mod storage_manager;
 pub mod vdc_collection;
-pub mod local_store;
 
 use std::{
     collections::HashMap,

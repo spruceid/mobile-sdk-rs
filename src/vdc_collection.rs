@@ -1,6 +1,6 @@
 use super::storage_manager::*;
 use serde_derive::{Deserialize, Serialize};
-use tracing::{info_span, info};
+use tracing::{info, info_span};
 use uuid::Uuid;
 
 /// Supported credential formats.
@@ -37,7 +37,12 @@ impl Credential {
         ctype: CredentialType,
         payload: Vec<u8>,
     ) -> Credential {
-        Credential { id, format, ctype, payload }
+        Credential {
+            id,
+            format,
+            ctype,
+            payload,
+        }
     }
 }
 
@@ -55,13 +60,7 @@ impl VdcCollection {
     }
 
     /// Add a credential to the set.
-    pub fn add(
-        &self,
-        id: Uuid,
-        format: CredentialFormat,
-        ctype: CredentialType,
-        payload: Vec<u8>,
-    ) {
+    pub fn add(&self, id: Uuid, format: CredentialFormat, ctype: CredentialType, payload: Vec<u8>) {
         let val;
 
         match serde_cbor::to_vec(&Credential::new(id, format, ctype, payload)) {
