@@ -12,7 +12,7 @@ impl StorageManagerInterface for LocalStore {
     /// Add a key/value pair to storage.
     fn add(&self, key: Key, value: Value) -> Result<(), StorageManagerError> {
         // Make sure the directory exists.
-        if let Ok(_) = fs::create_dir(DATASTORE_PATH) {}
+        fs::create_dir(DATASTORE_PATH).unwrap(); // Failure probably means it already exists.
 
         match fs::write(gen_path(key.0), value.0) {
             Ok(_) => Ok(()),
@@ -33,11 +33,9 @@ impl StorageManagerInterface for LocalStore {
         let mut keys = Vec::new();
         let files = fs::read_dir(DATASTORE_PATH).unwrap();
 
-        for f in files {
-            if let Ok(x) = f {
-                if let Some(x) = x.file_name().to_str() {
-                    keys.push(Key(x.to_string()));
-                }
+        for f in files.into_iter().flatten() {
+            if let Some(x) = f.file_name().to_str() {
+                keys.push(Key(x.to_string()));
             }
         }
 
