@@ -1,5 +1,7 @@
 use super::storage_manager::*;
 use serde_derive::{Deserialize, Serialize};
+use tracing::{info_span, info};
+use uuid::Uuid;
 
 /// Supported credential formats.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
@@ -21,7 +23,7 @@ pub enum CredentialType {
 /// An individual credential.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Credential {
-    id: String, // Probably a UUID, perhaps we should make it one?
+    id: Uuid,
     format: CredentialFormat,
     ctype: CredentialType,
     payload: Vec<u8>, // The actual credential.
@@ -30,17 +32,12 @@ pub struct Credential {
 impl Credential {
     /// Create a new credential.
     fn new(
-        id: &str,
+        id: Uuid,
         format: CredentialFormat,
         ctype: CredentialType,
         payload: Vec<u8>,
     ) -> Credential {
-        Credential {
-            id: id.to_string(),
-            format,
-            ctype,
-            payload,
-        }
+        Credential { id, format, ctype, payload }
     }
 }
 
@@ -59,8 +56,8 @@ impl VdcCollection {
 
     /// Add a credential to the set.
     pub fn add(
-        &mut self,
-        id: &str,
+        &self,
+        id: Uuid,
         format: CredentialFormat,
         ctype: CredentialType,
         payload: Vec<u8>,
@@ -79,7 +76,7 @@ impl VdcCollection {
     }
 
     /// Get a credential from the store.
-    pub fn get(&mut self, id: &str) -> Option<Credential> {
+    pub fn get(&self, id: &str) -> Option<Credential> {
         let raw;
 
         match self.storage.get(Key(id.to_string())) {
@@ -94,12 +91,12 @@ impl VdcCollection {
     }
 
     /// Get a list of all the credentials.
-    pub fn all_entries(&mut self) -> Vec<Key> {
+    pub fn all_entries(&self) -> Vec<Key> {
         self.storage.list()
     }
 
     /// Get a list of all the credentials that match a specified type.
-    pub fn all_entries_by_type(&mut self, ctype: CredentialType) -> Vec<String> {
+    pub fn all_entries_by_type(&self, ctype: CredentialType) -> Vec<String> {
         let mut r = Vec::new();
 
         for key in self.all_entries() {
@@ -119,12 +116,15 @@ impl VdcCollection {
     }
 
     /// Dump the contents of the credential set to the logger.
-    pub fn dump(&mut self) {
-        for key in self.all_entries() {
-            match self.get(&key.0) {
-                Some(x) => println!("{:?}", x),
-                None => {}
+    pub fn dump(&self) {
+        let span = info_span!("All Credentials");
+        span.in_scope(|| {
+            for key in self.all_entries() {
+                match self.get(&key.0) {
+                    Some(x) => info!("{:?}", x),
+                    None => {}
+                }
             }
-        }
+        });
     }
 }
