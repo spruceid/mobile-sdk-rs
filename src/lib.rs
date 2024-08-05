@@ -2,10 +2,7 @@ uniffi::setup_scaffolding!();
 
 pub mod storage_manager;
 
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::{ collections::HashMap, io::Cursor, sync::{Arc, Mutex} };
 
 use isomdl::{
     definitions::{
@@ -15,7 +12,9 @@ use isomdl::{
     },
     presentation::device::{self, Document, SessionManagerInit},
 };
+use ssi::{dids::{AnyDidMethod, DIDResolver}, json_ld::iref::Uri, status::{bitstring_status_list::{BitstringStatusListCredential, StatusList, StatusPurpose, TimeToLive}, client::{MaybeCached, ProviderError, TypedStatusMapProvider}}};
 use uuid::Uuid;
+use w3c_vc_barcodes::{aamva::{dlid::{pdf_417, DlSubfile}, ZZSubfile}, optical_barcode_credential::VerificationParameters, terse_bitstring_status_list_entry::{ConstTerseStatusListProvider, StatusListInfo}, verify};
 
 #[derive(thiserror::Error, uniffi::Error, Debug)]
 pub enum SessionError {
@@ -42,6 +41,40 @@ impl UniffiCustomTypeConverter for Uuid {
     fn from_custom(uuid: Self) -> Self::Builtin {
         uuid.to_string()
     }
+}
+
+pub struct StatusLists;
+
+impl TypedStatusMapProvider<Uri, BitstringStatusListCredential> for StatusLists {
+    async fn get_typed(&self, id: &Uri) -> Result<MaybeCached<StatusList>, ProviderError> {
+        eprintln!("fetch <{id}>");
+        Ok(MaybeCached::NotCached(StatusList::from_bytes(
+            1.try_into().unwrap(),
+            vec![0u8; 125],
+            TimeToLive::DEFAULT,
+        )))
+    }
+}
+
+#[uniffi::export]
+pub async fn verify_pdf417_barcode(payload: String) {
+    let mut cursor = Cursor::new(payload);
+    let mut file = pdf_417::File::new(&mut cursor).unwrap();
+    let dl: DlSubfile = file.read_subfile(b"DL").unwrap().unwrap();
+    let zz: ZZSubfile = file.read_subfile(b"ZZ").unwrap().unwrap();
+    let vc = zz.decode_credential().await.unwrap();
+
+    let status_list_client = ConstTerseStatusListProvider::new(
+        StatusLists,
+        StatusListInfo::new(1000, StatusPurpose::Revocation),
+    );
+
+    let params = VerificationParameters::new_with(
+        AnyDidMethod::default().into_vm_resolver(),
+        status_list_client,
+    );
+
+    verify(&vc, &dl.mandatory, params).await.is_ok();
 }
 
 #[uniffi::export]
@@ -151,7 +184,7 @@ pub enum ResponseError {
 }
 
 #[uniffi::export]
-fn submit_response(
+pub fn submit_response(
     session_manager: Arc<SessionManager>,
     permitted_items: HashMap<String, HashMap<String, Vec<String>>>,
 ) -> Result<Vec<u8>, ResponseError> {
@@ -182,7 +215,7 @@ pub enum SignatureError {
 }
 
 #[uniffi::export]
-fn submit_signature(
+pub fn submit_signature(
     session_manager: Arc<SessionManager>,
     der_signature: Vec<u8>,
 ) -> Result<Vec<u8>, SignatureError> {
