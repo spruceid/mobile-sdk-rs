@@ -1286,8 +1286,7 @@ public enum StorageManagerError {
     /**
      * An internal problem occurred in the storage manager.
      */
-    case InternalError(String
-    )
+    case InternalError
 }
 
 
@@ -1305,9 +1304,7 @@ public struct FfiConverterTypeStorageManagerError: FfiConverterRustBuffer {
         case 2: return .CouldNotDecryptValue
         case 3: return .StorageFull
         case 4: return .CouldNotMakeKey
-        case 5: return .InternalError(
-            try FfiConverterString.read(from: &buf)
-            )
+        case 5: return .InternalError
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -1336,10 +1333,9 @@ public struct FfiConverterTypeStorageManagerError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(4))
         
         
-        case let .InternalError(v1):
+        case .InternalError:
             writeInt(&buf, Int32(5))
-            FfiConverterString.write(v1, into: &buf)
-            
+        
         }
     }
 }
