@@ -13,14 +13,14 @@ impl StorageManagerInterface for LocalStore {
     fn add(&self, key: Key, value: Value) -> Result<(), StorageManagerError> {
         // Make sure the directory exists.
         match fs::create_dir(DATASTORE_PATH) {
-            Ok(_) => {}                                                              // Success.
-            Err(ref e) if e.kind() == std::io::ErrorKind::AlreadyExists => {}        // Success.
-            Err(e) => return Err(StorageManagerError::InternalError(e.to_string())), // Fail.
+            Ok(_) => {}                                                       // Success.
+            Err(ref e) if e.kind() == std::io::ErrorKind::AlreadyExists => {} // Success.
+            Err(_) => return Err(StorageManagerError::InternalError),         // Fail.
         }
 
         match fs::write(gen_path(key.0), value.0) {
             Ok(_) => Ok(()),
-            Err(e) => Err(StorageManagerError::InternalError(e.to_string())),
+            Err(_) => Err(StorageManagerError::InternalError),
         }
     }
 
@@ -28,7 +28,7 @@ impl StorageManagerInterface for LocalStore {
     fn get(&self, key: Key) -> Result<Value, StorageManagerError> {
         match fs::read(gen_path(key.0)) {
             Ok(x) => Ok(Value(x)),
-            Err(e) => Err(StorageManagerError::InternalError(e.to_string())),
+            Err(_) => Err(StorageManagerError::InternalError),
         }
     }
 

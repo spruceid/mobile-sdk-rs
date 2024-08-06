@@ -31,7 +31,7 @@ pub enum StorageManagerError {
 
     /// An internal problem occurred in the storage manager.
     #[error("Internal Error")]
-    InternalError(String),
+    InternalError,
 }
 
 /// Interface: StorageManagerInterface
