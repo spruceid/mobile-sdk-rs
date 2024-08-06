@@ -1,5 +1,6 @@
 use super::storage_manager::*;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 use tracing::{info, info_span};
 use uuid::Uuid;
 
@@ -56,11 +57,23 @@ pub struct VdcCollection {
     storage: Box<dyn StorageManagerInterface>,
 }
 
+#[derive(Error, Debug, uniffi::Error)]
 pub enum VdcCollectionError {
+    /// Attempt to convert the credential to a serialized form suitable for writing to storage failed.
+    #[error("Failed to Serialize Value")]
     SerializeFailed,
+
+    /// Attempting to convert the credential to a deserialized form suitable for runtime use failed.
+    #[error("Failed to Deserialize Value")]
     DeserializeFailed,
-    StoreFailed,
-    LoadFailed,
+
+    /// Attempting to write the credential to storage failed.
+    #[error("Failed to Write to Storage")]
+    StoreFailed(StorageManagerError),
+
+    /// Attempting to read the credential from storage failed.
+    #[error("Failed to Read from Storage")]
+    LoadFailed(StorageManagerError),
 }
 
 impl VdcCollection {
@@ -84,7 +97,7 @@ impl VdcCollection {
 
         match self.storage.add(self.id_to_key(id), Value(val)) {
             Ok(()) => Ok(()),
-            Err(_) => Err(VdcCollectionError::StoreFailed),
+            Err(e) => Err(VdcCollectionError::StoreFailed(e)),
         }
     }
 
@@ -92,7 +105,7 @@ impl VdcCollection {
     pub fn get(&self, id: &str) -> Result<Credential, VdcCollectionError> {
         let raw = match self.storage.get(self.str_to_key(id)) {
             Ok(x) => x.0,
-            Err(_) => return Err(VdcCollectionError::LoadFailed),
+            Err(e) => return Err(VdcCollectionError::LoadFailed(e)),
         };
 
         match serde_cbor::de::from_slice(&raw) {
