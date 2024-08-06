@@ -12,11 +12,15 @@ impl StorageManagerInterface for LocalStore {
     /// Add a key/value pair to storage.
     fn add(&self, key: Key, value: Value) -> Result<(), StorageManagerError> {
         // Make sure the directory exists.
-        fs::create_dir(DATASTORE_PATH).unwrap(); // Failure probably means it already exists.
+        match fs::create_dir(DATASTORE_PATH) {
+            Ok(_) => {}                                                              // Success.
+            Err(ref e) if e.kind() == std::io::ErrorKind::AlreadyExists => {}        // Success.
+            Err(e) => return Err(StorageManagerError::InternalError(e.to_string())), // Fail.
+        }
 
         match fs::write(gen_path(key.0), value.0) {
             Ok(_) => Ok(()),
-            Err(_) => Ok(()),
+            Err(e) => Err(StorageManagerError::InternalError(e.to_string())),
         }
     }
 
@@ -24,7 +28,7 @@ impl StorageManagerInterface for LocalStore {
     fn get(&self, key: Key) -> Result<Value, StorageManagerError> {
         match fs::read(gen_path(key.0)) {
             Ok(x) => Ok(Value(x)),
-            Err(_) => Ok(Value(Vec::new())), // Should probably be a storage manager error.
+            Err(e) => Err(StorageManagerError::InternalError(e.to_string())),
         }
     }
 
@@ -46,7 +50,7 @@ impl StorageManagerInterface for LocalStore {
     fn remove(&self, key: Key) -> Result<(), StorageManagerError> {
         match fs::remove_file(gen_path(key.0)) {
             Ok(_) => Ok(()),
-            Err(_) => Ok(()),
+            Err(_) => Ok(()), // Removing something that isn't there shouldn't generate an error.
         }
     }
 }

@@ -28,6 +28,10 @@ pub enum StorageManagerError {
     /// error is raised when that key could not be created.
     #[error("Could not make storage encryption key")]
     CouldNotMakeKey,
+
+    /// An internal problem occurred in the storage manager.
+    #[error("Internal Error")]
+    InternalError(String),
 }
 
 /// Interface: StorageManagerInterface

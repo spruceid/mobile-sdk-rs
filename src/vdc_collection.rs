@@ -74,6 +74,10 @@ pub enum VdcCollectionError {
     /// Attempting to read the credential from storage failed.
     #[error("Failed to Read from Storage")]
     LoadFailed(StorageManagerError),
+
+    /// Attempting to delete a credential from storage failed.
+    #[error("Failed to Delete from Storage")]
+    DeleteFailed(StorageManagerError),
 }
 
 impl VdcCollection {
@@ -111,6 +115,14 @@ impl VdcCollection {
         match serde_cbor::de::from_slice(&raw) {
             Ok(x) => Ok(x),
             Err(_) => Err(VdcCollectionError::DeserializeFailed),
+        }
+    }
+
+    /// Remove a credential from the store.
+    pub fn delete(&self, id: &str) -> Result<(), VdcCollectionError> {
+        match self.storage.remove(self.str_to_key(id)) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(VdcCollectionError::DeleteFailed(e)),
         }
     }
 
@@ -168,5 +180,93 @@ impl VdcCollection {
                 }
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::local_store::*;
+    use uuid::uuid;
+
+    #[test]
+    fn test_vdc() {
+        let smi = LocalStore;
+        let vdc = VdcCollection::new(Box::new(smi));
+        let payload_1: Vec<u8> = "Some random collection of bytes. ⚛".into();
+        let payload_2: Vec<u8> = "Some other random collection of bytes. 📯".into();
+        let payload_3: Vec<u8> = "Some third random collection of bytes. λ".into();
+
+        match vdc.add(
+            uuid!("00000000-0000-0000-0000-000000000001"),
+            CredentialFormat::MsoMdoc,
+            CredentialType::Iso18013_5_1mDl,
+            payload_1.clone(),
+        ) {
+            Ok(_) => {}
+            Err(_) => panic!("Unable to add the first value."),
+        }
+
+        match vdc.add(
+            uuid!("00000000-0000-0000-0000-000000000002"),
+            CredentialFormat::MsoMdoc,
+            CredentialType::Iso18013_5_1mDl,
+            payload_2.clone(),
+        ) {
+            Ok(_) => {}
+            Err(_) => panic!("Unable to add the second value."),
+        }
+
+        match vdc.add(
+            uuid!("00000000-0000-0000-0000-000000000003"),
+            CredentialFormat::MsoMdoc,
+            CredentialType::Iso18013_5_1mDl,
+            payload_3.clone(),
+        ) {
+            Ok(_) => {}
+            Err(_) => panic!("Unable to add the third value."),
+        }
+
+        match vdc.get("00000000-0000-0000-0000-000000000002") {
+            Ok(x) => assert!(x.payload == payload_2.clone()),
+            Err(_) => panic!("Failed to get the second value"),
+        }
+
+        match vdc.get("00000000-0000-0000-0000-000000000001") {
+            Ok(x) => assert!(x.payload == payload_1.clone()),
+            Err(_) => panic!("Failed to get the first value"),
+        }
+
+        match vdc.get("00000000-0000-0000-0000-000000000003") {
+            Ok(x) => assert!(x.payload == payload_3.clone()),
+            Err(_) => panic!("Failed to get the third value"),
+        }
+
+        let list = vdc.all_entries();
+
+        assert!(list.len() == 3);
+
+        match vdc.delete("00000000-0000-0000-0000-000000000002") {
+            Ok(_) => {}
+            Err(_) => panic!("Failed to delete the second value."),
+        }
+
+        let list = vdc.all_entries();
+
+        assert!(list.len() == 2);
+
+        match vdc.delete("00000000-0000-0000-0000-000000000001") {
+            Ok(_) => {}
+            Err(_) => panic!("Failed to delete the first value."),
+        }
+
+        match vdc.delete("00000000-0000-0000-0000-000000000003") {
+            Ok(_) => {}
+            Err(_) => panic!("Failed to delete the third value."),
+        }
+
+        let list = vdc.all_entries();
+
+        assert!(list.len() == 0);
     }
 }
