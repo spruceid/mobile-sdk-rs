@@ -1,7 +1,10 @@
 use super::storage_manager::*;
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use tracing::{info, info_span};
 use uuid::Uuid;
+
+/// Internal prefix for credential keys.
+const KEY_PREFIX: &str = "Credential.";
 
 /// Supported credential formats.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
@@ -79,7 +82,7 @@ impl VdcCollection {
             Err(_) => return Err(VdcCollectionError::SerializeFailed),
         };
 
-        match self.storage.add(Key(id.to_string()), Value(val)) {
+        match self.storage.add(self.id_to_key(id), Value(val)) {
             Ok(()) => Ok(()),
             Err(_) => Err(VdcCollectionError::StoreFailed),
         }
@@ -87,7 +90,7 @@ impl VdcCollection {
 
     /// Get a credential from the store.
     pub fn get(&self, id: &str) -> Result<Credential, VdcCollectionError> {
-        let raw = match self.storage.get(Key(id.to_string())) {
+        let raw = match self.storage.get(self.str_to_key(id)) {
             Ok(x) => x.0,
             Err(_) => return Err(VdcCollectionError::LoadFailed),
         };
@@ -100,7 +103,19 @@ impl VdcCollection {
 
     /// Get a list of all the credentials.
     pub fn all_entries(&self) -> Vec<Key> {
-        self.storage.list()
+        let mut r = Vec::new();
+
+        for key in self.storage.list() {
+            let name = key.0;
+
+            if name.starts_with(KEY_PREFIX) {
+                if let Some(id) = name.strip_prefix(KEY_PREFIX) {
+                    r.push(Key(id.to_string()));
+                }
+            }
+        }
+
+        r
     }
 
     /// Get a list of all the credentials that match a specified type.
@@ -118,6 +133,16 @@ impl VdcCollection {
         }
 
         r
+    }
+
+    /// Convert a UUID to a storage key.
+    fn id_to_key(&self, id: Uuid) -> Key {
+        self.str_to_key(&id.to_string())
+    }
+
+    /// Convert a string ref to a storage key.
+    fn str_to_key(&self, id: &str) -> Key {
+        Key(format!("{}{}", KEY_PREFIX, id))
     }
 
     /// Dump the contents of the credential set to the logger.
