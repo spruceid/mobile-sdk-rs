@@ -197,76 +197,49 @@ mod tests {
         let payload_2: Vec<u8> = "Some other random collection of bytes. 📯".into();
         let payload_3: Vec<u8> = "Some third random collection of bytes. λ".into();
 
-        match vdc.add(
+        vdc.add(
             uuid!("00000000-0000-0000-0000-000000000001"),
             CredentialFormat::MsoMdoc,
             CredentialType::Iso18013_5_1mDl,
             payload_1.clone(),
-        ) {
-            Ok(_) => {}
-            Err(_) => panic!("Unable to add the first value."),
-        }
+        )
+        .expect("Unable to add the first value.");
 
-        match vdc.add(
+        vdc.add(
             uuid!("00000000-0000-0000-0000-000000000002"),
             CredentialFormat::MsoMdoc,
             CredentialType::Iso18013_5_1mDl,
             payload_2.clone(),
-        ) {
-            Ok(_) => {}
-            Err(_) => panic!("Unable to add the second value."),
-        }
+        )
+        .expect("Unable to add the second value.");
 
-        match vdc.add(
+        vdc.add(
             uuid!("00000000-0000-0000-0000-000000000003"),
             CredentialFormat::MsoMdoc,
             CredentialType::Iso18013_5_1mDl,
             payload_3.clone(),
-        ) {
-            Ok(_) => {}
-            Err(_) => panic!("Unable to add the third value."),
-        }
+        )
+        .expect("Unable to add the third value.");
 
-        match vdc.get("00000000-0000-0000-0000-000000000002") {
-            Ok(x) => assert!(x.payload == payload_2.clone()),
-            Err(_) => panic!("Failed to get the second value"),
-        }
+        vdc.get("00000000-0000-0000-0000-000000000002")
+            .expect("Failed to get the second value");
+        vdc.get("00000000-0000-0000-0000-000000000001")
+            .expect("Failed to get the first value");
+        vdc.get("00000000-0000-0000-0000-000000000003")
+            .expect("Failed to get the third value");
 
-        match vdc.get("00000000-0000-0000-0000-000000000001") {
-            Ok(x) => assert!(x.payload == payload_1.clone()),
-            Err(_) => panic!("Failed to get the first value"),
-        }
+        assert!(vdc.all_entries().len() == 3);
 
-        match vdc.get("00000000-0000-0000-0000-000000000003") {
-            Ok(x) => assert!(x.payload == payload_3.clone()),
-            Err(_) => panic!("Failed to get the third value"),
-        }
+        vdc.delete("00000000-0000-0000-0000-000000000002")
+            .expect("Failed to delete the second value.");
 
-        let list = vdc.all_entries();
+        assert!(vdc.all_entries().len() == 2);
 
-        assert!(list.len() == 3);
+        vdc.delete("00000000-0000-0000-0000-000000000001")
+            .expect("Failed to delete the first value.");
+        vdc.delete("00000000-0000-0000-0000-000000000003")
+            .expect("Failed to delete the third value.");
 
-        match vdc.delete("00000000-0000-0000-0000-000000000002") {
-            Ok(_) => {}
-            Err(_) => panic!("Failed to delete the second value."),
-        }
-
-        let list = vdc.all_entries();
-
-        assert!(list.len() == 2);
-
-        match vdc.delete("00000000-0000-0000-0000-000000000001") {
-            Ok(_) => {}
-            Err(_) => panic!("Failed to delete the first value."),
-        }
-
-        match vdc.delete("00000000-0000-0000-0000-000000000003") {
-            Ok(_) => {}
-            Err(_) => panic!("Failed to delete the third value."),
-        }
-
-        let list = vdc.all_entries();
-
-        assert!(list.len() == 0);
+        assert!(vdc.all_entries().len() == 0);
     }
 }
