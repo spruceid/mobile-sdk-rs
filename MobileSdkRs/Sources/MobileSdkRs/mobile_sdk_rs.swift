@@ -1283,6 +1283,11 @@ public enum StorageManagerError {
      * error is raised when that key could not be created.
      */
     case CouldNotMakeKey
+    /**
+     * An internal problem occurred in the storage manager.
+     */
+    case InternalError(String
+    )
 }
 
 
@@ -1300,6 +1305,9 @@ public struct FfiConverterTypeStorageManagerError: FfiConverterRustBuffer {
         case 2: return .CouldNotDecryptValue
         case 3: return .StorageFull
         case 4: return .CouldNotMakeKey
+        case 5: return .InternalError(
+            try FfiConverterString.read(from: &buf)
+            )
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -1327,6 +1335,11 @@ public struct FfiConverterTypeStorageManagerError: FfiConverterRustBuffer {
         case .CouldNotMakeKey:
             writeInt(&buf, Int32(4))
         
+        
+        case let .InternalError(v1):
+            writeInt(&buf, Int32(5))
+            FfiConverterString.write(v1, into: &buf)
+            
         }
     }
 }
@@ -1387,6 +1400,105 @@ public struct FfiConverterTypeTerminationError: FfiConverterRustBuffer {
 extension TerminationError: Equatable, Hashable {}
 
 extension TerminationError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
+
+
+public enum VdcCollectionError {
+
+    
+    
+    /**
+     * Attempt to convert the credential to a serialized form suitable for writing to storage failed.
+     */
+    case SerializeFailed
+    /**
+     * Attempting to convert the credential to a deserialized form suitable for runtime use failed.
+     */
+    case DeserializeFailed
+    /**
+     * Attempting to write the credential to storage failed.
+     */
+    case StoreFailed(StorageManagerError
+    )
+    /**
+     * Attempting to read the credential from storage failed.
+     */
+    case LoadFailed(StorageManagerError
+    )
+    /**
+     * Attempting to delete a credential from storage failed.
+     */
+    case DeleteFailed(StorageManagerError
+    )
+}
+
+
+public struct FfiConverterTypeVdcCollectionError: FfiConverterRustBuffer {
+    typealias SwiftType = VdcCollectionError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> VdcCollectionError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .SerializeFailed
+        case 2: return .DeserializeFailed
+        case 3: return .StoreFailed(
+            try FfiConverterTypeStorageManagerError.read(from: &buf)
+            )
+        case 4: return .LoadFailed(
+            try FfiConverterTypeStorageManagerError.read(from: &buf)
+            )
+        case 5: return .DeleteFailed(
+            try FfiConverterTypeStorageManagerError.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: VdcCollectionError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case .SerializeFailed:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .DeserializeFailed:
+            writeInt(&buf, Int32(2))
+        
+        
+        case let .StoreFailed(v1):
+            writeInt(&buf, Int32(3))
+            FfiConverterTypeStorageManagerError.write(v1, into: &buf)
+            
+        
+        case let .LoadFailed(v1):
+            writeInt(&buf, Int32(4))
+            FfiConverterTypeStorageManagerError.write(v1, into: &buf)
+            
+        
+        case let .DeleteFailed(v1):
+            writeInt(&buf, Int32(5))
+            FfiConverterTypeStorageManagerError.write(v1, into: &buf)
+            
+        }
+    }
+}
+
+
+extension VdcCollectionError: Equatable, Hashable {}
+
+extension VdcCollectionError: Foundation.LocalizedError {
     public var errorDescription: String? {
         String(reflecting: self)
     }
