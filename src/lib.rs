@@ -1,6 +1,8 @@
 uniffi::setup_scaffolding!();
 
+pub mod local_store;
 pub mod storage_manager;
+pub mod vdc_collection;
 
 use std::{ collections::HashMap, io::Cursor, sync::{Arc, Mutex} };
 

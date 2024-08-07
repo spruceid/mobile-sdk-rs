@@ -1,10 +1,10 @@
 use thiserror::Error;
 
 uniffi::custom_newtype!(Key, String);
-pub struct Key(String);
+pub struct Key(pub String);
 
-uniffi::custom_newtype!(Value, String);
-pub struct Value(String);
+uniffi::custom_newtype!(Value, Vec<u8>);
+pub struct Value(pub Vec<u8>);
 
 /// Enum: StorageManagerError
 ///
@@ -28,6 +28,10 @@ pub enum StorageManagerError {
     /// error is raised when that key could not be created.
     #[error("Could not make storage encryption key")]
     CouldNotMakeKey,
+
+    /// An internal problem occurred in the storage manager.
+    #[error("Internal Error")]
+    InternalError,
 }
 
 /// Interface: StorageManagerInterface
@@ -57,6 +61,11 @@ pub trait StorageManagerInterface: Send + Sync {
     /// Callback function pointer to native (kotlin/swift) code for
     /// getting a key.
     fn get(&self, key: Key) -> Result<Option<Value>, StorageManagerError>;
+
+    /// Function: list
+    ///
+    /// Callback function pointer for listing available keys.
+    fn list(&self) -> Result<Vec<Key>, StorageManagerError>;
 
     /// Function: remove
     ///

@@ -1261,6 +1261,10 @@ public enum StorageManagerError {
      * error is raised when that key could not be created.
      */
     case CouldNotMakeKey
+    /**
+     * An internal problem occurred in the storage manager.
+     */
+    case InternalError
 }
 
 
@@ -1278,6 +1282,7 @@ public struct FfiConverterTypeStorageManagerError: FfiConverterRustBuffer {
         case 2: return .CouldNotDecryptValue
         case 3: return .StorageFull
         case 4: return .CouldNotMakeKey
+        case 5: return .InternalError
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -1304,6 +1309,10 @@ public struct FfiConverterTypeStorageManagerError: FfiConverterRustBuffer {
         
         case .CouldNotMakeKey:
             writeInt(&buf, Int32(4))
+        
+        
+        case .InternalError:
+            writeInt(&buf, Int32(5))
         
         }
     }
@@ -1406,9 +1415,103 @@ public struct FfiConverterTypeVCBVerificationError: FfiConverterRustBuffer {
 }
 
 
-extension VcbVerificationError: Equatable, Hashable {}
+public enum VdcCollectionError {
 
-extension VcbVerificationError: Error { }
+    
+    
+    /**
+     * Attempt to convert the credential to a serialized form suitable for writing to storage failed.
+     */
+    case SerializeFailed
+    /**
+     * Attempting to convert the credential to a deserialized form suitable for runtime use failed.
+     */
+    case DeserializeFailed
+    /**
+     * Attempting to write the credential to storage failed.
+     */
+    case StoreFailed(StorageManagerError
+    )
+    /**
+     * Attempting to read the credential from storage failed.
+     */
+    case LoadFailed(StorageManagerError
+    )
+    /**
+     * Attempting to delete a credential from storage failed.
+     */
+    case DeleteFailed(StorageManagerError
+    )
+}
+
+
+public struct FfiConverterTypeVdcCollectionError: FfiConverterRustBuffer {
+    typealias SwiftType = VdcCollectionError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> VdcCollectionError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .SerializeFailed
+        case 2: return .DeserializeFailed
+        case 3: return .StoreFailed(
+            try FfiConverterTypeStorageManagerError.read(from: &buf)
+            )
+        case 4: return .LoadFailed(
+            try FfiConverterTypeStorageManagerError.read(from: &buf)
+            )
+        case 5: return .DeleteFailed(
+            try FfiConverterTypeStorageManagerError.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: VdcCollectionError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case .SerializeFailed:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .DeserializeFailed:
+            writeInt(&buf, Int32(2))
+        
+        
+        case let .StoreFailed(v1):
+            writeInt(&buf, Int32(3))
+            FfiConverterTypeStorageManagerError.write(v1, into: &buf)
+            
+        
+        case let .LoadFailed(v1):
+            writeInt(&buf, Int32(4))
+            FfiConverterTypeStorageManagerError.write(v1, into: &buf)
+            
+        
+        case let .DeleteFailed(v1):
+            writeInt(&buf, Int32(5))
+            FfiConverterTypeStorageManagerError.write(v1, into: &buf)
+            
+        }
+    }
+}
+
+
+extension VdcCollectionError: Equatable, Hashable {}
+
+extension VdcCollectionError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 
@@ -1446,6 +1549,13 @@ public protocol StorageManagerInterface : AnyObject {
      * getting a key.
      */
     func get(key: Key) throws  -> Value?
+    
+    /**
+     * Function: list
+     *
+     * Callback function pointer for listing available keys.
+     */
+    func list() throws  -> [Key]
     
     /**
      * Function: remove
@@ -1518,6 +1628,29 @@ fileprivate struct UniffiCallbackInterfaceStorageManagerInterface {
 
             
             let writeReturn = { uniffiOutReturn.pointee = FfiConverterOptionTypeValue.lower($0) }
+            uniffiTraitInterfaceCallWithError(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn,
+                lowerError: FfiConverterTypeStorageManagerError.lower
+            )
+        },
+        list: { (
+            uniffiHandle: UInt64,
+            uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> [Key] in
+                guard let uniffiObj = try? FfiConverterCallbackInterfaceStorageManagerInterface.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return try uniffiObj.list(
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterSequenceTypeKey.lower($0) }
             uniffiTraitInterfaceCallWithError(
                 callStatus: uniffiCallStatus,
                 makeCall: makeCall,
@@ -1650,6 +1783,28 @@ fileprivate struct FfiConverterSequenceTypeItemsRequest: FfiConverterRustBuffer 
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeItemsRequest.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+fileprivate struct FfiConverterSequenceTypeKey: FfiConverterRustBuffer {
+    typealias SwiftType = [Key]
+
+    public static func write(_ value: [Key], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeKey.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Key] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [Key]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeKey.read(from: &buf))
         }
         return seq
     }
@@ -1820,22 +1975,22 @@ public func FfiConverterTypeUuid_lower(_ value: Uuid) -> RustBuffer {
  * Typealias from the type name used in the UDL file to the builtin type.  This
  * is needed because the UDL type name is used in function/method signatures.
  */
-public typealias Value = String
+public typealias Value = Data
 public struct FfiConverterTypeValue: FfiConverter {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Value {
-        return try FfiConverterString.read(from: &buf)
+        return try FfiConverterData.read(from: &buf)
     }
 
     public static func write(_ value: Value, into buf: inout [UInt8]) {
-        return FfiConverterString.write(value, into: &buf)
+        return FfiConverterData.write(value, into: &buf)
     }
 
     public static func lift(_ value: RustBuffer) throws -> Value {
-        return try FfiConverterString.lift(value)
+        return try FfiConverterData.lift(value)
     }
 
     public static func lower(_ value: Value) -> RustBuffer {
-        return FfiConverterString.lower(value)
+        return FfiConverterData.lower(value)
     }
 }
 
@@ -2003,13 +2158,16 @@ private var initializationResult: InitializationResult {
     if (uniffi_mobile_sdk_rs_checksum_constructor_mdoc_from_cbor() != 43984) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_add() != 57440) {
+    if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_add() != 60217) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_get() != 12195) {
+    if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_get() != 64957) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_remove() != 54584) {
+    if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_list() != 22654) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_remove() != 46691) {
         return InitializationResult.apiChecksumMismatch
     }
 
