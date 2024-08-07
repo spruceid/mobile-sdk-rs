@@ -106,13 +106,14 @@ impl VdcCollection {
     }
 
     /// Get a credential from the store.
-    pub fn get(&self, id: &str) -> Result<Credential, VdcCollectionError> {
+    pub fn get(&self, id: &str) -> Result<Option<Credential>, VdcCollectionError> {
         let raw = match self.storage.get(self.str_to_key(id)) {
-            Ok(x) => x.0,
+            Ok(Some(x)) => x,
+            Ok(None) => return Ok(None),
             Err(e) => return Err(VdcCollectionError::LoadFailed(e)),
         };
 
-        match serde_cbor::de::from_slice(&raw) {
+        match serde_cbor::de::from_slice(&raw.0) {
             Ok(x) => Ok(x),
             Err(_) => Err(VdcCollectionError::DeserializeFailed),
         }
@@ -127,37 +128,50 @@ impl VdcCollection {
     }
 
     /// Get a list of all the credentials.
-    pub fn all_entries(&self) -> Vec<Key> {
+    pub fn all_entries(&self) -> Result<Vec<String>, VdcCollectionError> {
         let mut r = Vec::new();
 
-        for key in self.storage.list() {
-            let name = key.0;
+        match self.storage.list() {
+            Ok(list) => {
+                for key in list {
+                    let name = key.0;
 
-            if name.starts_with(KEY_PREFIX) {
-                if let Some(id) = name.strip_prefix(KEY_PREFIX) {
-                    r.push(Key(id.to_string()));
+                    if name.starts_with(KEY_PREFIX) {
+                        if let Some(id) = name.strip_prefix(KEY_PREFIX) {
+                            r.push(id.to_string());
+                        }
+                    }
                 }
             }
+            Err(e) => return Err(VdcCollectionError::LoadFailed(e)),
         }
 
-        r
+        Ok(r)
     }
 
     /// Get a list of all the credentials that match a specified type.
-    pub fn all_entries_by_type(&self, ctype: CredentialType) -> Vec<String> {
+    pub fn all_entries_by_type(
+        &self,
+        ctype: CredentialType,
+    ) -> Result<Vec<String>, VdcCollectionError> {
         let mut r = Vec::new();
 
-        for key in self.all_entries() {
-            let cred = self.get(&key.0);
+        match self.all_entries() {
+            Ok(list) => {
+                for key in list {
+                    let cred = self.get(&key);
 
-            if let Ok(x) = cred {
-                if x.ctype == ctype {
-                    r.push(key.0);
+                    if let Ok(Some(x)) = cred {
+                        if x.ctype == ctype {
+                            r.push(key);
+                        }
+                    }
                 }
             }
+            Err(e) => return Err(e),
         }
 
-        r
+        Ok(r)
     }
 
     /// Convert a UUID to a storage key.
@@ -173,12 +187,15 @@ impl VdcCollection {
     /// Dump the contents of the credential set to the logger.
     pub fn dump(&self) {
         let span = info_span!("All Credentials");
-        span.in_scope(|| {
-            for key in self.all_entries() {
-                if let Ok(x) = self.get(&key.0) {
-                    info!("{:?}", x);
+        span.in_scope(|| match self.all_entries() {
+            Ok(list) => {
+                for key in list {
+                    if let Ok(x) = self.get(&key) {
+                        info!("{:?}", x);
+                    }
                 }
             }
+            Err(e) => info!("Unable to get list: {:?}", e),
         });
     }
 }
@@ -228,18 +245,18 @@ mod tests {
         vdc.get("00000000-0000-0000-0000-000000000003")
             .expect("Failed to get the third value");
 
-        assert!(vdc.all_entries().len() == 3);
+        assert!(vdc.all_entries().unwrap().len() == 3);
 
         vdc.delete("00000000-0000-0000-0000-000000000002")
             .expect("Failed to delete the second value.");
 
-        assert!(vdc.all_entries().len() == 2);
+        assert!(vdc.all_entries().unwrap().len() == 2);
 
         vdc.delete("00000000-0000-0000-0000-000000000001")
             .expect("Failed to delete the first value.");
         vdc.delete("00000000-0000-0000-0000-000000000003")
             .expect("Failed to delete the third value.");
 
-        assert!(vdc.all_entries().len() == 0);
+        assert!(vdc.all_entries().unwrap().len() == 0);
     }
 }

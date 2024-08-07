@@ -25,25 +25,34 @@ impl StorageManagerInterface for LocalStore {
     }
 
     /// Retrieve the value associated with a key.
-    fn get(&self, key: Key) -> Result<Value, StorageManagerError> {
+    fn get(&self, key: Key) -> Result<Option<Value>, StorageManagerError> {
         match fs::read(gen_path(key.0)) {
-            Ok(x) => Ok(Value(x)),
+            Ok(x) => Ok(Some(Value(x))),
+            Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
             Err(_) => Err(StorageManagerError::InternalError),
         }
     }
 
     /// List the available key/value pairs.
-    fn list(&self) -> Vec<Key> {
+    fn list(&self) -> Result<Vec<Key>, StorageManagerError> {
         let mut keys = Vec::new();
-        let files = fs::read_dir(DATASTORE_PATH).unwrap();
+
+        let files = match fs::read_dir(DATASTORE_PATH) {
+            Ok(x) => x,
+            Err(_) => return Err(StorageManagerError::InternalError),
+        };
 
         for f in files.into_iter().flatten() {
-            if let Some(x) = f.file_name().to_str() {
-                keys.push(Key(x.to_string()));
+            match f.file_name().to_str() {
+                Some(x) => keys.push(Key(x.to_string())),
+                None => return Err(StorageManagerError::InternalError),
             }
+            //if let Some(x) = f.file_name().to_str() {
+            //    keys.push(Key(x.to_string()));
+            //}
         }
 
-        keys
+        Ok(keys)
     }
 
     /// Delete a given key/value pair from storage.
