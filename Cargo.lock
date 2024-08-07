@@ -845,7 +845,7 @@ dependencies = [
 [[package]]
 name = "cbor-ld"
 version = "0.2.0"
-source = "git+ssh://git@github.com/spruceid/cbor-ld.git?rev=122f2cc#122f2ccb298fff97ee06bcd90a00d6bf1dc0ac26"
+source = "git+ssh://git@github.com/spruceid/cbor-ld.git?rev=74a439a#74a439a94b54c762a2c2178c6f59cc6dbe6634a9"
 dependencies = [
  "chrono",
  "ciborium",
@@ -3283,6 +3283,7 @@ dependencies = [
  "serde_json",
  "ssi",
  "thiserror",
+ "tokio",
  "uniffi",
  "uuid",
  "w3c-vc-barcodes",
@@ -6160,6 +6161,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "w3c-vc-barcodes"
 version = "0.1.0"
+source = "git+https://github.com/spruceid/w3c-vc-barcodes?rev=4d078d5#4d078d56b74fb6e5a881a8b0e73d2c4da40e5df9"
 dependencies = [
  "cbor-ld",
  "csv",

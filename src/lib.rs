@@ -12,9 +12,10 @@ use isomdl::{
     },
     presentation::device::{self, Document, SessionManagerInit},
 };
-use ssi::{dids::{AnyDidMethod, DIDResolver}, json_ld::iref::Uri, status::{bitstring_status_list::{BitstringStatusListCredential, StatusList, StatusPurpose, TimeToLive}, client::{MaybeCached, ProviderError, TypedStatusMapProvider}}};
+use ssi::{claims::vc::v1::data_integrity::any_credential_from_json_str, dids::{AnyDidMethod, DIDResolver}, json_ld::iref::Uri, prelude::AnyMethod, status::{bitstring_status_list::{BitstringStatusListCredential, StatusList, StatusPurpose, TimeToLive}, client::{MaybeCached, ProviderError, TypedStatusMapProvider}}};
 use uuid::Uuid;
-use w3c_vc_barcodes::{aamva::{dlid::{pdf_417, DlSubfile}, ZZSubfile}, optical_barcode_credential::VerificationParameters, terse_bitstring_status_list_entry::{ConstTerseStatusListProvider, StatusListInfo}, verify};
+use w3c_vc_barcodes::{aamva::{dlid::{pdf_417, DlSubfile}, ZZSubfile}, optical_barcode_credential::{decode_from_bytes, VerificationParameters}, terse_bitstring_status_list_entry::{ConstTerseStatusListProvider, StatusListInfo}, verify, MRZ, MachineReadableZone};
+
 
 #[derive(thiserror::Error, uniffi::Error, Debug)]
 pub enum SessionError {
@@ -57,12 +58,19 @@ impl TypedStatusMapProvider<Uri, BitstringStatusListCredential> for StatusLists 
 }
 
 #[uniffi::export]
-pub async fn verify_pdf417_barcode(payload: String) {
+pub async fn verify_pdf417_barcode(payload: String) -> Result<(), VCBVerificationError> {
     let mut cursor = Cursor::new(payload);
-    let mut file = pdf_417::File::new(&mut cursor).unwrap();
-    let dl: DlSubfile = file.read_subfile(b"DL").unwrap().unwrap();
-    let zz: ZZSubfile = file.read_subfile(b"ZZ").unwrap().unwrap();
-    let vc = zz.decode_credential().await.unwrap();
+    let mut file = pdf_417::File::new(&mut cursor)
+        .map_err(|e| VCBVerificationError::Generic { value: e.to_string() })?;
+    let dl: DlSubfile = file.read_subfile(b"DL")
+        .map_err(|e| VCBVerificationError::Generic { value: e.to_string() })?
+        .ok_or(VCBVerificationError::Generic { value: "Invalid DLSubfile".to_string() })?;
+    let zz: ZZSubfile = file.read_subfile(b"ZZ")
+        .map_err(|e| VCBVerificationError::Generic { value: e.to_string() })?
+        .ok_or(VCBVerificationError::Generic { value: "Invalid ZZSubfile".to_string() })?;
+    let vc = zz.decode_credential()
+        .await
+        .map_err(|e| VCBVerificationError::Generic { value: e.to_string() })?;
 
     let status_list_client = ConstTerseStatusListProvider::new(
         StatusLists,
@@ -74,7 +82,68 @@ pub async fn verify_pdf417_barcode(payload: String) {
         status_list_client,
     );
 
-    verify(&vc, &dl.mandatory, params).await.is_ok();
+    verify(&vc, &dl.mandatory, params)
+        .await
+        .map_err(|e| VCBVerificationError::Generic { value: e.to_string() })?
+        .map_err(|e| VCBVerificationError::Generic { value: e.to_string() })
+}
+
+fn convert_to_mrz_entry(s: &[u8]) -> &[u8; 30] {
+    s.try_into().expect("slice with incorrect length")
+}
+
+#[derive(thiserror::Error, uniffi::Error, Debug)]
+pub enum VCBVerificationError {
+    #[error("{value}")]
+    Generic { value: String },
+}
+
+#[uniffi::export]
+pub async fn verify_vcb_qrcode_against_mrz(mrz_payload: String, qr_payload: String) -> Result<(), VCBVerificationError> {
+    let mrz: MRZ = mrz_payload
+                .lines()
+                .map(|x| *convert_to_mrz_entry(x.as_bytes()))
+                .collect::<Vec<[u8;30]>>()
+                .try_into()
+                .map_err(|_| VCBVerificationError::Generic { value: "Invalid MRZ string".to_string() })?;
+
+    // First we decode the QR-code payload to get the VCB in CBOR-LD form.
+    let input = MachineReadableZone::decode_qr_code_payload(qr_payload.as_str())
+        .map_err(|e| VCBVerificationError::Generic { value: e.to_string() })?;
+
+    // Then we decompress the CBOR-LD VCB to get a regular JSON-LD VCB.
+    let vc = decode_from_bytes::<MachineReadableZone>(&input)
+        .await
+        .map_err(|e| VCBVerificationError::Generic { value: e.to_string() })?;
+
+    // Finally we verify the VCB against the MRZ data.
+    let params = VerificationParameters::new(AnyDidMethod::default().into_vm_resolver());
+    verify(&vc, &mrz, params)
+        .await
+        .map_err(|e| VCBVerificationError::Generic { value: e.to_string() })?
+        .map_err(|e| VCBVerificationError::Generic { value: e.to_string() })
+}
+
+#[derive(thiserror::Error, uniffi::Error, Debug)]
+pub enum VCVerificationError {
+    #[error("{value}")]
+    Generic { value: String },
+}
+
+#[uniffi::export]
+pub async fn verify_json_vc_string(json: String) -> Result<(), VCVerificationError> {
+    use ssi::prelude::VerificationParameters;
+
+    let vc = any_credential_from_json_str(&json)
+        .map_err(|e| VCVerificationError::Generic { value: e.to_string() })?;
+
+    let vm_resolver = AnyDidMethod::default().into_vm_resolver();
+    let params: VerificationParameters<ssi::dids::VerificationMethodDIDResolver<AnyDidMethod, AnyMethod>> = VerificationParameters::from_resolver(vm_resolver);
+
+    vc.verify(&params)
+        .await
+        .map_err(|e| VCVerificationError::Generic { value: e.to_string() })?
+        .map_err(|e| VCVerificationError::Generic { value: e.to_string() })
 }
 
 #[uniffi::export]
@@ -305,6 +374,28 @@ mod tests {
     use p256::ecdsa::signature::{SignatureEncoding, Signer};
 
     use super::*;
+
+    #[tokio::test]
+    async fn verify_vc() {
+        let json_vc = include_str!("../tests/res/vc");
+        let result = verify_json_vc_string(json_vc.into()).await.is_ok();
+        assert_eq!(result, true);
+    }
+
+    #[tokio::test]
+    async fn verify_vcb_dl() {
+        let pdf417 = "@\n\x1e\rANSI 000000090002DL00410234ZZ02750202DLDAQF987654321\nDCSSMITH\nDDEN\nDACJOHN\nDDFN\nDADNONE\nDDGN\nDCAC\nDCBNONE\nDCDNONE\nDBD01012024\nDBB04191988\nDBA04192030\nDBC1\nDAU069 IN\nDAYBRO\nDAG123 MAIN ST\nDAIANYVILLE\nDAJUTO\nDAKF87P20000  \nDCFUTODOCDISCRIM\nDCGUTO\nDAW158\nDCK1234567890\nDDAN\rZZZZA2QZkpgGDGYAAGYABGYACGJ2CGHYYpBi4oxicGKYYzhiyGNAa5ZIggRi6ohicGKAYqER1ggAgGL4YqhjApRicGGwY1gQY4BjmGOJYQXq3wuVrSeLM5iGEziaBjhWosXMWRAG107uT_9bSteuPasCXFQKuPdSdF-xmUoFkA0yRJoW4ERvATNyewT263ZHMGOQYrA==\r";
+        let result = verify_pdf417_barcode(pdf417.into()).await.is_ok();
+        assert_eq!(result, true);
+    }
+
+    #[tokio::test]
+    async fn verify_vcb_employment_authorization() {
+        let mrz = include_str!("../tests/res/mrz-vcb");
+        let ead = include_str!("../tests/res/ead-vcb");
+        let result = verify_vcb_qrcode_against_mrz(mrz.into(), ead.into()).await.is_ok();
+        assert_eq!(result, true);
+    }
 
     #[test]
     fn end_to_end_ble_presentment() {
