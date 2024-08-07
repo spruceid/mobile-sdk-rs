@@ -1535,14 +1535,14 @@ public protocol StorageManagerInterface : AnyObject {
      * Callback function pointer to native (kotlin/swift) code for
      * getting a key.
      */
-    func get(key: Key) throws  -> Value
+    func get(key: Key) throws  -> Value?
     
     /**
      * Function: list
      *
      * Callback function pointer for listing available keys.
      */
-    func list()  -> [Key]
+    func list() throws  -> [Key]
     
     /**
      * Function: remove
@@ -1604,7 +1604,7 @@ fileprivate struct UniffiCallbackInterfaceStorageManagerInterface {
             uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
         ) in
             let makeCall = {
-                () throws -> Value in
+                () throws -> Value? in
                 guard let uniffiObj = try? FfiConverterCallbackInterfaceStorageManagerInterface.handleMap.get(handle: uniffiHandle) else {
                     throw UniffiInternalError.unexpectedStaleHandle
                 }
@@ -1614,7 +1614,7 @@ fileprivate struct UniffiCallbackInterfaceStorageManagerInterface {
             }
 
             
-            let writeReturn = { uniffiOutReturn.pointee = FfiConverterTypeValue.lower($0) }
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterOptionTypeValue.lower($0) }
             uniffiTraitInterfaceCallWithError(
                 callStatus: uniffiCallStatus,
                 makeCall: makeCall,
@@ -1632,16 +1632,17 @@ fileprivate struct UniffiCallbackInterfaceStorageManagerInterface {
                 guard let uniffiObj = try? FfiConverterCallbackInterfaceStorageManagerInterface.handleMap.get(handle: uniffiHandle) else {
                     throw UniffiInternalError.unexpectedStaleHandle
                 }
-                return uniffiObj.list(
+                return try uniffiObj.list(
                 )
             }
 
             
             let writeReturn = { uniffiOutReturn.pointee = FfiConverterSequenceTypeKey.lower($0) }
-            uniffiTraitInterfaceCall(
+            uniffiTraitInterfaceCallWithError(
                 callStatus: uniffiCallStatus,
                 makeCall: makeCall,
-                writeReturn: writeReturn
+                writeReturn: writeReturn,
+                lowerError: FfiConverterTypeStorageManagerError.lower
             )
         },
         remove: { (
@@ -1706,6 +1707,27 @@ extension FfiConverterCallbackInterfaceStorageManagerInterface : FfiConverter {
 
     public static func write(_ v: SwiftType, into buf: inout [UInt8]) {
         writeInt(&buf, lower(v))
+    }
+}
+
+fileprivate struct FfiConverterOptionTypeValue: FfiConverterRustBuffer {
+    typealias SwiftType = Value?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeValue.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeValue.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
     }
 }
 
@@ -2046,10 +2068,10 @@ private var initializationResult: InitializationResult = {
     if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_add() != 60217) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_get() != 38907) {
+    if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_get() != 64957) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_list() != 5002) {
+    if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_list() != 22654) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_remove() != 46691) {
