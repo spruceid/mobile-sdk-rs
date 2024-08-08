@@ -382,6 +382,19 @@ fileprivate class UniffiHandleMap<T> {
 // Public interface members begin here.
 
 
+fileprivate struct FfiConverterUInt8: FfiConverterPrimitive {
+    typealias FfiType = UInt8
+    typealias SwiftType = UInt8
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt8 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: UInt8, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
 fileprivate struct FfiConverterBool : FfiConverter {
     typealias FfiType = Int8
     typealias SwiftType = Bool
@@ -1429,6 +1442,11 @@ public enum VdcCollectionError {
      */
     case DeleteFailed(StorageManagerError
     )
+    /**
+     * A loaded credential was serialized to an unsupported format.
+     */
+    case UnsupportedStorageVersion(UInt8
+    )
 }
 
 
@@ -1452,6 +1470,9 @@ public struct FfiConverterTypeVdcCollectionError: FfiConverterRustBuffer {
             )
         case 5: return .DeleteFailed(
             try FfiConverterTypeStorageManagerError.read(from: &buf)
+            )
+        case 6: return .UnsupportedStorageVersion(
+            try FfiConverterUInt8.read(from: &buf)
             )
 
          default: throw UniffiInternalError.unexpectedEnumCase
@@ -1486,6 +1507,11 @@ public struct FfiConverterTypeVdcCollectionError: FfiConverterRustBuffer {
         case let .DeleteFailed(v1):
             writeInt(&buf, Int32(5))
             FfiConverterTypeStorageManagerError.write(v1, into: &buf)
+            
+        
+        case let .UnsupportedStorageVersion(v1):
+            writeInt(&buf, Int32(6))
+            FfiConverterUInt8.write(v1, into: &buf)
             
         }
     }
