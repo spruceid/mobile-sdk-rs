@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 /// Internal prefix for credential keys.
 const KEY_PREFIX: &str = "Credential.";
+const CURRENT_STORAGE_VERSION: u8 = 0;
 
 /// Supported credential formats.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
@@ -78,6 +79,10 @@ pub enum VdcCollectionError {
     /// Attempting to delete a credential from storage failed.
     #[error("Failed to Delete from Storage")]
     DeleteFailed(StorageManagerError),
+
+    #[error("Unsupported Storage Version")]
+    /// A loaded credential was serialized to an unsupported format.
+    UnsupportedStorageVersion(u8),
 }
 
 impl VdcCollection {
@@ -94,10 +99,17 @@ impl VdcCollection {
         ctype: CredentialType,
         payload: Vec<u8>,
     ) -> Result<(), VdcCollectionError> {
-        let val = match serde_cbor::to_vec(&Credential::new(id, format, ctype, payload)) {
+        let mut val = match serde_cbor::to_vec(&Credential::new(id, format, ctype, payload)) {
             Ok(x) => x,
             Err(_) => return Err(VdcCollectionError::SerializeFailed),
         };
+
+        //    This is to allow for version changes and updates; if `Credential` changes such that the CBOR will be
+        // different, the storage version prefix byte can be updated; the corresponding code in `get()` can match
+        // on the value of the byte and decode to the appropriately versioned structure.  It can also potentially
+        // update the credential and write it back out in the new format.
+
+        val.insert(0, CURRENT_STORAGE_VERSION); // 1 byte version header, version 0
 
         match self.storage.add(self.id_to_key(id), Value(val)) {
             Ok(()) => Ok(()),
@@ -113,9 +125,18 @@ impl VdcCollection {
             Err(e) => return Err(VdcCollectionError::LoadFailed(e)),
         };
 
-        match serde_cbor::de::from_slice(&raw.0) {
-            Ok(x) => Ok(x),
-            Err(_) => Err(VdcCollectionError::DeserializeFailed),
+        //    Check the version.  This is currently a placeholder, since there is only one version of the
+        // `Credential` format, but having the version mechanism in place will make it easier to update things
+        // in the field if we do need to extend or modify the `Credential` structure in a way that changes the
+        // way CBOR serializes it.
+
+        match raw.0[0] {
+            // Version
+            CURRENT_STORAGE_VERSION => match serde_cbor::de::from_slice(&raw.0[1..]) {
+                Ok(x) => Ok(x),
+                Err(_) => Err(VdcCollectionError::DeserializeFailed),
+            },
+            v => Err(VdcCollectionError::UnsupportedStorageVersion(v)),
         }
     }
 
