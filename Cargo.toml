@@ -27,7 +27,7 @@ serde = { version = "1.0.204", features = ["derive"] }
 serde_cbor = "0.11.2"
 serde_json = "1.0.111"
 uuid = { version = "1.6.1", features = ["v4"] }
-w3c-vc-barcodes = { git = "https://github.com/spruceid/w3c-vc-barcodes", rev = "4d078d5" }
+w3c-vc-barcodes = { git = "https://github.com/spruceid/w3c-vc-barcodes", rev = "d3b3b9d" }
 ssi = { git = "https://github.com/spruceid/ssi.git", rev = "88110a9", features = ["secp256r1", "secp384r1"] }
 tracing = "0.1.40"
 
