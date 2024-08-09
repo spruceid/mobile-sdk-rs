@@ -44,7 +44,7 @@ cd kotlin
 ### Swift
 
 ```bash
-cargo swift package -p ios -n MobileSdkRs
+cargo swift package -p ios -n MobileSdkRs --release
 ```
 > You will need `cargo-swift` which you can install with `cargo install cargo-swift`.
 
