@@ -1415,32 +1415,143 @@ public struct FfiConverterTypeVCBVerificationError: FfiConverterRustBuffer {
 }
 
 
-public enum VdcCollectionError {
+extension VcbVerificationError: Equatable, Hashable {}
+
+extension VcbVerificationError: Error { }
+
+
+public enum VcVerificationError {
 
     
+    
+    case Generic(value: String
+    )
+}
+
+
+public struct FfiConverterTypeVCVerificationError: FfiConverterRustBuffer {
+    typealias SwiftType = VcVerificationError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> VcVerificationError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .Generic(
+            value: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: VcVerificationError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case let .Generic(value):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(value, into: &buf)
+            
+        }
+    }
+}
+
+
+extension VcVerificationError: Equatable, Hashable {}
+
+extension VcVerificationError: Error { }
+
+
+public enum VpError {
+
+    
+    
+    case Verification(value: String
+    )
+    case Parsing(value: String
+    )
+}
+
+
+public struct FfiConverterTypeVPError: FfiConverterRustBuffer {
+    typealias SwiftType = VpError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> VpError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .Verification(
+            value: try FfiConverterString.read(from: &buf)
+            )
+        case 2: return .Parsing(
+            value: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: VpError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case let .Verification(value):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(value, into: &buf)
+            
+        
+        case let .Parsing(value):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(value, into: &buf)
+            
+        }
+    }
+}
+
+
+extension VpError: Equatable, Hashable {}
+
+extension VpError: Error { }
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
+public enum VdcCollectionError {
     
     /**
      * Attempt to convert the credential to a serialized form suitable for writing to storage failed.
      */
-    case SerializeFailed
+    case serializeFailed
     /**
      * Attempting to convert the credential to a deserialized form suitable for runtime use failed.
      */
-    case DeserializeFailed
+    case deserializeFailed
     /**
      * Attempting to write the credential to storage failed.
      */
-    case StoreFailed(StorageManagerError
+    case storeFailed(StorageManagerError
     )
     /**
      * Attempting to read the credential from storage failed.
      */
-    case LoadFailed(StorageManagerError
+    case loadFailed(StorageManagerError
     )
     /**
      * Attempting to delete a credential from storage failed.
      */
-    case DeleteFailed(StorageManagerError
+    case deleteFailed(StorageManagerError
     )
 }
 
@@ -1451,52 +1562,47 @@ public struct FfiConverterTypeVdcCollectionError: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> VdcCollectionError {
         let variant: Int32 = try readInt(&buf)
         switch variant {
-
         
-
+        case 1: return .serializeFailed
         
-        case 1: return .SerializeFailed
-        case 2: return .DeserializeFailed
-        case 3: return .StoreFailed(
-            try FfiConverterTypeStorageManagerError.read(from: &buf)
-            )
-        case 4: return .LoadFailed(
-            try FfiConverterTypeStorageManagerError.read(from: &buf)
-            )
-        case 5: return .DeleteFailed(
-            try FfiConverterTypeStorageManagerError.read(from: &buf)
-            )
-
-         default: throw UniffiInternalError.unexpectedEnumCase
+        case 2: return .deserializeFailed
+        
+        case 3: return .storeFailed(try FfiConverterTypeStorageManagerError.read(from: &buf)
+        )
+        
+        case 4: return .loadFailed(try FfiConverterTypeStorageManagerError.read(from: &buf)
+        )
+        
+        case 5: return .deleteFailed(try FfiConverterTypeStorageManagerError.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
     public static func write(_ value: VdcCollectionError, into buf: inout [UInt8]) {
         switch value {
-
-        
-
         
         
-        case .SerializeFailed:
+        case .serializeFailed:
             writeInt(&buf, Int32(1))
         
         
-        case .DeserializeFailed:
+        case .deserializeFailed:
             writeInt(&buf, Int32(2))
         
         
-        case let .StoreFailed(v1):
+        case let .storeFailed(v1):
             writeInt(&buf, Int32(3))
             FfiConverterTypeStorageManagerError.write(v1, into: &buf)
             
         
-        case let .LoadFailed(v1):
+        case let .loadFailed(v1):
             writeInt(&buf, Int32(4))
             FfiConverterTypeStorageManagerError.write(v1, into: &buf)
             
         
-        case let .DeleteFailed(v1):
+        case let .deleteFailed(v1):
             writeInt(&buf, Int32(5))
             FfiConverterTypeStorageManagerError.write(v1, into: &buf)
             
@@ -1505,13 +1611,19 @@ public struct FfiConverterTypeVdcCollectionError: FfiConverterRustBuffer {
 }
 
 
+public func FfiConverterTypeVdcCollectionError_lift(_ buf: RustBuffer) throws -> VdcCollectionError {
+    return try FfiConverterTypeVdcCollectionError.lift(buf)
+}
+
+public func FfiConverterTypeVdcCollectionError_lower(_ value: VdcCollectionError) -> RustBuffer {
+    return FfiConverterTypeVdcCollectionError.lower(value)
+}
+
+
+
 extension VdcCollectionError: Equatable, Hashable {}
 
-extension VdcCollectionError: Foundation.LocalizedError {
-    public var errorDescription: String? {
-        String(reflecting: self)
-    }
-}
+
 
 
 
@@ -2087,6 +2199,48 @@ public func terminateSession()throws  -> Data {
     )
 })
 }
+public func vcToSignedVp(vc: String, keyStr: String)async throws  -> String {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_func_vc_to_signed_vp(FfiConverterString.lower(vc),FfiConverterString.lower(keyStr)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterString.lift,
+            errorHandler: FfiConverterTypeVPError.lift
+        )
+}
+public func verifyJsonVcString(json: String)async throws  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_func_verify_json_vc_string(FfiConverterString.lower(json)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_void,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_void,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeVCVerificationError.lift
+        )
+}
+public func verifyJwtVp(jwtVp: String)async throws  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_func_verify_jwt_vp(FfiConverterString.lower(jwtVp)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_void,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_void,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeVPError.lift
+        )
+}
 public func verifyPdf417Barcode(payload: String)async throws  {
     return
         try  await uniffiRustCallAsync(
@@ -2144,6 +2298,15 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_func_terminate_session() != 25700) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_func_vc_to_signed_vp() != 47312) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_func_verify_json_vc_string() != 13072) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_func_verify_jwt_vp() != 8825) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_func_verify_pdf417_barcode() != 14164) {

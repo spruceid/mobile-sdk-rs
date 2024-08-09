@@ -14,7 +14,7 @@ use isomdl::{
     },
     presentation::device::{self, Document, SessionManagerInit},
 };
-use ssi::{claims::vc::v1::data_integrity::any_credential_from_json_str, dids::{AnyDidMethod, DIDResolver}, json_ld::iref::Uri, prelude::AnyMethod, status::{bitstring_status_list::{BitstringStatusListCredential, StatusList, StatusPurpose, TimeToLive}, client::{MaybeCached, ProviderError, TypedStatusMapProvider}}};
+use ssi::{claims::vc::v1::{data_integrity::any_credential_from_json_str, ToJwtClaims}, dids::{AnyDidMethod, DIDResolver}, json_ld::iref::Uri, status::{bitstring_status_list::{BitstringStatusListCredential, StatusList, StatusPurpose, TimeToLive}, client::{MaybeCached, ProviderError, TypedStatusMapProvider}}};
 use uuid::Uuid;
 use w3c_vc_barcodes::{aamva::{dlid::{pdf_417, DlSubfile}, ZZSubfile}, optical_barcode_credential::{decode_from_bytes, VerificationParameters}, terse_bitstring_status_list_entry::{ConstTerseStatusListProvider, StatusListInfo}, verify, MRZ, MachineReadableZone};
 
@@ -140,12 +140,60 @@ pub async fn verify_json_vc_string(json: String) -> Result<(), VCVerificationErr
         .map_err(|e| VCVerificationError::Generic { value: e.to_string() })?;
 
     let vm_resolver = AnyDidMethod::default().into_vm_resolver();
-    let params: VerificationParameters<ssi::dids::VerificationMethodDIDResolver<AnyDidMethod, AnyMethod>> = VerificationParameters::from_resolver(vm_resolver);
+    let params = VerificationParameters::from_resolver(vm_resolver);
 
     vc.verify(&params)
         .await
         .map_err(|e| VCVerificationError::Generic { value: e.to_string() })?
         .map_err(|e| VCVerificationError::Generic { value: e.to_string() })
+}
+
+#[derive(thiserror::Error, uniffi::Error, Debug)]
+pub enum VPError {
+    #[error("{value}")]
+    Verification { value: String },
+    #[error("{value}")]
+    Parsing { value: String },
+}
+
+#[uniffi::export]
+pub async fn vc_to_signed_vp(vc: String, key_str: String) -> Result<String, VPError> {
+    use ssi::prelude::*;
+
+    let vp = ssi::claims::vc::v1::JsonPresentation::new(
+        None,
+        None,
+        vec![vc],
+    );
+
+    let mut key: ssi::jwk::JWK = serde_json::from_str(&key_str)
+            .map_err(|e| VPError::Parsing { value: e.to_string() })?;
+    let did = DIDJWK::generate_url(&key.to_public());
+    key.key_id = Some(did.into());
+    
+    let jwt = vp.to_jwt_claims()
+        .map_err(|e| VPError::Parsing { value: e.to_string() })?
+        .sign(&key)
+        .await
+        .map_err(|e| VPError::Parsing { value: e.to_string() })?;
+    Ok(jwt.into_string())
+}
+
+#[uniffi::export]
+pub async fn verify_jwt_vp(jwt_vp: String) -> Result<(), VPError> {
+    use ssi::prelude::*;
+
+    let jwt = CompactJWSString::from_string(jwt_vp.to_string())
+        .map_err(|e| VPError::Parsing { value: e.to_string() })?;
+
+    let vm_resolver: ssi::dids::VerificationMethodDIDResolver<AnyDidMethod, AnyMethod> = AnyDidMethod::default().into_vm_resolver();
+    let params = VerificationParameters::from_resolver(vm_resolver);
+
+    jwt
+        .verify(params)
+        .await
+        .map_err(|e| VPError::Verification { value: e.to_string() })?
+        .map_err(|e| VPError::Verification { value: e.to_string() })
 }
 
 #[uniffi::export]
@@ -381,6 +429,15 @@ mod tests {
     async fn verify_vc() {
         let json_vc = include_str!("../tests/res/vc");
         let result = verify_json_vc_string(json_vc.into()).await.is_ok();
+        assert_eq!(result, true);
+    }
+
+    #[tokio::test]
+    async fn verify_vp() {
+        let json_vc = include_str!("../tests/res/vc");
+        let key_str = include_str!("../tests/res/ed25519-2020-10-18.json");
+        let jwt_vp = vc_to_signed_vp(json_vc.to_string(), key_str.to_string()).await.unwrap();
+        let result = verify_jwt_vp(jwt_vp).await.is_ok();
         assert_eq!(result, true);
     }
 
