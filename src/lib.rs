@@ -1,6 +1,7 @@
 uniffi::setup_scaffolding!();
 
 pub mod local_store;
+pub mod reader;
 pub mod storage_manager;
 pub mod vdc_collection;
 
