@@ -38,7 +38,7 @@ pub struct MDLReaderSessionData {
     pub state: Arc<MDLSessionManager>,
     uuid: Uuid,
     pub request: Vec<u8>,
-    ble_ident: String,
+    ble_ident: Vec<u8>,
 }
 
 #[uniffi::export]
@@ -103,7 +103,7 @@ pub fn establish_session(
     Ok(MDLReaderSessionData {
         state: Arc::new(MDLSessionManager(manager)),
         request,
-        ble_ident,
+        ble_ident: ble_ident.into(),
         uuid: *uuid,
     })
 }
