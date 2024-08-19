@@ -73,7 +73,7 @@ impl EncryptedPayload {
 /// KeyManager for interacting with the device's
 /// cryptographic device APIs for signing and encrypting
 /// messages.
-#[uniffi::export(callback_interface)]
+#[uniffi::export(with_foreign)]
 pub trait KeyManagerInterface: Send + Sync + Debug {
     /// Reset the key manager, removing all keys.
     fn reset(&self) -> bool;

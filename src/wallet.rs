@@ -108,8 +108,8 @@ pub struct Wallet {
     // pub(crate) trust_manager: TrustManager,
     // TODO: Use the `TrustManager` once merged.
     pub(crate) trust_manager: Vec<String>,
-    pub(crate) key_manager: Box<dyn KeyManagerInterface>,
-    pub(crate) storage_manager: Box<dyn StorageManagerInterface>,
+    pub(crate) key_manager: Arc<dyn KeyManagerInterface>,
+    pub(crate) storage_manager: Arc<dyn StorageManagerInterface>,
     // // The active key index is used to determine which key to used for signing.
     // // By default, this is set to the 0-index key.
     // pub(crate) active_key_index: Arc<RwLock<u8>>,
@@ -138,8 +138,8 @@ impl Wallet {
     /// * If there is a storage error when initializing the metadata manager.
     #[uniffi::constructor]
     pub fn new(
-        storage_manager: Box<dyn StorageManagerInterface>,
-        key_manager: Box<dyn KeyManagerInterface>,
+        storage_manager: Arc<dyn StorageManagerInterface>,
+        key_manager: Arc<dyn KeyManagerInterface>,
     ) -> Result<Arc<Self>, WalletError> {
         let client = oid4vp::core::util::ReqwestClient::new()
             .map_err(|e| WalletError::HttpClientInitialization(format!("{e}")))?;
@@ -167,7 +167,7 @@ impl Wallet {
     /// Add a credential to the wallet.
     ///
     /// This method will add a verifiable credential to the wallet.
-    pub fn add_credential(&self, credential: Arc<Credential>) -> Result<(), WalletError> {
+    pub fn add_credential(&self, credential: Arc<Credential>) -> Result<Key, WalletError> {
         // NOTE: This will fail if there is more than one strong reference to the credential.
         let credential =
             Arc::into_inner(credential).ok_or(WalletError::InvalidCredentialReference)?;

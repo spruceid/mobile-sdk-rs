@@ -22,6 +22,7 @@ pub struct Credential {
 #[uniffi::export]
 impl Credential {
     #[uniffi::constructor]
+    /// Create a new credential.
     pub fn new(
         id: Uuid,
         format: ClaimFormatDesignation,
