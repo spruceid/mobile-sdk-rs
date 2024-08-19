@@ -1,4 +1,5 @@
 use super::storage_manager::*;
+use oid4vp::presentation_exchange::ClaimFormatDesignation;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tracing::{info, info_span};
@@ -7,14 +8,17 @@ use uuid::Uuid;
 /// Internal prefix for credential keys.
 const KEY_PREFIX: &str = "Credential.";
 
-/// Supported credential formats.
-#[derive(PartialEq, Debug, Serialize, Deserialize)]
-pub enum CredentialFormat {
-    MsoMdoc,
-    JwtVcJson,
-    LdpVc,
-    Other(String), // For ease of expansion.
-}
+// NOTE: Replacing CredentialType with ClaimFormatDesignation from oid4vp-rs crate.
+// Does this make sense or are ClaimFormatDesignation and CredentialType different things?
+//
+// /// Supported credential formats.
+// #[derive(PartialEq, Debug, Serialize, Deserialize)]
+// pub enum CredentialFormat {
+//     MsoMdoc,
+//     JwtVcJson,
+//     LdpVc,
+//     Other(String), // For ease of expansion.
+// }
 
 /// Supported credential types.
 #[derive(PartialEq, Debug, Serialize, Deserialize)]
@@ -28,16 +32,16 @@ pub enum CredentialType {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Credential {
     id: Uuid,
-    format: CredentialFormat,
+    format: ClaimFormatDesignation,
     ctype: CredentialType,
     payload: Vec<u8>, // The actual credential.
 }
 
 impl Credential {
     /// Create a new credential.
-    fn new(
+    pub fn new(
         id: Uuid,
-        format: CredentialFormat,
+        format: ClaimFormatDesignation,
         ctype: CredentialType,
         payload: Vec<u8>,
     ) -> Credential {
@@ -87,19 +91,13 @@ impl VdcCollection {
     }
 
     /// Add a credential to the set.
-    pub fn add(
-        &self,
-        id: Uuid,
-        format: CredentialFormat,
-        ctype: CredentialType,
-        payload: Vec<u8>,
-    ) -> Result<(), VdcCollectionError> {
-        let val = match serde_cbor::to_vec(&Credential::new(id, format, ctype, payload)) {
+    pub fn add(&self, credential: Credential) -> Result<(), VdcCollectionError> {
+        let val = match serde_cbor::to_vec(&credential) {
             Ok(x) => x,
             Err(_) => return Err(VdcCollectionError::SerializeFailed),
         };
 
-        match self.storage.add(self.id_to_key(id), Value(val)) {
+        match self.storage.add(self.id_to_key(credential.id), Value(val)) {
             Ok(()) => Ok(()),
             Err(e) => Err(VdcCollectionError::StoreFailed(e)),
         }
@@ -214,28 +212,28 @@ mod tests {
         let payload_2: Vec<u8> = "Some other random collection of bytes. 📯".into();
         let payload_3: Vec<u8> = "Some third random collection of bytes. λ".into();
 
-        vdc.add(
+        vdc.add(Credential::new(
             uuid!("00000000-0000-0000-0000-000000000001"),
-            CredentialFormat::MsoMdoc,
+            ClaimFormatDesignation::MsoMDoc,
             CredentialType::Iso18013_5_1mDl,
             payload_1.clone(),
-        )
+        ))
         .expect("Unable to add the first value.");
 
-        vdc.add(
+        vdc.add(Credential::new(
             uuid!("00000000-0000-0000-0000-000000000002"),
-            CredentialFormat::MsoMdoc,
+            ClaimFormatDesignation::MsoMDoc,
             CredentialType::Iso18013_5_1mDl,
             payload_2.clone(),
-        )
+        ))
         .expect("Unable to add the second value.");
 
-        vdc.add(
+        vdc.add(Credential::new(
             uuid!("00000000-0000-0000-0000-000000000003"),
-            CredentialFormat::MsoMdoc,
+            ClaimFormatDesignation::MsoMDoc,
             CredentialType::Iso18013_5_1mDl,
             payload_3.clone(),
-        )
+        ))
         .expect("Unable to add the third value.");
 
         vdc.get("00000000-0000-0000-0000-000000000002")
