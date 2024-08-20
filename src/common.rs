@@ -66,6 +66,11 @@ impl Key {
     pub fn with_prefix(prefix: &str, key: &str) -> Self {
         Self(format!("{}{}", prefix, key))
     }
+
+    /// Strip the prefix from the key
+    pub fn strip_prefix(&self, prefix: &str) -> Option<String> {
+        self.0.strip_prefix(prefix).map(ToOwned::to_owned)
+    }
 }
 
 impl From<Key> for String {
