@@ -1,10 +1,32 @@
 use thiserror::Error;
 
 uniffi::custom_newtype!(Key, String);
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct Key(pub String);
 
+impl Key {
+    /// Create a new key with a prefix
+    pub fn with_prefix(prefix: &str, key: &str) -> Self {
+        Self(format!("{}{}", prefix, key))
+    }
+
+    /// Strip the prefix from the key, returning the key without the prefix
+    pub fn strip_prefix(&self, prefix: &str) -> Option<String> {
+        self.0.strip_prefix(prefix).map(ToOwned::to_owned)
+    }
+}
+
 uniffi::custom_newtype!(Value, Vec<u8>);
+
+#[derive(Debug, PartialEq)]
 pub struct Value(pub Vec<u8>);
+
+impl From<bool> for Value {
+    fn from(value: bool) -> Self {
+        Self(vec![value as u8])
+    }
+}
 
 /// Enum: StorageManagerError
 ///

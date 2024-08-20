@@ -18,7 +18,7 @@ impl StorageManagerInterface for LocalStore {
             Err(_) => return Err(StorageManagerError::InternalError),         // Fail.
         }
 
-        match fs::write(gen_path(key.0), value.0) {
+        match fs::write(gen_path(&key.0), value.0) {
             Ok(_) => Ok(()),
             Err(_) => Err(StorageManagerError::InternalError),
         }
@@ -26,7 +26,7 @@ impl StorageManagerInterface for LocalStore {
 
     /// Retrieve the value associated with a key.
     fn get(&self, key: Key) -> Result<Option<Value>, StorageManagerError> {
-        match fs::read(gen_path(key.0)) {
+        match fs::read(gen_path(&key.0)) {
             Ok(x) => Ok(Some(Value(x))),
             Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
             Err(_) => Err(StorageManagerError::InternalError),
@@ -57,7 +57,7 @@ impl StorageManagerInterface for LocalStore {
 
     /// Delete a given key/value pair from storage.
     fn remove(&self, key: Key) -> Result<(), StorageManagerError> {
-        match fs::remove_file(gen_path(key.0)) {
+        match fs::remove_file(gen_path(&key.0)) {
             Ok(_) => Ok(()),
             Err(_) => Ok(()), // Removing something that isn't there shouldn't generate an error.
         }
@@ -65,6 +65,6 @@ impl StorageManagerInterface for LocalStore {
 }
 
 /// Generate the path to a file in the storage.
-fn gen_path(file: String) -> String {
+fn gen_path(file: &str) -> String {
     format!("{}/{}", DATASTORE_PATH, file)
 }
