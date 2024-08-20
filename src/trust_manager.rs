@@ -1,6 +1,5 @@
-use crate::storage_manager::{Key, StorageManagerError, Value};
-
-use super::storage_manager::StorageManagerInterface;
+use crate::common::*;
+use crate::storage_manager::{StorageManagerError, StorageManagerInterface};
 
 /// Internal prefix for trusted did keys.
 const KEY_PREFIX: &str = "TrustedDIDs.";

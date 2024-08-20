@@ -10,7 +10,7 @@ use crate::{
 
 use std::sync::Arc;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use oid4vp::{
     core::{authorization_request::parameters::ResponseMode, metadata::WalletMetadata},
     wallet::Wallet as OID4VPWallet,
@@ -73,6 +73,8 @@ pub enum WalletError {
     CredentialCallback(#[from] CredentialCallbackError),
     #[error("Unknown error occurred.")]
     Unknown,
+    // #[error("Required credential not found for input descriptor id: {0}")]
+    // RequiredCredentialNotFound(String),
 }
 
 // Handle unexpected errors when calling a foreign callback
