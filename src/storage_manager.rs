@@ -17,6 +17,12 @@ impl Key {
     }
 }
 
+impl From<Key> for String {
+    fn from(key: Key) -> Self {
+        key.0
+    }
+}
+
 uniffi::custom_newtype!(Value, Vec<u8>);
 
 #[derive(Debug, PartialEq)]
