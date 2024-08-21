@@ -3403,6 +3403,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "base64 0.22.1",
+ "did-jwk",
  "hex",
  "isomdl",
  "oid4vp",
