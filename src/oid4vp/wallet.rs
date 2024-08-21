@@ -144,7 +144,6 @@ impl Wallet {
         let credentials = self.retrieve_credentials(&presentation_definition)?;
 
         // TODO: Show the user the credentials, and then request a selection from the credentials.
-
         // Create a descriptor map for the presentation submission based on the credentials
         // returned from the VDC collection.
         //

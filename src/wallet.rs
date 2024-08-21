@@ -8,7 +8,7 @@ use crate::{
     vdc_collection::{Credential, VdcCollection, VdcCollectionError},
 };
 
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use anyhow::{bail, Result};
 use oid4vp::{
@@ -96,6 +96,13 @@ impl From<uniffi::UnexpectedUniFFICallbackError> for WalletError {
 /// (see [RFC6749](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#RFC6749))
 /// towards the Credential Verifier which acts as the OAuth 2.0 Client.
 ///
+/// # Example
+///
+/// ```
+/// use mobile_sdk_rs::wallet::Wallet;
+///
+/// let wallet = Wallet::new().unwrap();
+/// ```
 #[derive(uniffi::Object, Debug)]
 pub struct Wallet {
     pub(crate) client: oid4vp::core::util::ReqwestClient,
