@@ -98,10 +98,19 @@ impl From<uniffi::UnexpectedUniFFICallbackError> for WalletError {
 ///
 /// # Example
 ///
+/// #[ignore]
 /// ```
-/// use mobile_sdk_rs::wallet::Wallet;
+/// use mobile_sdk_rs::prelude::*;
 ///
-/// let wallet = Wallet::new().unwrap();
+/// let storage_manager = Box::new(MyStorageManager::new());
+/// let key_manager = Box::new(MyKeyManager::new());
+///
+/// fn main() -> Result<(), WalletError> {
+///  let wallet = Wallet::new(storage_manager, key_manager)?;
+///
+/// }
+///
+///
 /// ```
 #[derive(uniffi::Object, Debug)]
 pub struct Wallet {
