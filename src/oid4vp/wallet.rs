@@ -267,10 +267,8 @@ impl RequestVerifier for Wallet {
             .get_trusted_dids(&self.storage_manager)
             .ok();
 
-        let wallet_metadata = self.metadata.clone();
-
         verify_with_resolver(
-            &wallet_metadata,
+            self.metadata.as_ref(),
             decoded_request,
             request_jwt,
             trusted_dids.as_ref().map(|did| did.as_slice()),
@@ -290,7 +288,7 @@ impl OID4VPWallet for Wallet {
     }
 
     fn metadata(&self) -> &WalletMetadata {
-        &self.metadata
+        self.metadata.as_ref()
     }
 }
 
