@@ -3,29 +3,18 @@ use crate::{
     key_manager::{KeyManager, DEFAULT_KEY_INDEX, KEY_MANAGER_PREFIX},
     storage_manager::{self, Key, StorageManagerInterface},
     trust_manager::TrustManager,
-    vdc_collection::{Credential, VdcCollection, VdcCollectionError},
+    vdc_collection::{VdcCollection, VdcCollectionError},
 };
 
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use anyhow::Result;
 use oid4vp::{
-    core::{
-        authorization_request::{
-            parameters::PresentationDefinition,
-            verification::{did::verify_with_resolver, RequestVerifier},
-            AuthorizationRequestObject,
-        },
-        metadata::WalletMetadata,
-        response::{parameters::VpToken, AuthorizationResponse, UnencodedAuthorizationResponse},
-    },
-    presentation_exchange::{ClaimFormatDesignation, DescriptorMap, PresentationSubmission},
+    core::{authorization_request::parameters::ResponseMode, metadata::WalletMetadata},
+    verifier::request_signer::RequestSigner,
     wallet::Wallet as OID4VPWallet,
 };
-use serde_json::json;
-use ssi_dids::DIDMethod;
-use ssi_vc::{LinkedDataProofOptions, Presentation, URI};
-use ssi_verification_methods::AnyJwkMethod;
+use ssi_dids::DIDKey;
 use thiserror::Error;
 
 /// The [WalletError] enum represents the errors that can occur
@@ -46,10 +35,12 @@ pub enum WalletError {
     VdcCollection(#[from] VdcCollectionError),
     #[error("Required credential not found for input descriptor id: {0}")]
     RequiredCredentialNotFound(String),
-    #[error("Key not found for ID: {0}")]
-    KeyNotFound(String),
+    #[error("Key not found for index: {0}")]
+    KeyNotFound(u8),
     #[error("Failed to deserialize JSON: {0}")]
     Deserialization(String),
+    #[error("Serde JSON Error: {0}")]
+    SerdeJson(String),
     #[error("Failed to submit OID4VP response: {0}")]
     OID4VPResponseSubmission(String),
     #[error("Failed to create presentation submission: {0}")]
@@ -58,6 +49,20 @@ pub enum WalletError {
     VerifiablePresentation(String),
     #[error("Failed to create JWT: {0}")]
     GenerateJwt(String),
+    #[error("Failed to acquire read/write lock for active key index: {0}")]
+    ActiveKeyIndexReadWriteError(String),
+    #[error("Failed to parse JSON encoded JWK: {0}")]
+    JWKParseError(String),
+    #[error("Failed to generate DID Key from JWK: {0}")]
+    DIDKeyGenerateUrl(String),
+    #[error("Invalid DID URL: {0}")]
+    InvalidDIDUrl(String),
+    #[error("Unsupported Response Mode for OID4VP Request: {0}")]
+    OID4VPUnsupportedResponseMode(String),
+    #[error("Signing Algorithm Not Found: {0}")]
+    SigningAlgorithmNotFound(String),
+    #[error("Failed to sign JWT: {0}")]
+    SigningError(String),
 }
 
 // Handle unexpected errors when calling a foreign callback
@@ -86,14 +91,17 @@ impl From<uniffi::UnexpectedUniFFICallbackError> for WalletError {
 ///
 /// let wallet = Wallet::new().unwrap();
 /// ```
-#[derive(uniffi::Object)]
+#[derive(uniffi::Object, Debug)]
 pub struct Wallet {
-    client: oid4vp::core::util::ReqwestClient,
-    metadata: WalletMetadata,
-    vdc_collection: VdcCollection,
-    trust_manager: TrustManager,
-    key_manager: Box<dyn KeyManager>,
-    storage_manager: Box<dyn StorageManagerInterface>,
+    pub(crate) client: oid4vp::core::util::ReqwestClient,
+    pub(crate) metadata: WalletMetadata,
+    pub(crate) vdc_collection: VdcCollection,
+    pub(crate) trust_manager: TrustManager,
+    pub(crate) key_manager: Box<dyn KeyManager>,
+    pub(crate) storage_manager: Box<dyn StorageManagerInterface>,
+    // The active key index is used to determine which key to use for signing.
+    // By default, this is set to the 0-index key.
+    pub(crate) active_key_index: Arc<RwLock<u8>>,
 }
 
 #[uniffi::export]
@@ -126,299 +134,91 @@ impl Wallet {
             trust_manager: TrustManager::new(),
             key_manager,
             storage_manager,
+            active_key_index: Arc::new(RwLock::new(DEFAULT_KEY_INDEX)),
         }))
     }
 
     /// Handle an OID4VP authorization request provided as a URL.
     ///
-    /// This method will validate the request, processing the presentation
-    /// exchange request and response.
+    /// This method will validate and process the request, returning a
+    /// redirect URL with the encoded verifiable presentation token,
+    /// if the presentation exchange was successful.
+    ///
+    /// If the request is invalid or cannot be processed, an error will be returned.
     pub async fn handle_oid4vp_request(&self, url: Url) -> Result<Option<Url>, WalletError> {
         let request = self
             .validate_request(url)
             .await
             .map_err(|e| WalletError::OID4VPRequestValidation(e.to_string()))?;
 
-        // Resolve the presentation definition.
-        let presentation_definition = request
-            .resolve_presentation_definition(self.http_client())
-            .await
-            .map_err(|e| WalletError::OID4VPPresentationDefinitionResolution(e.to_string()))?;
+        let response = match request.response_mode() {
+            ResponseMode::DirectPost => {
+                self.handle_unencoded_authorization_request(&request)
+                    .await?
+            }
+            // TODO: Implement support for other response modes?
+            mode => return Err(WalletError::OID4VPUnsupportedResponseMode(mode.to_string())),
+        };
 
-        // TODO: Handle request using a selected key index.
-        let key_index = None;
-
-        // Create an unencoded authorization response.
-        let response = self
-            .create_unencoded_authorization_response(presentation_definition, key_index)
-            .await?;
-
-        self.submit_response(request, AuthorizationResponse::Unencoded(response))
+        self.submit_response(request, response)
             .await
             .map_err(|e| WalletError::OID4VPResponseSubmission(e.to_string()))
     }
 
-    /// Returns the JWK DID of the wallet's public JWK encoded key.
+    /// Returns the JSON-encoded JWK of the wallet's public JWK encoded key.
     ///
     /// An optional `key_index` can be provided to specify the key index to use.
-    /// If no `key_index` is provided, the default key index (i.e. `0`) is used.
-    pub fn jwk_did(&self, key_index: Option<u8>) -> Result<String, WalletError> {
-        let key_id = key_index
-            .map(|index| Key::with_prefix(KEY_MANAGER_PREFIX, &format!("{index}")))
-            // Use a default key id if no did_key is provided.
-            .unwrap_or(Key::with_prefix(
-                KEY_MANAGER_PREFIX,
-                &format!("{DEFAULT_KEY_INDEX}"),
-            ));
+    ///
+    /// If no key index is provided, the active key index is used.
+    pub fn get_jwk(&self) -> Result<String, WalletError> {
+        let index = self.get_active_key_index()?;
+        let key_id = Key::with_prefix(KEY_MANAGER_PREFIX, &format!("{index}"));
 
-        let did_key = self
-            .key_manager
+        self.key_manager
             .get_jwk(key_id.clone())
-            .map(|jwk| serde_json::from_str(&jwk))
-            .transpose()
-            .map_err(|e| WalletError::Deserialization(e.to_string()))?
-            .map(|jwk| DIDJWK::generate(&jwk))
-            .ok_or(WalletError::KeyNotFound(key_id.into()))?;
-
-        Ok(did_key.to_string())
+            .ok_or(WalletError::KeyNotFound(index))
     }
 
     /// Returns the verification method of the wallet's public JWK encoded key.
-    pub fn jwk_verification_method(&self, key_index: Option<u8>) -> Result<String, WalletError> {
-        let did_key = self.jwk_did(key_index)?;
-        let index = key_index.unwrap_or(DEFAULT_KEY_INDEX);
-        Ok(format!("{}#{}", did_key, index))
-    }
-}
+    pub fn jwk_verification_method(&self) -> Result<String, WalletError> {
+        let index = self.get_active_key_index()?;
+        // Convert JWK into DID Key format.
+        let did_key = DIDKey::generate_url(&self.jwk()?)
+            .map_err(|e| WalletError::DIDKeyGenerateUrl(e.to_string()))?;
 
-// Internal Wallet Methods for OID4VP
-impl Wallet {
-    /// Retrieves the credentials from the wallet
-    /// storage based on the presentation definition.
-    fn retrieve_credentials(
-        &self,
-        presentation_definition: &PresentationDefinition,
-    ) -> Result<Vec<Option<Credential>>, WalletError> {
-        presentation_definition
-            .parsed()
-            .input_descriptors()
-            .iter()
-            .map(|input_descriptor| {
-                match self
-                    .vdc_collection
-                    .get(input_descriptor.id(), &self.storage_manager)
-                {
-                    Ok(Some(credential)) => Ok(Some(credential)),
-                    Ok(None) => {
-                        // Check if the input descriptor contains required constraints.
-                        if input_descriptor.constraints().is_required() {
-                            Err(WalletError::RequiredCredentialNotFound(
-                                input_descriptor.id().to_string(),
-                            ))
-                        } else {
-                            Ok(None)
-                        }
-                    }
-                    Err(e) => Err(WalletError::VdcCollection(e)),
-                }
-            })
-            .collect::<Result<Vec<_>, _>>()
+        Ok(format!("{did_key}#{index}"))
     }
 
-    // Construct a DescriptorMap for the presentation submission based on the
-    // credentials returned from the VDC collection.
-    fn create_descriptor_maps(
-        &self,
-        credentials: Vec<Option<Credential>>,
-    ) -> Vec<(DescriptorMap, Credential)> {
-        credentials
-            .into_iter()
-            // Filter out the credentials that are not found in the storage.
-            .filter_map(|credential| credential)
-            // Enumerate over the existing credentials to create a descriptor map.
-            .enumerate()
-            .map(|(index, credential)| {
-                (
-                    DescriptorMap::new(
-                        *credential.id(),
-                        ClaimFormatDesignation::JwtVpJson,
-                        "$.vp".into(),
-                    )
-                    // TODO: Determine if the nested path should be set.
-                    // For example: `$.vc` or `$.verifiableCredential`
-                    .set_path_nested(DescriptorMap::new(
-                        *credential.id(),
-                        credential.format().to_owned(),
-                        // NOTE: The path is set to the index of the credential
-                        // in the presentation submission.
-                        format!("$.verifiableCredential[{index}]"),
-                    )),
-                    // Return the credential for the presentation submission.
-                    // This is used to construct the `verifiableCredentials` array
-                    // in the presentation submission. The index position
-                    // of the credential in the array must match the index position
-                    // of the descriptor in the descriptor map.
-                    credential,
-                )
-            })
-            .collect::<Vec<(DescriptorMap, Credential)>>()
-    }
+    /// Set the Active Key Index of the Wallet.
+    /// This is used as the default key index for signing.
+    /// By default, this is set to the 0-index key.
+    ///
+    /// This will error if the key index is not found.
+    pub fn set_active_key_index(&self, key_index: u8) -> Result<(), WalletError> {
+        if !self.key_manager.key_exists(Key::with_prefix(
+            KEY_MANAGER_PREFIX,
+            &format!("{key_index}"),
+        )) {
+            return Err(WalletError::KeyNotFound(key_index));
+        }
 
-    // Internal method for creating a verifiable presentation object.
-    async fn create_unencoded_authorization_response(
-        &self,
-        presentation_definition: PresentationDefinition,
-        key_index: Option<u8>,
-    ) -> Result<UnencodedAuthorizationResponse, WalletError> {
-        let presentation_submission_id = uuid::Uuid::new_v4();
-        let presentation_definition_id = presentation_definition.parsed().id().clone();
+        let mut active_key_index = self
+            .active_key_index
+            .write()
+            .map_err(|e| WalletError::ActiveKeyIndexReadWriteError(e.to_string()))?;
 
-        // Check if the verifiable credential(s) exists in the storage.
-        let credentials = self.retrieve_credentials(&presentation_definition)?;
-
-        // Create a descriptor map for the presentation submission based on the credentials
-        // returned from the VDC collection.
-        //
-        // NOTE: The order of the descriptor map is important as the index of the descriptor
-        // in the presentation submission must match the index of the credential in the
-        // presentation submission.
-        //
-        // For example, when adding to the `verifiableCredentials` array in the presentation
-        // submission, the order of the credentials must match the order of the descriptors
-        // in the descriptor map where there paths are index-based.
-        let credential_descriptor_map = self.create_descriptor_maps(credentials);
-
-        // Create a presentation submission.
-        let presentation_submission = PresentationSubmission::new(
-            presentation_submission_id,
-            presentation_definition_id,
-            // Use the descriptor map to create the submission.
-            credential_descriptor_map
-                .iter()
-                .map(|(descriptor, _)| descriptor.clone())
-                .collect(),
-        )
-        .try_into()
-        .map_err(|e: anyhow::Error| WalletError::PresentationSubmissionCreation(e.to_string()))?;
-
-        let vp_token = self
-            .create_verifiable_presentation_jwt(credential_descriptor_map, key_index)
-            .await?;
-
-        // Create a verifiable presentation object.
-        Ok(UnencodedAuthorizationResponse(
-            Default::default(),
-            VpToken(vp_token),
-            presentation_submission,
-        ))
-    }
-
-    // Internation method for creating a verifiable presentation JWT.
-    async fn create_verifiable_presentation_jwt(
-        &self,
-        credential_descriptor_map: Vec<(DescriptorMap, Credential)>,
-        key_index: Option<u8>,
-    ) -> Result<String, WalletError> {
-        let verifiable_credential = credential_descriptor_map
-            .into_iter()
-            .map(|(_, credential)| credential)
-            .collect::<Vec<Credential>>();
-
-        let vp_json = json!({
-            "@context": [
-                "https://www.w3.org/2018/credentials/v1",
-                "https://www.w3.org/2018/credentials/examples/v1"
-            ],
-            "type": [
-                "VerifiablePresentation"
-            ],
-            "verifiableCredential": verifiable_credential
-        });
-
-        let vp: Presentation = serde_json::from_value(vp_json)
-            .map_err(|e| WalletError::VerifiablePresentation(e.to_string()))?;
-
-        let ldp_options = self.new_linked_data_proof_options(key_index)?;
-
-        // Constuct unsigned JWT, then sign it with the key manager.
-        let unsigned_jwt_vp = vp
-            .generate_jwt(None, &ldp_options, did_jwk::DIDJWK.to_resolver())
-            .await
-            .map_err(|e| WalletError::GenerateJwt(e.to_string()))?;
-
-        unimplemented!()
-    }
-
-    // Internal method for creating new linked data proof options.
-    //
-    // This method is not intended to be used by external callers.
-    fn new_linked_data_proof_options(
-        &self,
-        key_index: Option<u8>,
-    ) -> Result<LinkedDataProofOptions, WalletError> {
-        Ok(LinkedDataProofOptions {
-            verification_method: self
-                .jwk_verification_method(key_index)
-                .ok()
-                .map(|vm| URI::String(vm)),
-            // NOTE: The ldp options are defaulted for the user
-            // to override if needed.
-            ..LinkedDataProofOptions::default()
-        })
-    }
-}
-
-#[async_trait::async_trait]
-impl RequestVerifier for Wallet {
-    /// Performs verification on Authorization Request Objects when `client_id_scheme` is `did`.
-    async fn did(
-        &self,
-        decoded_request: &AuthorizationRequestObject,
-        request_jwt: String,
-    ) -> Result<()> {
-        let trusted_dids = self
-            .trust_manager
-            .get_trusted_dids(&self.storage_manager)
-            .ok();
-
-        let wallet_metadata = self.metadata.clone();
-
-        verify_with_resolver(
-            &wallet_metadata,
-            decoded_request,
-            request_jwt,
-            trusted_dids.as_ref().map(|did| did.as_slice()),
-            DIDKey.to_resolver(),
-        )
-        .await?;
+        *active_key_index = key_index;
 
         Ok(())
     }
-}
 
-impl OID4VPWallet for Wallet {
-    type HttpClient = oid4vp::core::util::ReqwestClient;
+    /// Get the Active Key Index of the Wallet.
+    pub fn get_active_key_index(&self) -> Result<u8, WalletError> {
+        let key_index = self
+            .active_key_index
+            .read()
+            .map_err(|e| WalletError::ActiveKeyIndexReadWriteError(e.to_string()))?;
 
-    fn http_client(&self) -> &Self::HttpClient {
-        &self.client
-    }
-
-    fn metadata(&self) -> &WalletMetadata {
-        &self.metadata
+        Ok(*key_index)
     }
 }
-
-// /// The [Wallet] trait defines the presentation exchange
-// /// methods a holder must implement to perform the presentation exchange
-// /// in the oid4vp protocol.
-// #[uniffi::export]
-// #[async_trait::async_trait]
-// pub trait Wallet: Send + Sync {
-//     /// Handle an authorization request sent by a verifier.
-//     async fn handle_authorization_request(
-//         &self,
-//         request: &AuthorizationRequest,
-//     ) -> Result<(), OID4VPError> {
-//         Ok(())
-//     }
-// }

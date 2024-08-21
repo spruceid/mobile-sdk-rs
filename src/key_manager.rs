@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 // TODO: Consider moving `Key` type to the `common` module.
 use crate::storage_manager::Key;
 
@@ -32,7 +34,7 @@ impl EncryptedPayload {
 /// cryptographic device APIs for signing and encrypting
 /// messages.
 #[uniffi::export(callback_interface)]
-pub trait KeyManager: Send + Sync {
+pub trait KeyManager: Send + Sync + Debug {
     /// Reset the key manager, removing all keys.
     fn reset(&self) -> bool;
 

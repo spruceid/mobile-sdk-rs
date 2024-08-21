@@ -11,6 +11,7 @@ pub enum TrustManagerError {
     Storage(#[from] StorageManagerError),
 }
 
+#[derive(Debug)]
 pub struct TrustManager;
 
 impl TrustManager {

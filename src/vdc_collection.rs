@@ -77,6 +77,7 @@ impl Credential {
 /// Verifiable Digital Credential Collection
 ///
 /// This is the main interface to credentials.
+#[derive(Debug)]
 pub struct VdcCollection;
 // {
 //     storage: Box<dyn StorageManagerInterface>,
