@@ -1,11 +1,18 @@
 use std::{collections::HashMap, str::FromStr, sync::Arc};
 
-use http::{HeaderMap, HeaderName, HeaderValue, Method};
-use oid4vci::openidconnect::{HttpRequest as IHttpRequest, HttpResponse as IHttpResponse};
-use url::Url;
+use oid4vci::openidconnect::{
+    http::{HeaderMap, Method, Request, Response, StatusCode, Uri},
+    HttpRequest as IHttpRequest, HttpResponse as IHttpResponse,
+};
 
 #[derive(thiserror::Error, uniffi::Error, Debug)]
 pub enum HttpClientError {
+    #[error("failed to build request")]
+    RequestBuilder,
+
+    #[error("failed to build response")]
+    ResponseBuilder,
+
     #[error("failed to parse url")]
     UrlParse,
 
@@ -45,19 +52,12 @@ pub struct HttpRequest {
 impl TryFrom<IHttpRequest> for HttpRequest {
     type Error = HttpClientError;
 
-    fn try_from(
-        IHttpRequest {
-            url,
-            method,
-            headers,
-            body,
-        }: IHttpRequest,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(req: IHttpRequest) -> Result<Self, Self::Error> {
         Ok(Self {
-            url: url.to_string(),
-            method: method.to_string(),
-            headers: headermap_to_hashmap(headers)?,
-            body,
+            url: req.uri().to_string(),
+            method: req.method().to_string(),
+            headers: headermap_to_hashmap(req.headers())?,
+            body: req.body().clone(),
         })
     }
 }
@@ -66,12 +66,17 @@ impl TryInto<IHttpRequest> for HttpRequest {
     type Error = HttpClientError;
 
     fn try_into(self) -> Result<IHttpRequest, Self::Error> {
-        Ok(IHttpRequest {
-            url: Url::from_str(&self.url).map_err(|_| HttpClientError::UrlParse)?,
-            method: Method::from_str(&self.method).map_err(|_| HttpClientError::MethodParse)?,
-            headers: hashmap_to_headermap(self.headers)?,
-            body: self.body,
-        })
+        let mut request = Request::builder()
+            .method(Method::from_str(&self.method).map_err(|_| HttpClientError::MethodParse)?)
+            .uri(Uri::from_str(&self.url).map_err(|_| HttpClientError::UrlParse)?);
+
+        for (k, v) in self.headers {
+            request = request.header(k, v);
+        }
+
+        request
+            .body(self.body)
+            .map_err(|_| HttpClientError::RequestBuilder)
     }
 }
 
@@ -85,17 +90,11 @@ pub struct HttpResponse {
 impl TryFrom<IHttpResponse> for HttpResponse {
     type Error = HttpClientError;
 
-    fn try_from(
-        IHttpResponse {
-            status_code,
-            headers,
-            body,
-        }: IHttpResponse,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(res: IHttpResponse) -> Result<Self, Self::Error> {
         Ok(Self {
-            status_code: status_code.as_u16(),
-            headers: headermap_to_hashmap(headers)?,
-            body,
+            status_code: res.status().as_u16(),
+            headers: headermap_to_hashmap(res.headers())?,
+            body: res.body().clone(),
         })
     }
 }
@@ -104,13 +103,19 @@ impl TryInto<IHttpResponse> for HttpResponse {
     type Error = HttpClientError;
 
     fn try_into(self) -> Result<IHttpResponse, Self::Error> {
-        Ok(IHttpResponse {
-            status_code: http::status::StatusCode::from_u16(self.status_code)
+        let mut response = Response::builder().status(
+            StatusCode::from_u16(self.status_code)
                 .map_err(|_| "failed to parse status code".to_string())
                 .map_err(HttpClientError::from)?,
-            headers: hashmap_to_headermap(self.headers)?,
-            body: self.body,
-        })
+        );
+
+        for (k, v) in self.headers {
+            response = response.header(k, v);
+        }
+
+        response
+            .body(self.body)
+            .map_err(|_| HttpClientError::ResponseBuilder)
     }
 }
 
@@ -128,7 +133,7 @@ pub(crate) fn wrap_http_client(
     }
 }
 
-fn headermap_to_hashmap(headers: HeaderMap) -> Result<HashMap<String, String>, HttpClientError> {
+fn headermap_to_hashmap(headers: &HeaderMap) -> Result<HashMap<String, String>, HttpClientError> {
     headers
         .keys()
         .map(|k| {
@@ -142,19 +147,5 @@ fn headermap_to_hashmap(headers: HeaderMap) -> Result<HashMap<String, String>, H
                     .join(","),
             ))
         })
-        .collect()
-}
-
-fn hashmap_to_headermap(headers: HashMap<String, String>) -> Result<HeaderMap, HttpClientError> {
-    headers
-        .into_iter()
-        .map(
-            |(k, v)| match (HeaderName::from_str(&k), HeaderValue::from_str(&v)) {
-                (Ok(k), Ok(v)) => Ok((k, v)),
-                (Err(_), Ok(_)) => Err(HttpClientError::HeaderKeyParse { key: v }),
-                (Ok(_), Err(_)) => Err(HttpClientError::HeaderValueParse { value: v }),
-                (Err(_), Err(_)) => Err(HttpClientError::HeaderEntryParse { key: k, value: v }),
-            },
-        )
         .collect()
 }

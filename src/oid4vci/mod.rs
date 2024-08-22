@@ -333,13 +333,13 @@ async fn oid4vci_initiate_with_offer(
 
     let issuer_metadata = metadata::CredentialIssuerMetadata::discover(
         base_url,
-        wrap_http_client(http_client.clone()),
+        &wrap_http_client(http_client.clone()),
     )?;
 
     let authorization_metadata = AuthorizationMetadata::discover(
         &issuer_metadata,
         None,
-        wrap_http_client(http_client.clone()),
+        &wrap_http_client(http_client.clone()),
     )?;
 
     let credential_requests: Vec<profiles::CoreProfilesRequest> = match &credential_offer {
@@ -394,10 +394,11 @@ async fn oid4vci_initiate_with_offer(
             .credential_configurations_supported()
             .iter()
             .filter_map(|c| {
-                if let Some(name) = c.name() {
-                    if credential_configuration_ids.iter().any(|cid| *cid == *name) {
-                        return Some(c.additional_fields().to_request());
-                    }
+                if credential_configuration_ids
+                    .iter()
+                    .any(|cid| *cid == *c.name())
+                {
+                    return Some(c.additional_fields().to_request());
                 }
                 None
             })
@@ -436,13 +437,13 @@ async fn oid4vci_initiate(
 ) -> Result<OID4VCISession, OID4VCIError> {
     let issuer_metadata = metadata::CredentialIssuerMetadata::discover(
         &IssuerUrl::new(base_url).unwrap(),
-        wrap_http_client(http_client.clone()),
+        &wrap_http_client(http_client.clone()),
     )?;
 
     let authorization_metadata = AuthorizationMetadata::discover(
         &issuer_metadata,
         None,
-        wrap_http_client(http_client.clone()),
+        &wrap_http_client(http_client.clone()),
     )?;
 
     let client = client::Client::from_issuer_metadata(
@@ -475,7 +476,7 @@ fn oid4vci_exchange_token(
     let token_response = session
         .get_client()
         .exchange_code(AuthorizationCode::new(authorization_code))
-        .request(wrap_http_client(http_client.clone()))?;
+        .request(&wrap_http_client(http_client.clone()))?;
 
     let nonce = token_response
         .extra_fields()
@@ -518,7 +519,7 @@ async fn oid4vci_exchange_credential(
             .set_proof(Some(Proof::JWT {
                 jwt: proofs_of_possession.first().unwrap().to_owned(),
             }))
-            .request(wrap_http_client(http_client))?
+            .request(&wrap_http_client(http_client))?
             .additional_profile_fields()
             .to_owned()]
     } else {
@@ -534,7 +535,7 @@ async fn oid4vci_exchange_credential(
                     .map(|p| Proof::JWT { jwt: p })
                     .collect(),
             )?
-            .request(wrap_http_client(http_client))?
+            .request(&wrap_http_client(http_client))?
             .credential_responses()
             .to_owned()
     };

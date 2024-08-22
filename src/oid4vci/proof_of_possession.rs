@@ -6,7 +6,7 @@ use oid4vci::{
         ProofOfPossession, ProofOfPossessionController, ProofOfPossessionParams,
     },
 };
-use ssi_dids::DIDURLBuf;
+use ssi_dids_core::DIDURLBuf;
 use ssi_jwk::JWK;
 use url::Url;
 
