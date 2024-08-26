@@ -1,8 +1,11 @@
-use std::{collections::HashMap, str::FromStr, sync::Arc};
+use std::{collections::HashMap, future::Future, pin::Pin, str::FromStr, sync::Arc};
 
+use async_trait::async_trait;
+use either::Either;
 use oid4vci::openidconnect::{
     http::{HeaderMap, Method, Request, Response, StatusCode, Uri},
-    HttpRequest as IHttpRequest, HttpResponse as IHttpResponse,
+    AsyncHttpClient as IAsyncHttpClient, HttpRequest as IHttpRequest,
+    HttpResponse as IHttpResponse, SyncHttpClient as ISyncHttpClient,
 };
 
 #[derive(thiserror::Error, uniffi::Error, Debug)]
@@ -119,18 +122,69 @@ impl TryInto<IHttpResponse> for HttpResponse {
     }
 }
 
-// TODO figure out how to use async_trait to have an async version of HttpClient
 #[uniffi::export(with_foreign)]
 pub trait HttpClient: Send + Sync {
     fn http_client(&self, request: HttpRequest) -> Result<HttpResponse, HttpClientError>;
 }
 
-pub(crate) fn wrap_http_client(
-    client: Arc<dyn HttpClient>,
-) -> impl Fn(IHttpRequest) -> Result<IHttpResponse, HttpClientError> {
-    move |request| -> Result<IHttpResponse, HttpClientError> {
-        client.http_client(request.try_into()?)?.try_into()
+impl ISyncHttpClient for WrapArc<dyn HttpClient> {
+    type Error = HttpClientError;
+
+    fn call(&self, request: IHttpRequest) -> Result<IHttpResponse, Self::Error> {
+        let request: HttpRequest = request.try_into()?;
+        let response: HttpResponse = self.0.http_client(request)?;
+        let response: IHttpResponse = response.try_into()?;
+        Ok::<_, HttpClientError>(response)
     }
+}
+
+#[uniffi::export(with_foreign)]
+#[async_trait]
+pub trait AsyncHttpClient: Send + Sync {
+    async fn http_client(&self, request: HttpRequest) -> Result<HttpResponse, HttpClientError>;
+}
+
+impl<'a, 'c> IAsyncHttpClient<'c> for WrapArc<dyn AsyncHttpClient + 'a> {
+    type Error = HttpClientError;
+    type Future = Pin<Box<dyn Future<Output = Result<IHttpResponse, HttpClientError>> + Send + 'c>>;
+
+    fn call(&'c self, request: IHttpRequest) -> Self::Future {
+        Box::pin(async move {
+            let request: HttpRequest = request.try_into()?;
+            let response: HttpResponse = self.0.http_client(request).await?;
+            let response: IHttpResponse = response.try_into()?;
+            Ok::<_, HttpClientError>(response)
+        })
+    }
+}
+
+#[derive(uniffi::Object)]
+pub struct EitherHttpClient(
+    pub(crate) Either<WrapArc<dyn HttpClient>, WrapArc<dyn AsyncHttpClient>>,
+);
+
+impl From<Arc<dyn HttpClient>> for EitherHttpClient {
+    fn from(value: Arc<dyn HttpClient>) -> Self {
+        Self(Either::Left(WrapArc::<_>(value)))
+    }
+}
+
+impl From<Arc<dyn AsyncHttpClient>> for EitherHttpClient {
+    fn from(value: Arc<dyn AsyncHttpClient>) -> Self {
+        Self(Either::Right(WrapArc::<_>(value)))
+    }
+}
+
+pub struct WrapArc<T: ?Sized>(Arc<T>);
+
+#[uniffi::export]
+fn oid4vci_create_sync_client(client: Arc<dyn HttpClient>) -> EitherHttpClient {
+    client.into()
+}
+
+#[uniffi::export]
+fn oid4vci_create_async_client(client: Arc<dyn AsyncHttpClient>) -> EitherHttpClient {
+    client.into()
 }
 
 fn headermap_to_hashmap(headers: &HeaderMap) -> Result<HashMap<String, String>, HttpClientError> {

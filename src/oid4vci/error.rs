@@ -5,7 +5,7 @@ use oid4vci::{
 
 #[derive(thiserror::Error, uniffi::Error, Debug)]
 #[uniffi(flat_error)]
-pub enum OID4VCIError {
+pub enum Oid4vciError {
     #[error("Serde error")]
     SerdeJsonError(String),
 
@@ -29,55 +29,55 @@ pub enum OID4VCIError {
 }
 
 // TODO: some or all of these trait implementations can be converted to macros
-impl From<String> for OID4VCIError {
+impl From<String> for Oid4vciError {
     fn from(value: String) -> Self {
         Self::Generic(value)
     }
 }
 
-impl<RE> From<DiscoveryError<RE>> for OID4VCIError
+impl<RE> From<DiscoveryError<RE>> for Oid4vciError
 where
     RE: std::error::Error + 'static,
 {
     fn from(value: DiscoveryError<RE>) -> Self {
         if let DiscoveryError::Parse(e) = &value {
-            OID4VCIError::RequestError(format!("{value}: {e}"))
+            Oid4vciError::RequestError(format!("{value}: {e}"))
         } else {
-            OID4VCIError::RequestError(value.to_string())
+            Oid4vciError::RequestError(value.to_string())
         }
     }
 }
 
-impl From<serde_json::Error> for OID4VCIError {
+impl From<serde_json::Error> for Oid4vciError {
     fn from(_: serde_json::Error) -> Self {
-        OID4VCIError::SerdeJsonError("".into())
+        Oid4vciError::SerdeJsonError("".into())
     }
 }
 
-impl<RE> From<RequestError<RE>> for OID4VCIError
+impl<RE> From<RequestError<RE>> for Oid4vciError
 where
     RE: std::error::Error + 'static,
 {
     fn from(value: RequestError<RE>) -> Self {
         if let RequestError::Parse(e) = &value {
-            OID4VCIError::RequestError(format!("{value}: {e}"))
+            Oid4vciError::RequestError(format!("{value}: {e}"))
         } else {
-            OID4VCIError::RequestError(value.to_string())
+            Oid4vciError::RequestError(value.to_string())
         }
     }
 }
 
-impl<RE, T> From<RequestTokenError<RE, T>> for OID4VCIError
+impl<RE, T> From<RequestTokenError<RE, T>> for Oid4vciError
 where
     RE: std::error::Error + 'static,
     T: ErrorResponse + 'static,
 {
     fn from(value: RequestTokenError<RE, T>) -> Self {
-        OID4VCIError::RequestError(value.to_string())
+        Oid4vciError::RequestError(value.to_string())
     }
 }
-impl From<oid4vci::client::Error> for OID4VCIError {
+impl From<oid4vci::client::Error> for Oid4vciError {
     fn from(value: oid4vci::client::Error) -> Self {
-        OID4VCIError::RequestError(value.to_string())
+        Oid4vciError::RequestError(value.to_string())
     }
 }
