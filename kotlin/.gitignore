@@ -1,6 +1,8 @@
 walletsdkrs/src
+.idea
 .gradle
 build
 kls_database.db
 *.hprof
 local.properties
+/**/jniLibs
