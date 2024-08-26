@@ -6,6 +6,8 @@ pub mod storage_manager;
 pub mod vdc_collection;
 pub mod w3c_vc_barcodes;
 
+pub use mdl::*;
+
 // use std::{
 //     collections::HashMap,
 //     sync::{Arc, Mutex},
