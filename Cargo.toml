@@ -32,7 +32,7 @@ ssi = { version = "0.8.1", features = ["secp256r1", "secp384r1"] }
 tracing = "0.1.40"
 
 [dev-dependencies]
-uniffi = { version = "0.27.1", features = ["bindgen-tests"] }
+uniffi = { version = "0.28.1", features = ["bindgen-tests"] }
 tokio = "1.39.2"
 base64 = "0.22.0"
 

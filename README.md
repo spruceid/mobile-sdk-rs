@@ -46,6 +46,8 @@ cd kotlin
 ```bash
 cargo swift package -p ios -n MobileSdkRs --release
 ```
+> **⚠** If you need to call `verify_vcb_qrcode_against_mrz` or `verify_pdf417_barcode` in your iOS app, you **must** build with the `--release` flag to avoid runtime errors when executing these methods.
+
 > You will need `cargo-swift` which you can install with `cargo install cargo-swift`.
 
 ## Test
