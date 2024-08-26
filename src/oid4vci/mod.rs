@@ -22,14 +22,14 @@ use oid4vci::{
         profiles::{
             self,
             w3c::{CredentialDefinition, CredentialDefinitionLD},
-            CoreProfilesMetadata, CoreProfilesOffer, CoreProfilesResponse,
+            CoreProfilesConfiguration, CoreProfilesOffer, CoreProfilesResponse,
         },
     },
     credential::ResponseEnum,
     credential_offer::CredentialOfferParameters,
     metadata::AuthorizationMetadata,
     openidconnect::{AuthorizationCode, ClientId, IssuerUrl, OAuth2TokenResponse, RedirectUrl},
-    profiles::CredentialMetadataProfile,
+    profiles::CredentialConfigurationProfile,
     proof_of_possession::Proof,
 };
 use ssi::{
@@ -87,14 +87,14 @@ pub async fn oid4vci_initiate_with_offer(
                 use oid4vci::credential_offer::CredentialOfferFormat::*;
                 match c {
                     Reference(_scope) => todo!(),
-                    Value(JWTVC(offer)) => CoreProfilesMetadata::JWTVC(w3c::jwt::Metadata::new(
-                        CredentialDefinition::new(
+                    Value(JWTVC(offer)) => CoreProfilesConfiguration::JWTVC(
+                        w3c::jwt::Configuration::new(CredentialDefinition::new(
                             offer.credential_definition().r#type().to_owned(),
-                        ),
-                    ))
+                        )),
+                    )
                     .to_request(),
-                    Value(JWTLDVC(offer)) => CoreProfilesMetadata::JWTLDVC(
-                        w3c::jwtld::Metadata::new(CredentialDefinitionLD::new(
+                    Value(JWTLDVC(offer)) => CoreProfilesConfiguration::JWTLDVC(
+                        w3c::jwtld::Configuration::new(CredentialDefinitionLD::new(
                             CredentialDefinition::new(
                                 offer
                                     .credential_definition()
@@ -106,19 +106,22 @@ pub async fn oid4vci_initiate_with_offer(
                         )),
                     )
                     .to_request(),
-                    Value(LDVC(offer)) => CoreProfilesMetadata::LDVC(w3c::ldp::Metadata::new(
-                        CredentialDefinitionLD::new(
-                            CredentialDefinition::new(
-                                offer
-                                    .credential_definition()
-                                    .credential_offer_definition()
-                                    .r#type()
-                                    .to_owned(),
-                            ),
+                    Value(LDVC(offer)) => {
+                        CoreProfilesConfiguration::LDVC(w3c::ldp::Configuration::new(
                             offer.credential_definition().context().to_owned(),
-                        ),
-                    ))
-                    .to_request(),
+                            CredentialDefinitionLD::new(
+                                CredentialDefinition::new(
+                                    offer
+                                        .credential_definition()
+                                        .credential_offer_definition()
+                                        .r#type()
+                                        .to_owned(),
+                                ),
+                                offer.credential_definition().context().to_owned(),
+                            ),
+                        ))
+                        .to_request()
+                    }
                     Value(ISOmDL(_)) => todo!(),
                 }
             })

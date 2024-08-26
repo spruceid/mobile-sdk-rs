@@ -7,7 +7,7 @@ use oid4vci::{
         profiles::{self},
     },
     credential_offer::CredentialOfferGrants,
-    profiles::CredentialMetadataProfile,
+    profiles::CredentialConfigurationProfile,
     token,
 };
 
