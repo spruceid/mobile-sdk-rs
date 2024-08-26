@@ -73,8 +73,6 @@ pub enum WalletError {
     CredentialCallback(#[from] CredentialCallbackError),
     #[error("Unknown error occurred.")]
     Unknown,
-    // #[error("Required credential not found for input descriptor id: {0}")]
-    // RequiredCredentialNotFound(String),
 }
 
 // Handle unexpected errors when calling a foreign callback
@@ -96,22 +94,6 @@ impl From<uniffi::UnexpectedUniFFICallbackError> for WalletError {
 /// (see [RFC6749](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#RFC6749))
 /// towards the Credential Verifier which acts as the OAuth 2.0 Client.
 ///
-/// # Example
-///
-/// #[ignore]
-/// ```
-/// use mobile_sdk_rs::prelude::*;
-///
-/// let storage_manager = Box::new(MyStorageManager::new());
-/// let key_manager = Box::new(MyKeyManager::new());
-///
-/// fn main() -> Result<(), WalletError> {
-///  let wallet = Wallet::new(storage_manager, key_manager)?;
-///
-/// }
-///
-///
-/// ```
 #[derive(uniffi::Object, Debug)]
 pub struct Wallet {
     pub(crate) client: oid4vp::core::util::ReqwestClient,
