@@ -1,3 +1,5 @@
+use crate::UniffiCustomTypeConverter;
+
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -357,14 +359,14 @@ mod tests {
 
     #[tokio::test]
     async fn verify_vc() {
-        let json_vc = include_str!("../tests/res/vc");
+        let json_vc = include_str!("../../tests/res/vc");
         verify_json_vc_string(json_vc.into()).await.unwrap()
     }
 
     #[tokio::test]
     async fn verify_vp() {
-        let json_vc = include_str!("../tests/res/vc");
-        let key_str = include_str!("../tests/res/ed25519-2020-10-18.json");
+        let json_vc = include_str!("../../tests/res/vc");
+        let key_str = include_str!("../../tests/res/ed25519-2020-10-18.json");
         let jwt_vp = vc_to_signed_vp(json_vc.to_string(), key_str.to_string())
             .await
             .unwrap();
@@ -373,11 +375,11 @@ mod tests {
 
     #[test]
     fn end_to_end_ble_presentment() {
-        let mdoc_b64 = include_str!("../tests/res/mdoc.b64");
+        let mdoc_b64 = include_str!("../../tests/res/mdoc.b64");
         let mdoc_bytes = BASE64_STANDARD.decode(mdoc_b64).unwrap();
         let mdoc = MDoc::from_cbor(mdoc_bytes).unwrap();
         let key: p256::ecdsa::SigningKey =
-            p256::SecretKey::from_sec1_pem(include_str!("../tests/res/sec1.pem"))
+            p256::SecretKey::from_sec1_pem(include_str!("../../tests/res/sec1.pem"))
                 .unwrap()
                 .into();
         let session_data = initialise_session(mdoc, Uuid::new_v4()).unwrap();
@@ -397,7 +399,7 @@ mod tests {
         .try_into()
         .unwrap();
         let trust_anchor = TrustAnchorRegistry::iaca_registry_from_str(vec![include_str!(
-            "../tests/res/issuer-cert.pem"
+            "../../tests/res/issuer-cert.pem"
         )
         .to_string()])
         .unwrap();
