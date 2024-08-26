@@ -32,14 +32,9 @@ security firm before the v1.0 release.
 Use the [`release` Github Action](https://github.com/spruceid/mobile-sdk-rs/actions/workflows/release.yml)
 which is a manually triggered action.
 
-## Build
+## Building
 
-### Kotlin
-
-```bash
-cd kotlin
-./gradlew build
-```
+### Pre-requisites
 
 ### Swift
 
@@ -48,10 +43,13 @@ cargo swift package -p ios -n MobileSdkRs --release
 ```
 > **⚠** If you need to call `verify_vcb_qrcode_against_mrz` or `verify_pdf417_barcode` in your iOS app, you **must** build with the `--release` flag to avoid runtime errors when executing these methods.
 
+-  **Cargo Swift**
+
 > You will need `cargo-swift` which you can install with `cargo install cargo-swift`.
 
-## Test
-In order to run the tests you'll need to download a copy of JNA
+-  **Download and link `JNA`**
+
+> In order to run the tests you'll need to download a copy of JNA
 
 ```
 wget https://repo1.maven.org/maven2/net/java/dev/jna/jna/5.14.0/jna-5.14.0.jar
@@ -65,8 +63,8 @@ in your `.bashrc` file
 ```bash
 export CLASSPATH="/path/to/jna-5.14.0.jar:/path/to/kotlinx-coroutines-core-jvm-1.6.4.jar:$CLASSPATH"
 ```
-This lets you just run `cargo test` as normal.
 
+> This lets you just run `cargo test` as normal.
 
 Alternatively, if you don't like the addition to your environment you can
 specify it on every invocation of cargo test:
@@ -74,3 +72,45 @@ specify it on every invocation of cargo test:
 ```bash
 CLASSPATH="/path/to/jna-5.14.0.jar:/path/to/kotlinx-coroutines-core-jvm-1.6.4.jar" cargo test
 ```
+
+
+### **Use the Makefile**
+
+Use the `Makefile` to build the project. The `Makefile` has the following targets:
+
+#### Generate the Bindings for Kotlin and Swift
+
+```bash
+make bindings
+```
+
+> NOTE: If you only want to generate the bindings for a specific language, use `make kotlin` or `make swift`
+
+#### Compile the Kotlin Code
+
+```bash
+make compile_kotlin
+```
+This will generate the bindings and compile the Kotlin code, checking for any errors.
+
+## Testing
+
+```bash
+make test
+```
+
+Make test will run the uniffi bindgen tests for swift and will run the android tests for kotlin.
+
+Use `make test_kotlin` or `make test_swift` to run the tests for Kotlin or Swift respectively.
+
+Running the tests will generate the bindings and compile the code before running the tests.
+
+## Packaging
+
+```bash
+make package
+```
+
+This will package both the Kotlin and Swift libraries for distribution.
+
+Using `make package_kotlin` or `make package_swift` will package only the Kotlin or Swift libraries respectively.
