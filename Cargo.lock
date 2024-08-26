@@ -3589,6 +3589,7 @@ dependencies = [
  "http 1.1.0",
  "jsonpath_lib",
  "jsonschema",
+ "oid4vp-frontend",
  "p256",
  "reqwest 0.12.5",
  "serde",
@@ -3603,6 +3604,14 @@ dependencies = [
  "url",
  "uuid",
  "x509-cert",
+]
+
+[[package]]
+name = "oid4vp-frontend"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
