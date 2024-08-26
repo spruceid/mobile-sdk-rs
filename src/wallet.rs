@@ -1,20 +1,20 @@
 use crate::{
-    common::Url,
-    key_manager::{KeyManagerInterface, DEFAULT_KEY_INDEX, KEY_MANAGER_PREFIX},
+    common::{Key, Url},
+    credentials_callback::{CredentialCallbackError, CredentialCallbackInterface},
+    key_manager::{KeyManagerError, KeyManagerInterface, DEFAULT_KEY_INDEX, KEY_MANAGER_PREFIX},
     metadata_manager::{MetadataManager, MetadataManagerError},
-    storage_manager::{self, Key, StorageManagerInterface},
+    storage_manager::{self, StorageManagerInterface},
     trust_manager::TrustManager,
     vdc_collection::{VdcCollection, VdcCollectionError},
+    Credential,
 };
 
 use std::sync::{Arc, RwLock};
 
 use anyhow::Result;
 use oid4vp::{
-    core::authorization_request::parameters::ResponseMode, verifier::request_signer::RequestSigner,
-    wallet::Wallet as OID4VPWallet,
+    core::authorization_request::parameters::ResponseMode, wallet::Wallet as OID4VPWallet,
 };
-use ssi_dids::DIDKey;
 use thiserror::Error;
 
 /// The [WalletError] enum represents the errors that can occur
@@ -34,7 +34,9 @@ pub enum WalletError {
     #[error(transparent)]
     VdcCollection(#[from] VdcCollectionError),
     #[error(transparent)]
-    MetadataManagerError(#[from] MetadataManagerError),
+    MetadataManager(#[from] MetadataManagerError),
+    #[error(transparent)]
+    KeyManager(#[from] KeyManagerError),
     #[error("Required credential not found for input descriptor id: {0}")]
     RequiredCredentialNotFound(String),
     #[error("Key not found for index: {0}")]
@@ -65,6 +67,12 @@ pub enum WalletError {
     SigningAlgorithmNotFound(String),
     #[error("Failed to sign JWT: {0}")]
     SigningError(String),
+    #[error("Failed to save reference to credential.")]
+    InvalidCredentialReference,
+    #[error(transparent)]
+    CredentialCallback(#[from] CredentialCallbackError),
+    #[error("Unknown error occurred.")]
+    Unknown,
 }
 
 // Handle unexpected errors when calling a foreign callback
@@ -86,22 +94,6 @@ impl From<uniffi::UnexpectedUniFFICallbackError> for WalletError {
 /// (see [RFC6749](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#RFC6749))
 /// towards the Credential Verifier which acts as the OAuth 2.0 Client.
 ///
-/// # Example
-///
-/// #[ignore]
-/// ```
-/// use mobile_sdk_rs::prelude::*;
-///
-/// let storage_manager = Box::new(MyStorageManager::new());
-/// let key_manager = Box::new(MyKeyManager::new());
-///
-/// fn main() -> Result<(), WalletError> {
-///  let wallet = Wallet::new(storage_manager, key_manager)?;
-///
-/// }
-///
-///
-/// ```
 #[derive(uniffi::Object, Debug)]
 pub struct Wallet {
     pub(crate) client: oid4vp::core::util::ReqwestClient,
@@ -114,9 +106,9 @@ pub struct Wallet {
     pub(crate) trust_manager: TrustManager,
     pub(crate) key_manager: Box<dyn KeyManagerInterface>,
     pub(crate) storage_manager: Box<dyn StorageManagerInterface>,
-    // The active key index is used to determine which key to used for signing.
-    // By default, this is set to the 0-index key.
-    pub(crate) active_key_index: Arc<RwLock<u8>>,
+    // // The active key index is used to determine which key to used for signing.
+    // // By default, this is set to the 0-index key.
+    // pub(crate) active_key_index: Arc<RwLock<u8>>,
 }
 
 #[uniffi::export]
@@ -160,8 +152,23 @@ impl Wallet {
             storage_manager,
             vdc_collection: VdcCollection::new(),
             trust_manager: TrustManager::new(),
-            active_key_index: Arc::new(RwLock::new(DEFAULT_KEY_INDEX)),
+            // TODO: Remove the key should be determined by the
+            // requested credential to be presented.
+            // active_key_index: Arc::new(RwLock::new(DEFAULT_KEY_INDEX)),
         }))
+    }
+
+    /// Add a credential to the wallet.
+    ///
+    /// This method will add a verifiable credential to the wallet.
+    pub fn add_credential(&self, credential: Arc<Credential>) -> Result<(), WalletError> {
+        // NOTE: This will fail if there is more than one strong reference to the credential.
+        let credential =
+            Arc::into_inner(credential).ok_or(WalletError::InvalidCredentialReference)?;
+
+        self.vdc_collection
+            .add(credential, &self.storage_manager)
+            .map_err(Into::into)
     }
 
     /// Handle an OID4VP authorization request provided as a URL.
@@ -186,7 +193,11 @@ impl Wallet {
     /// * If the response mode is not supported;
     /// * If the response submission fails.
     ///
-    pub async fn handle_oid4vp_request(&self, url: Url) -> Result<Option<Url>, WalletError> {
+    pub async fn handle_oid4vp_request(
+        &self,
+        url: Url,
+        callback: &Box<dyn CredentialCallbackInterface>,
+    ) -> Result<Option<Url>, WalletError> {
         let request = self
             .validate_request(url)
             .await
@@ -194,7 +205,7 @@ impl Wallet {
 
         let response = match request.response_mode() {
             ResponseMode::DirectPost => {
-                self.handle_unencoded_authorization_request(&request)
+                self.handle_unencoded_authorization_request(&request, callback)
                     .await?
             }
             // TODO: Implement support for other response modes?
@@ -204,117 +215,5 @@ impl Wallet {
         self.submit_response(request, response)
             .await
             .map_err(|e| WalletError::OID4VPResponseSubmission(e.to_string()))
-    }
-
-    /// Returns the JSON-encoded JWK of the wallet's public JWK encoded key.
-    ///
-    /// An optional `key_index` can be provided to specify the key index to use.
-    ///
-    /// If no key index is provided, the active key index is used.
-    ///
-    /// # Arguments
-    ///
-    /// # Returns
-    ///
-    /// The JSON-encoded JWK of the wallet's public JWK encoded key.
-    ///
-    /// # Errors
-    ///
-    /// * If the key index is not found.
-    /// * If the key is not found.
-    /// * If the JWK cannot be encoded.
-    ///
-    pub fn get_jwk(&self) -> Result<String, WalletError> {
-        let index = self.get_active_key_index()?;
-        let key_id = Key::with_prefix(KEY_MANAGER_PREFIX, &format!("{index}"));
-
-        self.key_manager
-            .get_jwk(key_id.clone())
-            .ok_or(WalletError::KeyNotFound(index))
-    }
-
-    /// Returns the verification method of the wallet's public JWK encoded key.
-    ///
-    /// The verification method is a DID URL that can be used to reference the key.
-    ///
-    /// The active key index is used as the fragment of the DID URL.
-    ///
-    /// # Arguments
-    ///
-    /// # Returns
-    ///
-    /// The verification method of the wallet's public JWK encoded key.
-    ///
-    /// # Errors
-    ///
-    /// * If the key index is not found.
-    /// * If the key is not found.
-    /// * If the JWK cannot be encoded.
-    /// * If the JWK cannot be converted to a DID Key.
-    ///
-    pub fn jwk_verification_method(&self) -> Result<String, WalletError> {
-        let index = self.get_active_key_index()?;
-        // Convert JWK into DID Key format.
-        let did_key = DIDKey::generate_url(&self.jwk()?)
-            .map_err(|e| WalletError::DIDKeyGenerateUrl(e.to_string()))?;
-
-        Ok(format!("{did_key}#{index}"))
-    }
-
-    /// Set the Active Key Index of the Wallet.
-    /// This is used as the default key index for signing.
-    /// By default, this is set to the 0-index key.
-    ///
-    /// This will error if the key index does not exist.
-    ///
-    /// # Arguments
-    ///
-    /// * `key_index` - The key index to set as the active key index.
-    ///
-    /// # Returns
-    ///
-    /// A result indicating success or failure.
-    ///
-    /// # Errors
-    ///
-    /// * If the key index does not exist.
-    /// * If the active key index cannot be written due to a write lock guard error.
-    ///
-    pub fn set_active_key_index(&self, key_index: u8) -> Result<(), WalletError> {
-        if !self.key_manager.key_exists(Key::with_prefix(
-            KEY_MANAGER_PREFIX,
-            &format!("{key_index}"),
-        )) {
-            return Err(WalletError::KeyNotFound(key_index));
-        }
-
-        let mut active_key_index = self
-            .active_key_index
-            .write()
-            .map_err(|e| WalletError::ActiveKeyIndexReadWriteError(e.to_string()))?;
-
-        *active_key_index = key_index;
-
-        Ok(())
-    }
-
-    /// Get the Active Key Index of the Wallet.
-    /// This is used as the default key index for signing.
-    ///
-    /// # Returns
-    ///
-    /// The active key index.
-    ///
-    /// # Errors
-    ///
-    /// * If the active key index cannot be read due to a read lock guard failure;
-    ///
-    pub fn get_active_key_index(&self) -> Result<u8, WalletError> {
-        let key_index = self
-            .active_key_index
-            .read()
-            .map_err(|e| WalletError::ActiveKeyIndexReadWriteError(e.to_string()))?;
-
-        Ok(*key_index)
     }
 }

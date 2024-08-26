@@ -1,6 +1,7 @@
 use crate::{
+    common::Key,
+    credentials_callback::CredentialCallbackInterface,
     key_manager::KEY_MANAGER_PREFIX,
-    storage_manager::Key,
     vdc_collection::Credential,
     wallet::{Wallet, WalletError},
 };
@@ -18,10 +19,11 @@ use oid4vp::{
             verification::{did::verify_with_resolver, RequestVerifier},
             AuthorizationRequestObject,
         },
+        credential_format::ClaimFormatDesignation,
         metadata::WalletMetadata,
+        presentation_submission::{DescriptorMap, PresentationSubmission},
         response::{parameters::VpToken, AuthorizationResponse, UnencodedAuthorizationResponse},
     },
-    presentation_exchange::{ClaimFormatDesignation, DescriptorMap, PresentationSubmission},
     verifier::request_signer::RequestSigner,
     wallet::Wallet as OID4VPWallet,
 };
@@ -46,56 +48,63 @@ impl Wallet {
     fn retrieve_credentials(
         &self,
         presentation_definition: &PresentationDefinition,
-    ) -> Result<Vec<Option<Credential>>, WalletError> {
-        presentation_definition
-            .parsed()
-            .input_descriptors()
-            .iter()
-            .map(|input_descriptor| {
-                match self
-                    .vdc_collection
-                    .get(input_descriptor.id(), &self.storage_manager)
-                {
-                    Ok(Some(credential)) => Ok(Some(credential)),
-                    Ok(None) => {
-                        // Check if the input descriptor contains required constraints.
-                        if input_descriptor.constraints().is_required() {
-                            Err(WalletError::RequiredCredentialNotFound(
-                                input_descriptor.id().to_string(),
-                            ))
-                        } else {
-                            Ok(None)
-                        }
-                    }
-                    Err(e) => Err(WalletError::VdcCollection(e)),
-                }
-            })
-            .collect::<Result<Vec<_>, _>>()
+    ) -> Result<Vec<Credential>, WalletError> {
+        unimplemented!()
+        // presentation_definition
+        //     .parsed()
+        //     .input_descriptors()
+        //     .iter()
+        //     .map(|input_descriptor| {
+        //         match self
+        //             .vdc_collection
+        //             // TODO: Is the input descriptor the ID to use
+        //             // for the credential lookup?
+        //             //
+        //             // Check to ensure the VDC collection contains the credential
+        //             // by comparing the format of the credential and then run
+        //             // the constraints scheme to check if the credential matches.
+        //             .get(input_descriptor.id(), &self.storage_manager)
+        //         {
+        //             Ok(Some(credential)) => Ok(Some(credential)),
+        //             Ok(None) => {
+        //                 // Check if the input descriptor contains required constraints.
+        //                 if input_descriptor.constraints().is_required() {
+        //                     Err(WalletError::RequiredCredentialNotFound(
+        //                         input_descriptor.id().to_string(),
+        //                     ))
+        //                 } else {
+        //                     Ok(None)
+        //                 }
+        //             }
+        //             Err(e) => Err(WalletError::VdcCollection(e)),
+        //         }
+        //     })
+        //     .collect::<Result<Vec<_>, _>>()
     }
 
     // Construct a DescriptorMap for the presentation submission based on the
     // credentials returned from the VDC collection.
     fn create_descriptor_maps(
         &self,
-        credentials: Vec<Option<Credential>>,
+        credentials: Vec<Credential>,
     ) -> Vec<(DescriptorMap, Credential)> {
         credentials
             .into_iter()
             // Filter out the credentials that are not found in the storage.
-            .filter_map(|credential| credential)
+            // .filter_map(|credential| credential)
             // Enumerate over the existing credentials to create a descriptor map.
             .enumerate()
             .map(|(index, credential)| {
                 (
                     DescriptorMap::new(
-                        *credential.id(),
+                        credential.id(),
                         ClaimFormatDesignation::JwtVpJson,
                         "$.vp".into(),
                     )
                     // TODO: Determine if the nested path should be set.
                     // For example: `$.vc` or `$.verifiableCredential`
                     .set_path_nested(DescriptorMap::new(
-                        *credential.id(),
+                        credential.id(),
                         credential.format().to_owned(),
                         // NOTE: The path is set to the index of the credential
                         // in the presentation submission.
@@ -116,6 +125,7 @@ impl Wallet {
     pub(crate) async fn handle_unencoded_authorization_request(
         &self,
         request: &AuthorizationRequestObject,
+        callback: &Box<dyn CredentialCallbackInterface>,
     ) -> Result<AuthorizationResponse, WalletError> {
         // Resolve the presentation definition.
         let presentation_definition = request
@@ -126,8 +136,14 @@ impl Wallet {
         let presentation_submission_id = uuid::Uuid::new_v4();
         let presentation_definition_id = presentation_definition.parsed().id().clone();
 
+        // NOTE: This is a callback method to alert the client the information requested.
+        // The user can deny the request or permit the presentation.
+        callback.permit_presentation(presentation_definition.parsed().requested_fields())?;
+
         // Check if the verifiable credential(s) exists in the storage.
         let credentials = self.retrieve_credentials(&presentation_definition)?;
+
+        // TODO: Show the user the credentials, and then request a selection from the credentials.
 
         // Create a descriptor map for the presentation submission based on the credentials
         // returned from the VDC collection.
@@ -182,7 +198,7 @@ impl Wallet {
             .into_iter()
             .map(|(_, credential)| credential)
             .map(|credential| {
-                serde_json::from_slice::<Value>(credential.payload())
+                serde_json::from_slice::<Value>(&credential.payload())
                     .map_err(|e| WalletError::SerdeJson(e.to_string()))
             })
             .collect::<Result<Vec<Value>, WalletError>>()?;
@@ -307,9 +323,11 @@ impl RequestSigner for Wallet {
     }
 
     fn jwk(&self) -> Result<JWK, Self::Error> {
-        let jwk = self.get_jwk()?;
+        unimplemented!()
 
-        serde_json::from_str(&jwk).map_err(|e| WalletError::JWKParseError(e.to_string()))
+        // let jwk = self.get_jwk()?;
+
+        // serde_json::from_str(&jwk).map_err(|e| WalletError::JWKParseError(e.to_string()))
     }
 
     async fn sign(&self, _payload: &[u8]) -> Vec<u8> {
@@ -319,14 +337,13 @@ impl RequestSigner for Wallet {
     }
 
     async fn try_sign(&self, payload: &[u8]) -> Result<Vec<u8>, Self::Error> {
-        let index = self.get_active_key_index()?;
-        let key_id = Key::with_prefix(KEY_MANAGER_PREFIX, &format!("{index}"));
+        unimplemented!()
+        // let index = self.get_active_key_index()?;
+        // let key_id = Key::with_prefix(KEY_MANAGER_PREFIX, &format!("{index}"));
 
-        self.key_manager
-            .sign_payload(key_id, payload.to_vec())
-            .ok_or(WalletError::SigningError(
-                "key manager failed to sign payload".into(),
-            ))
+        // self.key_manager
+        //     .sign_payload(key_id, payload.to_vec())
+        //     .map_err(Into::into)
     }
 }
 

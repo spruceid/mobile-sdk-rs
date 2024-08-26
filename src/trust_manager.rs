@@ -1,16 +1,24 @@
-use crate::storage_manager::{Key, StorageManagerError, Value};
-
-use super::storage_manager::StorageManagerInterface;
+use crate::common::{Key, Value};
+use crate::storage_manager::{StorageManagerError, StorageManagerInterface};
 
 /// Internal prefix for trusted did keys.
 const KEY_PREFIX: &str = "TrustedDIDs.";
 
 #[derive(thiserror::Error, Debug, uniffi::Error)]
 pub enum TrustManagerError {
+    #[error("An unexpected foreign callback error occurred: {0}")]
+    UnexpectedUniFFICallbackError(String),
     #[error(transparent)]
     Storage(#[from] StorageManagerError),
     #[error("The DID key cannot be added because it is blocked, key: {0}")]
     DIDBlocked(String),
+}
+
+// Handle unexpected errors when calling a foreign callback
+impl From<uniffi::UnexpectedUniFFICallbackError> for TrustManagerError {
+    fn from(value: uniffi::UnexpectedUniFFICallbackError) -> Self {
+        TrustManagerError::UnexpectedUniFFICallbackError(value.reason)
+    }
 }
 
 /// TrustManager is responsible for managing trusted DIDs for the wallet.

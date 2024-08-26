@@ -218,12 +218,16 @@ pub enum MDocInitError {
 #[uniffi::export]
 impl MDoc {
     #[uniffi::constructor]
-    fn from_cbor(value: Vec<u8>) -> Result<Arc<Self>, MDocInitError> {
-        Ok(Arc::new(MDoc(serde_cbor::from_slice(&value).map_err(
-            |e| MDocInitError::Generic {
-                value: e.to_string(),
-            },
-        )?)))
+    fn from_cbor(value: Vec<u8>) -> Arc<Self> {
+        let mdoc = MDoc(
+            serde_cbor::from_slice(&value)
+                .map_err(|e| MDocInitError::Generic {
+                    value: e.to_string(),
+                })
+                .expect("Failed construct mdoc presentation."),
+        );
+
+        Arc::new(mdoc)
     }
 
     fn id(&self) -> Uuid {
@@ -263,7 +267,7 @@ mod tests {
     fn end_to_end_ble_presentment() {
         let mdoc_b64 = include_str!("../../tests/res/mdoc.b64");
         let mdoc_bytes = BASE64_STANDARD.decode(mdoc_b64).unwrap();
-        let mdoc = MDoc::from_cbor(mdoc_bytes).unwrap();
+        let mdoc = MDoc::from_cbor(mdoc_bytes);
         let key: p256::ecdsa::SigningKey =
             p256::SecretKey::from_sec1_pem(include_str!("../../tests/res/sec1.pem"))
                 .unwrap()

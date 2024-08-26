@@ -1,35 +1,17 @@
-use super::storage_manager::*;
-use oid4vp::presentation_exchange::ClaimFormatDesignation;
+use crate::common::*;
+use crate::storage_manager::*;
+
+use std::sync::Arc;
+
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tracing::{info, info_span};
-use uuid::Uuid;
 
 /// Internal prefix for credential keys.
 const KEY_PREFIX: &str = "Credential.";
 
-// NOTE: Replacing CredentialType with ClaimFormatDesignation from oid4vp-rs crate.
-// Does this make sense or are ClaimFormatDesignation and CredentialType different things?
-//
-// /// Supported credential formats.
-// #[derive(PartialEq, Debug, Serialize, Deserialize)]
-// pub enum CredentialFormat {
-//     MsoMdoc,
-//     JwtVcJson,
-//     LdpVc,
-//     Other(String), // For ease of expansion.
-// }
-
-/// Supported credential types.
-#[derive(PartialEq, Debug, Serialize, Deserialize)]
-pub enum CredentialType {
-    Iso18013_5_1mDl,
-    VehicleTitle,
-    Other(String), // For ease of expansion.
-}
-
 /// An individual credential.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, uniffi::Object, Serialize, Deserialize)]
 pub struct Credential {
     id: Uuid,
     format: ClaimFormatDesignation,
@@ -37,15 +19,16 @@ pub struct Credential {
     payload: Vec<u8>, // The actual credential.
 }
 
+#[uniffi::export]
 impl Credential {
-    /// Create a new credential.
+    #[uniffi::constructor]
     pub fn new(
         id: Uuid,
         format: ClaimFormatDesignation,
         ctype: CredentialType,
         payload: Vec<u8>,
-    ) -> Credential {
-        Credential {
+    ) -> Self {
+        Self {
             id,
             format,
             ctype,
@@ -53,24 +36,34 @@ impl Credential {
         }
     }
 
+    #[uniffi::constructor]
+    pub fn new_as_arc(
+        id: Uuid,
+        format: ClaimFormatDesignation,
+        ctype: CredentialType,
+        payload: Vec<u8>,
+    ) -> Arc<Self> {
+        Arc::new(Self::new(id, format, ctype, payload))
+    }
+
     /// Get the ID of the credential.
-    pub fn id(&self) -> &Uuid {
-        &self.id
+    pub fn id(&self) -> Uuid {
+        self.id.clone()
     }
 
     /// Get the format of the credential.
-    pub fn format(&self) -> &ClaimFormatDesignation {
-        &self.format
+    pub fn format(&self) -> ClaimFormatDesignation {
+        self.format.clone()
     }
 
     /// Get the type of the credential.
-    pub fn ctype(&self) -> &CredentialType {
-        &self.ctype
+    pub fn ctype(&self) -> CredentialType {
+        self.ctype.clone()
     }
 
     /// Get the payload of the credential.
-    pub fn payload(&self) -> &Vec<u8> {
-        &self.payload
+    pub fn payload(&self) -> Vec<u8> {
+        self.payload.clone()
     }
 }
 
@@ -79,12 +72,13 @@ impl Credential {
 /// This is the main interface to credentials.
 #[derive(Debug)]
 pub struct VdcCollection;
-// {
-//     storage: Box<dyn StorageManagerInterface>,
-// }
 
 #[derive(Error, Debug, uniffi::Error)]
 pub enum VdcCollectionError {
+    /// An unexpected error occurred.
+    #[error("An unexpected foreign callback error occurred: {0}")]
+    UnexpectedUniFFICallbackError(String),
+
     /// Attempt to convert the credential to a serialized form suitable for writing to storage failed.
     #[error("Failed to Serialize Value")]
     SerializeFailed,
@@ -106,11 +100,16 @@ pub enum VdcCollectionError {
     DeleteFailed(StorageManagerError),
 }
 
+// Handle unexpected errors when calling a foreign callback
+impl From<uniffi::UnexpectedUniFFICallbackError> for VdcCollectionError {
+    fn from(value: uniffi::UnexpectedUniFFICallbackError) -> Self {
+        VdcCollectionError::UnexpectedUniFFICallbackError(value.reason)
+    }
+}
+
 impl VdcCollection {
     /// Create a new credential set.
-    pub fn new(// _engine: Box<dyn StorageManagerInterface>
-    ) -> VdcCollection {
-        // VdcCollection { storage: engine }
+    pub fn new() -> VdcCollection {
         Self
     }
 

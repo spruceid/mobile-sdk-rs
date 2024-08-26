@@ -1,14 +1,15 @@
-use oid4vp::{core::metadata::WalletMetadata, presentation_exchange::ClaimFormatDesignation};
+use crate::common::Value;
+use crate::storage_manager::{StorageManagerError, StorageManagerInterface};
 
-use crate::storage_manager::{Key, StorageManagerError, Value};
-
-use super::storage_manager::StorageManagerInterface;
+use oid4vp::core::{credential_format::ClaimFormatDesignation, metadata::WalletMetadata};
 
 /// Internal prefix for the wallet metadata.
 const DEFAULT_WALLET_METADATA_KEY: &str = "WalletMetadata.default";
 
 #[derive(thiserror::Error, Debug, uniffi::Error)]
 pub enum MetadataManagerError {
+    #[error("An unexpected foreign callback error occurred: {0}")]
+    UnexpectedUniFFICallbackError(String),
     #[error(transparent)]
     Storage(#[from] StorageManagerError),
     #[error("Failed to serialize metadata: {0}")]
@@ -17,6 +18,13 @@ pub enum MetadataManagerError {
     NoMetadataFound,
     #[error("Failed to retrieve or add new request object signing algorithm: {0}")]
     RequestObjectSigningAlgorithm(String),
+}
+
+// Handle unexpected errors when calling a foreign callback
+impl From<uniffi::UnexpectedUniFFICallbackError> for MetadataManagerError {
+    fn from(value: uniffi::UnexpectedUniFFICallbackError) -> Self {
+        MetadataManagerError::UnexpectedUniFFICallbackError(value.reason)
+    }
 }
 
 /// MetadataManager is responsible for managing OID4VP metadata for the wallet.
@@ -85,12 +93,12 @@ impl MetadataManager {
 
     /// Returns a reference to the wallet metadata.
     ///
-    // The metadata manager cache is used to provide a reference to the wallet metadata without having to
-    // retrieve it from storage each time.
-    //
-    // The cache is updated when new metadata is added to the wallet using the [MetadataManager] methods.
-    //
-    // This is an alias for [MetadataManager::as_ref].
+    /// The metadata manager cache is used to provide a reference to the wallet metadata without having to
+    /// retrieve it from storage each time.
+    ///
+    /// The cache is updated when new metadata is added to the wallet using the [MetadataManager] methods.
+    ///
+    /// This is an alias for [MetadataManager::as_ref].
     pub fn cache(&self) -> &WalletMetadata {
         self.as_ref()
     }
