@@ -12,7 +12,8 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use oid4vp::{
-    core::authorization_request::parameters::ResponseMode, wallet::Wallet as OID4VPWallet,
+    core::{authorization_request::parameters::ResponseMode, metadata::WalletMetadata},
+    wallet::Wallet as OID4VPWallet,
 };
 use thiserror::Error;
 
@@ -96,6 +97,8 @@ impl From<uniffi::UnexpectedUniFFICallbackError> for WalletError {
 #[derive(uniffi::Object, Debug)]
 pub struct Wallet {
     pub(crate) client: oid4vp::core::util::ReqwestClient,
+    pub(crate) metadata: WalletMetadata,
+    // TODO: Use `MetadataManager` once merged.
     // pub(crate) metadata: MetadataManager,
     pub(crate) vdc_collection: VdcCollection,
     // NOTE: The wallet has internal access to the trust manager APIs, but
@@ -103,6 +106,8 @@ pub struct Wallet {
     // This is because the trust manager is intended to be used internally by the wallet.
     // The [TrustManager] does not implement uniffi bindings.
     // pub(crate) trust_manager: TrustManager,
+    // TODO: Use the `TrustManager` once merged.
+    pub(crate) trust_manager: Vec<String>,
     pub(crate) key_manager: Box<dyn KeyManagerInterface>,
     pub(crate) storage_manager: Box<dyn StorageManagerInterface>,
     // // The active key index is used to determine which key to used for signing.
@@ -146,10 +151,12 @@ impl Wallet {
 
         Ok(Arc::new(Self {
             client,
-            // metadata,
+            // TODO: Replace with `MetadataManager` once merged.
+            metadata: WalletMetadata::openid4vp_scheme_static(),
             key_manager,
             storage_manager,
             vdc_collection: VdcCollection::new(),
+            trust_manager: Vec::new(),
             // trust_manager: TrustManager::new(),
             // TODO: Remove the key should be determined by the
             // requested credential to be presented.
