@@ -202,6 +202,7 @@ impl Wallet {
     pub async fn handle_oid4vp_request(
         &self,
         url: Url,
+        // NOTE: The callback handles UI interactions.
         callback: &Box<dyn CredentialCallbackInterface>,
     ) -> Result<Option<Url>, WalletError> {
         let request = self

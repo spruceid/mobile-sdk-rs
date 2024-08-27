@@ -36,6 +36,8 @@ impl From<uniffi::UnexpectedUniFFICallbackError> for MetadataManagerError {
 /// Use the [MetadataManager::cache] method to access a reference to the wallet metadata.
 #[derive(Debug)]
 pub struct MetadataManager {
+    // TODO: Remove a singular cache;
+    // There may be multiple types of wallet metadata required per protocol.
     cache: WalletMetadata,
 }
 
@@ -59,6 +61,8 @@ impl MetadataManager {
             Err(e) => Err(e),
         }
     }
+
+    // NOTE: Provide a mutable reference to the wallet metadata.
 
     // /// Add a new supported request object signing algorithm to the wallet metadata.
     // pub fn add_request_object_signing_alg(
@@ -86,7 +90,6 @@ impl MetadataManager {
     //         .0
     //         .get_mut(claim_format)
     //         .map(|formats| formats.add_alg(algorithm));
-
     //     // Overwrite the metadata with the new algorithm.
     //     Self::add_metadata(&self.cache, storage)
     // }

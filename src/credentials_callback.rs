@@ -30,7 +30,10 @@ pub trait CredentialCallbackInterface: Send + Sync + Debug {
     /// If the user denies the a field request, the verifier should return a [CredentialCallbackError::PermissionDenied]
     fn permit_presentation(
         &self,
+        // TODO: Should include a uniffi::Object with method handlers for purpose and description, etc.
+        // TODO: Selective disclosure of credential. Bool -> `is_selectively_disclosable`.
         requested_fields: Vec<String>,
+        // TODO: Consider returning a `selective disclosure` object that includes the requested fields.
     ) -> Result<(), CredentialCallbackError>;
 
     /// Select which credentials to present provided a list of matching credentials.
@@ -38,4 +41,6 @@ pub trait CredentialCallbackInterface: Send + Sync + Debug {
     /// This is called by the client to select which credentials to present to the verifier. Multiple credentials
     /// may satisfy the request, and the client should select the most appropriate credentials to present.
     fn select_credentials(&self, credentials: Vec<Arc<Credential>>) -> Vec<Arc<Credential>>;
+
+    // TODO: Selective disclosure of credential attributes.
 }

@@ -296,6 +296,9 @@ impl RequestVerifier for Wallet {
     }
 }
 
+// TODO: The wallet should provide a `factory` for wallet instances
+// that implement the protocol-sepecific traits, e.g. `Wallet` in OID4VP.
+
 impl OID4VPWallet for Wallet {
     type HttpClient = oid4vp::core::util::ReqwestClient;
 

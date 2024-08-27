@@ -62,7 +62,7 @@ package_kotlin: kotlin
 
 # Package Swift code
 package_swift: swift
-	$(CARGO) swift package -p ios -n MobileSdkRs
+	$(CARGO) swift package -p ios -n MobileSdkRs --release
 
 # Package the Swift and Kotlin code
 package: package_kotlin package_swift
