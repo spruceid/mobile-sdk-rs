@@ -1,3 +1,5 @@
+use crate::Wallet;
+
 use super::common::*;
 
 use std::{
@@ -5,6 +7,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use anyhow::Result;
 use isomdl::{
     definitions::{
         device_engagement::{CentralClientMode, DeviceRetrievalMethods},
@@ -13,6 +16,120 @@ use isomdl::{
     },
     presentation::device::{self, Document, SessionManagerInit},
 };
+use ssi_claims::ResourceProvider;
+
+#[uniffi::export]
+impl Wallet {
+    /// Begin the mDL presentation process for the holder.
+    ///
+    /// Initializes the presentation session for an ISO 18013-5 mDL and stores
+    /// the session state object in the device storage_manager.
+    ///
+    /// Arguments:
+    /// mdoc_id: unique identifier for the credential to present, to be looked up
+    ///          in the VDC collection
+    /// uuid:    the Bluetooth Low Energy Client Central Mode UUID to be used
+    ///
+    /// Returns:
+    /// A Result, with the `Ok` containing a tuple consisting of an enum representing
+    /// the state of the presentation, a String containing the QR code URI, and a
+    /// String containing the BLE ident.
+    pub fn initialize_mdl_presentation(
+        &self,
+        mdoc_id: &str,
+        uuid: Uuid,
+    ) -> Result<(MdlPresentationSession, String, String)> {
+        let document = self
+            .vdc_collection
+            .get(mdoc_id, &self.storage_manager)?
+            .ok_or(Err("No credential with that ID in the VDC collection."))?;
+
+        let mdoc = MDoc::from_cbor(document.payload());
+        let drms = DeviceRetrievalMethods::new(DeviceRetrievalMethod::BLE(BleOptions {
+            peripheral_server_mode: None,
+            central_client_mode: Some(CentralClientMode { uuid }),
+        }));
+        let session = SessionManagerInit::initialise(
+            NonEmptyMap::new("org.iso.18013.5.1.mDL".into(), mdoc),
+            Some(drms),
+            None,
+        )
+        .map_err(|e| SessionError::Generic {
+            value: format!("Could not initialize session: {e:?}"),
+        })?;
+        let mut ble_ident =
+            session
+                .ble_ident()
+                .map(hex::encode)
+                .map_err(|e| SessionError::Generic {
+                    value: format!("Could not encode hex BLE ident: {e:?}"),
+                })?;
+        ble_ident.insert_str(0, "0x");
+        let (engaged_state, qr_code_uri) =
+            session.qr_engagement().map_err(|e| SessionError::Generic {
+                value: format!("Could not generate qr engagement: {e:?}"),
+            })?;
+        Ok((
+            MdlPresentationSession::Engaged(engaged_state),
+            qr_code_uri,
+            ble_ident,
+        ))
+    }
+}
+
+#[derive(uniffi::Enum)]
+pub enum MdlPresentationSession {
+    Engaged(device::SessionManagerEngaged),
+    InProcess(InProcessRecord),
+}
+
+struct InProcessRecord {
+    session: Mutex<device::SessionManager>,
+    items_request: Vec<ItemsRequest>,
+}
+
+#[uniffi::export]
+impl MdlPresentationSession {
+    pub fn handle_request(self, request: Vec<u8>) -> Result<RequestData, RequestError> {
+        let (session_manager, items_requests) = {
+            let session_establishment: SessionEstablishment = serde_cbor::from_slice(&request)
+                .map_err(|e| RequestError::Generic {
+                    value: format!("Could not deserialize request: {e:?}"),
+                })?;
+            if let MdlPresentationSession::Engaged(session) = self {
+                session
+                    .clone()
+                    .process_session_establishment(session_establishment)
+                    .map_err(|e| RequestError::Generic {
+                        value: format!("Could not process process session establishment: {e:?}"),
+                    })?
+            }
+        };
+
+        self = MdlPresentationSession::InProcess(Mutex::new(session_manager));
+        Ok(RequestData {
+            session_manager: Arc::new(SessionManager {
+                inner: Mutex::new(session_manager),
+                items_requests: items_requests.clone(),
+            }),
+            items_requests: items_requests
+                .into_iter()
+                .map(|req| ItemsRequest {
+                    doc_type: req.doc_type,
+                    namespaces: req
+                        .namespaces
+                        .into_inner()
+                        .into_iter()
+                        .map(|(ns, es)| {
+                            let items_request = es.into_inner().into_iter().collect();
+                            (ns, items_request)
+                        })
+                        .collect(),
+                })
+                .collect(),
+        })
+    }
+}
 
 #[derive(thiserror::Error, uniffi::Error, Debug)]
 pub enum SessionError {
@@ -28,39 +145,6 @@ struct SessionData {
     state: Arc<SessionManagerEngaged>,
     qr_code_uri: String,
     ble_ident: String,
-}
-
-#[uniffi::export]
-fn initialise_session(document: Arc<MDoc>, uuid: Uuid) -> Result<SessionData, SessionError> {
-    let drms = DeviceRetrievalMethods::new(DeviceRetrievalMethod::BLE(BleOptions {
-        peripheral_server_mode: None,
-        central_client_mode: Some(CentralClientMode { uuid }),
-    }));
-    let session = SessionManagerInit::initialise(
-        NonEmptyMap::new("org.iso.18013.5.1.mDL".into(), document.0.clone()),
-        Some(drms),
-        None,
-    )
-    .map_err(|e| SessionError::Generic {
-        value: format!("Could not initialize session: {e:?}"),
-    })?;
-    let mut ble_ident =
-        session
-            .ble_ident()
-            .map(hex::encode)
-            .map_err(|e| SessionError::Generic {
-                value: format!("Could not encode hex BLE ident: {e:?}"),
-            })?;
-    ble_ident.insert_str(0, "0x");
-    let (engaged_state, qr_code_uri) =
-        session.qr_engagement().map_err(|e| SessionError::Generic {
-            value: format!("Could not generate qr engagement: {e:?}"),
-        })?;
-    Ok(SessionData {
-        state: Arc::new(SessionManagerEngaged(engaged_state)),
-        qr_code_uri,
-        ble_ident,
-    })
 }
 
 #[derive(thiserror::Error, uniffi::Error, Debug)]
@@ -88,46 +172,6 @@ struct RequestData {
 }
 
 #[uniffi::export]
-fn handle_request(
-    state: Arc<SessionManagerEngaged>,
-    request: Vec<u8>,
-) -> Result<RequestData, RequestError> {
-    let (session_manager, items_requests) = {
-        let session_establishment: SessionEstablishment = serde_cbor::from_slice(&request)
-            .map_err(|e| RequestError::Generic {
-                value: format!("Could not deserialize request: {e:?}"),
-            })?;
-        state
-            .0
-            .clone()
-            .process_session_establishment(session_establishment)
-            .map_err(|e| RequestError::Generic {
-                value: format!("Could not process process session establishment: {e:?}"),
-            })?
-    };
-    Ok(RequestData {
-        session_manager: Arc::new(SessionManager {
-            inner: Mutex::new(session_manager),
-            items_requests: items_requests.clone(),
-        }),
-        items_requests: items_requests
-            .into_iter()
-            .map(|req| ItemsRequest {
-                doc_type: req.doc_type,
-                namespaces: req
-                    .namespaces
-                    .into_inner()
-                    .into_iter()
-                    .map(|(ns, es)| {
-                        let items_request = es.into_inner().into_iter().collect();
-                        (ns, items_request)
-                    })
-                    .collect(),
-            })
-            .collect(),
-    })
-}
-
 #[derive(thiserror::Error, uniffi::Error, Debug)]
 pub enum ResponseError {
     #[error("no signature payload received from session manager")]
