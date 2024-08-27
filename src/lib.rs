@@ -8,6 +8,8 @@ pub mod mdl;
 pub mod storage_manager;
 pub mod vdc_collection;
 pub mod w3c_vc_barcodes;
+pub mod wallet;
 
 pub use common::*;
 pub use mdl::*;
+pub use wallet::*;
