@@ -484,6 +484,191 @@ fileprivate struct FfiConverterData: FfiConverterRustBuffer {
 
 
 
+public protocol AsyncHttpClient : AnyObject {
+    
+    func httpClient(request: HttpRequest) async throws  -> HttpResponse
+    
+}
+
+open class AsyncHttpClientImpl:
+    AsyncHttpClient {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_asynchttpclient(self.pointer, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_asynchttpclient(pointer, $0) }
+    }
+
+    
+
+    
+open func httpClient(request: HttpRequest)async throws  -> HttpResponse {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_method_asynchttpclient_http_client(
+                    self.uniffiClonePointer(),
+                    FfiConverterTypeHttpRequest.lower(request)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeHttpResponse.lift,
+            errorHandler: FfiConverterTypeHttpClientError.lift
+        )
+}
+    
+
+}
+// Magic number for the Rust proxy to call using the same mechanism as every other method,
+// to free the callback once it's dropped by Rust.
+private let IDX_CALLBACK_FREE: Int32 = 0
+// Callback return codes
+private let UNIFFI_CALLBACK_SUCCESS: Int32 = 0
+private let UNIFFI_CALLBACK_ERROR: Int32 = 1
+private let UNIFFI_CALLBACK_UNEXPECTED_ERROR: Int32 = 2
+
+// Put the implementation in a struct so we don't pollute the top-level namespace
+fileprivate struct UniffiCallbackInterfaceAsyncHttpClient {
+
+    // Create the VTable using a series of closures.
+    // Swift automatically converts these into C callback functions.
+    static var vtable: UniffiVTableCallbackInterfaceAsyncHttpClient = UniffiVTableCallbackInterfaceAsyncHttpClient(
+        httpClient: { (
+            uniffiHandle: UInt64,
+            request: RustBuffer,
+            uniffiFutureCallback: @escaping UniffiForeignFutureCompleteRustBuffer,
+            uniffiCallbackData: UInt64,
+            uniffiOutReturn: UnsafeMutablePointer<UniffiForeignFuture>
+        ) in
+            let makeCall = {
+                () async throws -> HttpResponse in
+                guard let uniffiObj = try? FfiConverterTypeAsyncHttpClient.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return try await uniffiObj.httpClient(
+                     request: try FfiConverterTypeHttpRequest.lift(request)
+                )
+            }
+
+            let uniffiHandleSuccess = { (returnValue: HttpResponse) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureStructRustBuffer(
+                        returnValue: FfiConverterTypeHttpResponse.lower(returnValue),
+                        callStatus: RustCallStatus()
+                    )
+                )
+            }
+            let uniffiHandleError = { (statusCode, errorBuf) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureStructRustBuffer(
+                        returnValue: RustBuffer.empty(),
+                        callStatus: RustCallStatus(code: statusCode, errorBuf: errorBuf)
+                    )
+                )
+            }
+            let uniffiForeignFuture = uniffiTraitInterfaceCallAsyncWithError(
+                makeCall: makeCall,
+                handleSuccess: uniffiHandleSuccess,
+                handleError: uniffiHandleError,
+                lowerError: FfiConverterTypeHttpClientError.lower
+            )
+            uniffiOutReturn.pointee = uniffiForeignFuture
+        },
+        uniffiFree: { (uniffiHandle: UInt64) -> () in
+            let result = try? FfiConverterTypeAsyncHttpClient.handleMap.remove(handle: uniffiHandle)
+            if result == nil {
+                print("Uniffi callback interface AsyncHttpClient: handle missing in uniffiFree")
+            }
+        }
+    )
+}
+
+private func uniffiCallbackInitAsyncHttpClient() {
+    uniffi_mobile_sdk_rs_fn_init_callback_vtable_asynchttpclient(&UniffiCallbackInterfaceAsyncHttpClient.vtable)
+}
+
+public struct FfiConverterTypeAsyncHttpClient: FfiConverter {
+    fileprivate static var handleMap = UniffiHandleMap<AsyncHttpClient>()
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = AsyncHttpClient
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> AsyncHttpClient {
+        return AsyncHttpClientImpl(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: AsyncHttpClient) -> UnsafeMutableRawPointer {
+        guard let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: handleMap.insert(obj: value))) else {
+            fatalError("Cast to UnsafeMutableRawPointer failed")
+        }
+        return ptr
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AsyncHttpClient {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: AsyncHttpClient, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+public func FfiConverterTypeAsyncHttpClient_lift(_ pointer: UnsafeMutableRawPointer) throws -> AsyncHttpClient {
+    return try FfiConverterTypeAsyncHttpClient.lift(pointer)
+}
+
+public func FfiConverterTypeAsyncHttpClient_lower(_ value: AsyncHttpClient) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeAsyncHttpClient.lower(value)
+}
+
+
+
+
 public protocol ClientProtocol : AnyObject {
     
 }
@@ -763,6 +948,99 @@ public func FfiConverterTypeCredentialRequest_lower(_ value: CredentialRequest) 
 
 
 
+public protocol EitherHttpClientProtocol : AnyObject {
+    
+}
+
+open class EitherHttpClient:
+    EitherHttpClientProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_eitherhttpclient(self.pointer, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_eitherhttpclient(pointer, $0) }
+    }
+
+    
+
+    
+
+}
+
+public struct FfiConverterTypeEitherHttpClient: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = EitherHttpClient
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> EitherHttpClient {
+        return EitherHttpClient(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: EitherHttpClient) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EitherHttpClient {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: EitherHttpClient, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+public func FfiConverterTypeEitherHttpClient_lift(_ pointer: UnsafeMutableRawPointer) throws -> EitherHttpClient {
+    return try FfiConverterTypeEitherHttpClient.lift(pointer)
+}
+
+public func FfiConverterTypeEitherHttpClient_lower(_ value: EitherHttpClient) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeEitherHttpClient.lower(value)
+}
+
+
+
+
 public protocol GrantsProtocol : AnyObject {
     
 }
@@ -913,13 +1191,7 @@ open func httpClient(request: HttpRequest)throws  -> HttpResponse {
     
 
 }
-// Magic number for the Rust proxy to call using the same mechanism as every other method,
-// to free the callback once it's dropped by Rust.
-private let IDX_CALLBACK_FREE: Int32 = 0
-// Callback return codes
-private let UNIFFI_CALLBACK_SUCCESS: Int32 = 0
-private let UNIFFI_CALLBACK_ERROR: Int32 = 1
-private let UNIFFI_CALLBACK_UNEXPECTED_ERROR: Int32 = 2
+
 
 // Put the implementation in a struct so we don't pollute the top-level namespace
 fileprivate struct UniffiCallbackInterfaceHttpClient {
@@ -1124,16 +1396,22 @@ public func FfiConverterTypeMDoc_lower(_ value: MDoc) -> UnsafeMutableRawPointer
 
 
 
-public protocol Oid4vciSessionProtocol : AnyObject {
+public protocol Oid4vciProtocol : AnyObject {
     
-    func getAllCredentialRequests() throws  -> [CredentialRequest]
+    func exchangeCredential(proofsOfPossession: [String]) async throws  -> [CredentialResponse]
     
-    func getCredentialRequestByIndex(index: UInt16) throws  -> CredentialRequest
+    func exchangeToken() async throws  -> String?
+    
+    func getMetadata() throws  -> Oid4vciMetadata
+    
+    func initiate(baseUrl: String, clientId: String, redirectUrl: String) async throws 
+    
+    func initiateWithOffer(credentialOffer: String, clientId: String, redirectUrl: String) async throws 
     
 }
 
-open class Oid4vciSession:
-    Oid4vciSessionProtocol {
+open class Oid4vci:
+    Oid4vciProtocol {
     fileprivate let pointer: UnsafeMutableRawPointer!
 
     /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
@@ -1158,53 +1436,149 @@ open class Oid4vciSession:
     }
 
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_oid4vcisession(self.pointer, $0) }
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_oid4vci(self.pointer, $0) }
     }
-    // No primary constructor declared for this class.
+public convenience init() {
+    let pointer = try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_constructor_oid4vci_new($0
+    )
+}
+    self.init(unsafeFromRawPointer: pointer)
+}
 
     deinit {
         guard let pointer = pointer else {
             return
         }
 
-        try! rustCall { uniffi_mobile_sdk_rs_fn_free_oid4vcisession(pointer, $0) }
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_oid4vci(pointer, $0) }
     }
 
     
-
-    
-open func getAllCredentialRequests()throws  -> [CredentialRequest] {
-    return try  FfiConverterSequenceTypeCredentialRequest.lift(try rustCallWithError(FfiConverterTypeOID4VCIError.lift) {
-    uniffi_mobile_sdk_rs_fn_method_oid4vcisession_get_all_credential_requests(self.uniffiClonePointer(),$0
+public static func newWithAsyncClient(client: HttpClient) -> Oid4vci {
+    return try!  FfiConverterTypeOid4vci.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_constructor_oid4vci_new_with_async_client(
+        FfiConverterTypeHttpClient.lower(client),$0
     )
 })
 }
     
-open func getCredentialRequestByIndex(index: UInt16)throws  -> CredentialRequest {
-    return try  FfiConverterTypeCredentialRequest.lift(try rustCallWithError(FfiConverterTypeOID4VCIError.lift) {
-    uniffi_mobile_sdk_rs_fn_method_oid4vcisession_get_credential_request_by_index(self.uniffiClonePointer(),
-        FfiConverterUInt16.lower(index),$0
+public static func newWithDefaultAsyncClient() -> Oid4vci {
+    return try!  FfiConverterTypeOid4vci.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_constructor_oid4vci_new_with_default_async_client($0
+    )
+})
+}
+    
+public static func newWithDefaultSyncClient() -> Oid4vci {
+    return try!  FfiConverterTypeOid4vci.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_constructor_oid4vci_new_with_default_sync_client($0
+    )
+})
+}
+    
+public static func newWithSyncClient(client: HttpClient) -> Oid4vci {
+    return try!  FfiConverterTypeOid4vci.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_constructor_oid4vci_new_with_sync_client(
+        FfiConverterTypeHttpClient.lower(client),$0
     )
 })
 }
     
 
+    
+open func exchangeCredential(proofsOfPossession: [String])async throws  -> [CredentialResponse] {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_method_oid4vci_exchange_credential(
+                    self.uniffiClonePointer(),
+                    FfiConverterSequenceString.lower(proofsOfPossession)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceTypeCredentialResponse.lift,
+            errorHandler: FfiConverterTypeOid4vciError.lift
+        )
+}
+    
+open func exchangeToken()async throws  -> String? {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_method_oid4vci_exchange_token(
+                    self.uniffiClonePointer()
+                    
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterOptionString.lift,
+            errorHandler: FfiConverterTypeOid4vciError.lift
+        )
+}
+    
+open func getMetadata()throws  -> Oid4vciMetadata {
+    return try  FfiConverterTypeOid4vciMetadata.lift(try rustCallWithError(FfiConverterTypeOid4vciError.lift) {
+    uniffi_mobile_sdk_rs_fn_method_oid4vci_get_metadata(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func initiate(baseUrl: String, clientId: String, redirectUrl: String)async throws  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_method_oid4vci_initiate(
+                    self.uniffiClonePointer(),
+                    FfiConverterString.lower(baseUrl),FfiConverterString.lower(clientId),FfiConverterString.lower(redirectUrl)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_void,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_void,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeOid4vciError.lift
+        )
+}
+    
+open func initiateWithOffer(credentialOffer: String, clientId: String, redirectUrl: String)async throws  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_method_oid4vci_initiate_with_offer(
+                    self.uniffiClonePointer(),
+                    FfiConverterString.lower(credentialOffer),FfiConverterString.lower(clientId),FfiConverterString.lower(redirectUrl)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_void,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_void,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeOid4vciError.lift
+        )
+}
+    
+
 }
 
-public struct FfiConverterTypeOID4VCISession: FfiConverter {
+public struct FfiConverterTypeOid4vci: FfiConverter {
 
     typealias FfiType = UnsafeMutableRawPointer
-    typealias SwiftType = Oid4vciSession
+    typealias SwiftType = Oid4vci
 
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> Oid4vciSession {
-        return Oid4vciSession(unsafeFromRawPointer: pointer)
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> Oid4vci {
+        return Oid4vci(unsafeFromRawPointer: pointer)
     }
 
-    public static func lower(_ value: Oid4vciSession) -> UnsafeMutableRawPointer {
+    public static func lower(_ value: Oid4vci) -> UnsafeMutableRawPointer {
         return value.uniffiClonePointer()
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Oid4vciSession {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Oid4vci {
         let v: UInt64 = try readInt(&buf)
         // The Rust code won't compile if a pointer won't fit in a UInt64.
         // We have to go via `UInt` because that's the thing that's the size of a pointer.
@@ -1215,7 +1589,7 @@ public struct FfiConverterTypeOID4VCISession: FfiConverter {
         return try lift(ptr!)
     }
 
-    public static func write(_ value: Oid4vciSession, into buf: inout [UInt8]) {
+    public static func write(_ value: Oid4vci, into buf: inout [UInt8]) {
         // This fiddling is because `Int` is the thing that's the same size as a pointer.
         // The Rust code won't compile if a pointer won't fit in a `UInt64`.
         writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
@@ -1225,12 +1599,12 @@ public struct FfiConverterTypeOID4VCISession: FfiConverter {
 
 
 
-public func FfiConverterTypeOID4VCISession_lift(_ pointer: UnsafeMutableRawPointer) throws -> Oid4vciSession {
-    return try FfiConverterTypeOID4VCISession.lift(pointer)
+public func FfiConverterTypeOid4vci_lift(_ pointer: UnsafeMutableRawPointer) throws -> Oid4vci {
+    return try FfiConverterTypeOid4vci.lift(pointer)
 }
 
-public func FfiConverterTypeOID4VCISession_lower(_ value: Oid4vciSession) -> UnsafeMutableRawPointer {
-    return FfiConverterTypeOID4VCISession.lower(value)
+public func FfiConverterTypeOid4vci_lower(_ value: Oid4vci) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeOid4vci.lower(value)
 }
 
 
@@ -1338,7 +1712,7 @@ open func notificationEndpoint() -> String? {
 }
     
 open func toJson()throws  -> String {
-    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeOID4VCIError.lift) {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeOid4vciError.lift) {
     uniffi_mobile_sdk_rs_fn_method_oid4vcimetadata_to_json(self.uniffiClonePointer(),$0
     )
 })
@@ -1387,6 +1761,118 @@ public func FfiConverterTypeOid4vciMetadata_lift(_ pointer: UnsafeMutableRawPoin
 
 public func FfiConverterTypeOid4vciMetadata_lower(_ value: Oid4vciMetadata) -> UnsafeMutableRawPointer {
     return FfiConverterTypeOid4vciMetadata.lower(value)
+}
+
+
+
+
+public protocol Oid4vciSessionProtocol : AnyObject {
+    
+    func getAllCredentialRequests() throws  -> [CredentialRequest]
+    
+    func getCredentialRequestByIndex(index: UInt16) throws  -> CredentialRequest
+    
+}
+
+open class Oid4vciSession:
+    Oid4vciSessionProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_oid4vcisession(self.pointer, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_oid4vcisession(pointer, $0) }
+    }
+
+    
+
+    
+open func getAllCredentialRequests()throws  -> [CredentialRequest] {
+    return try  FfiConverterSequenceTypeCredentialRequest.lift(try rustCallWithError(FfiConverterTypeOid4vciError.lift) {
+    uniffi_mobile_sdk_rs_fn_method_oid4vcisession_get_all_credential_requests(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func getCredentialRequestByIndex(index: UInt16)throws  -> CredentialRequest {
+    return try  FfiConverterTypeCredentialRequest.lift(try rustCallWithError(FfiConverterTypeOid4vciError.lift) {
+    uniffi_mobile_sdk_rs_fn_method_oid4vcisession_get_credential_request_by_index(self.uniffiClonePointer(),
+        FfiConverterUInt16.lower(index),$0
+    )
+})
+}
+    
+
+}
+
+public struct FfiConverterTypeOid4vciSession: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = Oid4vciSession
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> Oid4vciSession {
+        return Oid4vciSession(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: Oid4vciSession) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Oid4vciSession {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: Oid4vciSession, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+public func FfiConverterTypeOid4vciSession_lift(_ pointer: UnsafeMutableRawPointer) throws -> Oid4vciSession {
+    return try FfiConverterTypeOid4vciSession.lift(pointer)
+}
+
+public func FfiConverterTypeOid4vciSession_lower(_ value: Oid4vciSession) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeOid4vciSession.lower(value)
 }
 
 
@@ -2413,7 +2899,7 @@ public enum Oid4vciError {
 }
 
 
-public struct FfiConverterTypeOID4VCIError: FfiConverterRustBuffer {
+public struct FfiConverterTypeOid4vciError: FfiConverterRustBuffer {
     typealias SwiftType = Oid4vciError
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Oid4vciError {
@@ -3599,8 +4085,74 @@ fileprivate func uniffiFutureContinuationCallback(handle: UInt64, pollResult: In
         print("uniffiFutureContinuationCallback invalid handle")
     }
 }
+private func uniffiTraitInterfaceCallAsync<T>(
+    makeCall: @escaping () async throws -> T,
+    handleSuccess: @escaping (T) -> (),
+    handleError: @escaping (Int8, RustBuffer) -> ()
+) -> UniffiForeignFuture {
+    let task = Task {
+        do {
+            handleSuccess(try await makeCall())
+        } catch {
+            handleError(CALL_UNEXPECTED_ERROR, FfiConverterString.lower(String(describing: error)))
+        }
+    }
+    let handle = UNIFFI_FOREIGN_FUTURE_HANDLE_MAP.insert(obj: task)
+    return UniffiForeignFuture(handle: handle, free: uniffiForeignFutureFree)
+
+}
+
+private func uniffiTraitInterfaceCallAsyncWithError<T, E>(
+    makeCall: @escaping () async throws -> T,
+    handleSuccess: @escaping (T) -> (),
+    handleError: @escaping (Int8, RustBuffer) -> (),
+    lowerError: @escaping (E) -> RustBuffer
+) -> UniffiForeignFuture {
+    let task = Task {
+        do {
+            handleSuccess(try await makeCall())
+        } catch let error as E {
+            handleError(CALL_ERROR, lowerError(error))
+        } catch {
+            handleError(CALL_UNEXPECTED_ERROR, FfiConverterString.lower(String(describing: error)))
+        }
+    }
+    let handle = UNIFFI_FOREIGN_FUTURE_HANDLE_MAP.insert(obj: task)
+    return UniffiForeignFuture(handle: handle, free: uniffiForeignFutureFree)
+}
+
+// Borrow the callback handle map implementation to store foreign future handles
+// TODO: consolidate the handle-map code (https://github.com/mozilla/uniffi-rs/pull/1823)
+fileprivate var UNIFFI_FOREIGN_FUTURE_HANDLE_MAP = UniffiHandleMap<UniffiForeignFutureTask>()
+
+// Protocol for tasks that handle foreign futures.
+//
+// Defining a protocol allows all tasks to be stored in the same handle map.  This can't be done
+// with the task object itself, since has generic parameters.
+protocol UniffiForeignFutureTask {
+    func cancel()
+}
+
+extension Task: UniffiForeignFutureTask {}
+
+private func uniffiForeignFutureFree(handle: UInt64) {
+    do {
+        let task = try UNIFFI_FOREIGN_FUTURE_HANDLE_MAP.remove(handle: handle)
+        // Set the cancellation flag on the task.  If it's still running, the code can check the
+        // cancellation flag or call `Task.checkCancellation()`.  If the task has completed, this is
+        // a no-op.
+        task.cancel()
+    } catch {
+        print("uniffiForeignFutureFree: handle missing from handlemap")
+    }
+}
+
+// For testing
+public func uniffiForeignFutureHandleCountMobileSdkRs() -> Int {
+    UNIFFI_FOREIGN_FUTURE_HANDLE_MAP.count
+}
 public func generatePopComplete(signingInput: Data, signature: Data)throws  -> String {
-    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeOID4VCIError.lift) {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeOid4vciError.lift) {
     uniffi_mobile_sdk_rs_fn_func_generate_pop_complete(
         FfiConverterData.lower(signingInput),
         FfiConverterData.lower(signature),$0
@@ -3608,7 +4160,7 @@ public func generatePopComplete(signingInput: Data, signature: Data)throws  -> S
 })
 }
 public func generatePopPrepare(audience: String, issuer: String, nonce: String?, vm: String, publicJwk: String, durationInSecs: Int64?)throws  -> Data {
-    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeOID4VCIError.lift) {
+    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeOid4vciError.lift) {
     uniffi_mobile_sdk_rs_fn_func_generate_pop_prepare(
         FfiConverterString.lower(audience),
         FfiConverterString.lower(issuer),
@@ -3635,68 +4187,81 @@ public func initialiseSession(document: MDoc, uuid: Uuid)throws  -> SessionData 
     )
 })
 }
-public func oid4vciExchangeCredential(session: Oid4vciSession, proofsOfPossession: [String], httpClient: HttpClient)async throws  -> [CredentialResponse] {
+public func oid4vciCreateAsyncClient(client: AsyncHttpClient) -> EitherHttpClient {
+    return try!  FfiConverterTypeEitherHttpClient.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_func_oid4vci_create_async_client(
+        FfiConverterTypeAsyncHttpClient.lower(client),$0
+    )
+})
+}
+public func oid4vciCreateSyncClient(client: HttpClient) -> EitherHttpClient {
+    return try!  FfiConverterTypeEitherHttpClient.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_func_oid4vci_create_sync_client(
+        FfiConverterTypeHttpClient.lower(client),$0
+    )
+})
+}
+public func oid4vciExchangeCredential(session: Oid4vciSession, proofsOfPossession: [String], httpClient: EitherHttpClient)async throws  -> [CredentialResponse] {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_mobile_sdk_rs_fn_func_oid4vci_exchange_credential(FfiConverterTypeOID4VCISession.lower(session),FfiConverterSequenceString.lower(proofsOfPossession),FfiConverterTypeHttpClient.lower(httpClient)
+                uniffi_mobile_sdk_rs_fn_func_oid4vci_exchange_credential(FfiConverterTypeOid4vciSession.lower(session),FfiConverterSequenceString.lower(proofsOfPossession),FfiConverterTypeEitherHttpClient.lower(httpClient)
                 )
             },
             pollFunc: ffi_mobile_sdk_rs_rust_future_poll_rust_buffer,
             completeFunc: ffi_mobile_sdk_rs_rust_future_complete_rust_buffer,
             freeFunc: ffi_mobile_sdk_rs_rust_future_free_rust_buffer,
             liftFunc: FfiConverterSequenceTypeCredentialResponse.lift,
-            errorHandler: FfiConverterTypeOID4VCIError.lift
+            errorHandler: FfiConverterTypeOid4vciError.lift
         )
 }
-public func oid4vciExchangeToken(session: Oid4vciSession, httpClient: HttpClient)throws  -> String? {
-    return try  FfiConverterOptionString.lift(try rustCallWithError(FfiConverterTypeOID4VCIError.lift) {
-    uniffi_mobile_sdk_rs_fn_func_oid4vci_exchange_token(
-        FfiConverterTypeOID4VCISession.lower(session),
-        FfiConverterTypeHttpClient.lower(httpClient),$0
+public func oid4vciExchangeToken(session: Oid4vciSession, httpClient: EitherHttpClient)async throws  -> String? {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_func_oid4vci_exchange_token(FfiConverterTypeOid4vciSession.lower(session),FfiConverterTypeEitherHttpClient.lower(httpClient)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterOptionString.lift,
+            errorHandler: FfiConverterTypeOid4vciError.lift
+        )
+}
+public func oid4vciGetMetadata(session: Oid4vciSession)throws  -> Oid4vciMetadata {
+    return try  FfiConverterTypeOid4vciMetadata.lift(try rustCallWithError(FfiConverterTypeOid4vciError.lift) {
+    uniffi_mobile_sdk_rs_fn_func_oid4vci_get_metadata(
+        FfiConverterTypeOid4vciSession.lower(session),$0
     )
 })
 }
-public func oid4vciGetMetadata(session: Oid4vciSession)async throws  -> Oid4vciMetadata {
+public func oid4vciInitiate(baseUrl: String, clientId: String, redirectUrl: String, httpClient: EitherHttpClient)async throws  -> Oid4vciSession {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_mobile_sdk_rs_fn_func_oid4vci_get_metadata(FfiConverterTypeOID4VCISession.lower(session)
+                uniffi_mobile_sdk_rs_fn_func_oid4vci_initiate(FfiConverterString.lower(baseUrl),FfiConverterString.lower(clientId),FfiConverterString.lower(redirectUrl),FfiConverterTypeEitherHttpClient.lower(httpClient)
                 )
             },
             pollFunc: ffi_mobile_sdk_rs_rust_future_poll_pointer,
             completeFunc: ffi_mobile_sdk_rs_rust_future_complete_pointer,
             freeFunc: ffi_mobile_sdk_rs_rust_future_free_pointer,
-            liftFunc: FfiConverterTypeOid4vciMetadata.lift,
-            errorHandler: FfiConverterTypeOID4VCIError.lift
+            liftFunc: FfiConverterTypeOid4vciSession.lift,
+            errorHandler: FfiConverterTypeOid4vciError.lift
         )
 }
-public func oid4vciInitiate(baseUrl: String, clientId: String, redirectUrl: String, httpClient: HttpClient)async throws  -> Oid4vciSession {
+public func oid4vciInitiateWithOffer(credentialOffer: String, clientId: String, redirectUrl: String, httpClient: EitherHttpClient)async throws  -> Oid4vciSession {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_mobile_sdk_rs_fn_func_oid4vci_initiate(FfiConverterString.lower(baseUrl),FfiConverterString.lower(clientId),FfiConverterString.lower(redirectUrl),FfiConverterTypeHttpClient.lower(httpClient)
+                uniffi_mobile_sdk_rs_fn_func_oid4vci_initiate_with_offer(FfiConverterString.lower(credentialOffer),FfiConverterString.lower(clientId),FfiConverterString.lower(redirectUrl),FfiConverterTypeEitherHttpClient.lower(httpClient)
                 )
             },
             pollFunc: ffi_mobile_sdk_rs_rust_future_poll_pointer,
             completeFunc: ffi_mobile_sdk_rs_rust_future_complete_pointer,
             freeFunc: ffi_mobile_sdk_rs_rust_future_free_pointer,
-            liftFunc: FfiConverterTypeOID4VCISession.lift,
-            errorHandler: FfiConverterTypeOID4VCIError.lift
-        )
-}
-public func oid4vciInitiateWithOffer(credentialOffer: String, clientId: String, redirectUrl: String, httpClient: HttpClient)async throws  -> Oid4vciSession {
-    return
-        try  await uniffiRustCallAsync(
-            rustFutureFunc: {
-                uniffi_mobile_sdk_rs_fn_func_oid4vci_initiate_with_offer(FfiConverterString.lower(credentialOffer),FfiConverterString.lower(clientId),FfiConverterString.lower(redirectUrl),FfiConverterTypeHttpClient.lower(httpClient)
-                )
-            },
-            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_pointer,
-            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_pointer,
-            freeFunc: ffi_mobile_sdk_rs_rust_future_free_pointer,
-            liftFunc: FfiConverterTypeOID4VCISession.lift,
-            errorHandler: FfiConverterTypeOID4VCIError.lift
+            liftFunc: FfiConverterTypeOid4vciSession.lift,
+            errorHandler: FfiConverterTypeOid4vciError.lift
         )
 }
 public func submitResponse(sessionManager: SessionManager, permittedItems: [String: [String: [String]]])throws  -> Data {
@@ -3737,10 +4302,10 @@ private var initializationResult: InitializationResult {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_func_generate_pop_complete() != 23353) {
+    if (uniffi_mobile_sdk_rs_checksum_func_generate_pop_complete() != 56778) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_func_generate_pop_prepare() != 53206) {
+    if (uniffi_mobile_sdk_rs_checksum_func_generate_pop_prepare() != 18468) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_func_handle_request() != 26058) {
@@ -3749,19 +4314,25 @@ private var initializationResult: InitializationResult {
     if (uniffi_mobile_sdk_rs_checksum_func_initialise_session() != 57560) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_exchange_credential() != 40542) {
+    if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_create_async_client() != 50125) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_exchange_token() != 9611) {
+    if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_create_sync_client() != 57464) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_get_metadata() != 43169) {
+    if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_exchange_credential() != 11429) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_initiate() != 13415) {
+    if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_exchange_token() != 40071) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_initiate_with_offer() != 33791) {
+    if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_get_metadata() != 16967) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_initiate() != 33704) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_initiate_with_offer() != 9217) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_func_submit_response() != 50547) {
@@ -3773,16 +4344,28 @@ private var initializationResult: InitializationResult {
     if (uniffi_mobile_sdk_rs_checksum_func_terminate_session() != 25700) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mobile_sdk_rs_checksum_method_asynchttpclient_http_client() != 44924) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mobile_sdk_rs_checksum_method_httpclient_http_client() != 6948) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_method_mdoc_id() != 4321) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_oid4vcisession_get_all_credential_requests() != 5475) {
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vci_exchange_credential() != 17336) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_oid4vcisession_get_credential_request_by_index() != 25739) {
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vci_exchange_token() != 35585) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vci_get_metadata() != 38460) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vci_initiate() != 12704) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vci_initiate_with_offer() != 23294) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_method_oid4vcimetadata_authorization_servers() != 42340) {
@@ -3803,10 +4386,31 @@ private var initializationResult: InitializationResult {
     if (uniffi_mobile_sdk_rs_checksum_method_oid4vcimetadata_notification_endpoint() != 39275) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_oid4vcimetadata_to_json() != 38827) {
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vcimetadata_to_json() != 52469) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vcisession_get_all_credential_requests() != 32094) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vcisession_get_credential_request_by_index() != 55077) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_constructor_mdoc_from_cbor() != 43984) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_constructor_oid4vci_new() != 27200) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_constructor_oid4vci_new_with_async_client() != 64849) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_constructor_oid4vci_new_with_default_async_client() != 51040) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_constructor_oid4vci_new_with_default_sync_client() != 30492) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_constructor_oid4vci_new_with_sync_client() != 38715) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_add() != 60217) {
@@ -3822,6 +4426,7 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
 
+    uniffiCallbackInitAsyncHttpClient()
     uniffiCallbackInitHttpClient()
     uniffiCallbackInitStorageManagerInterface()
     return InitializationResult.ok

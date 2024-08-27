@@ -47,7 +47,7 @@ pub async fn oid4vci_initiate_with_offer(
     credential_offer: String,
     client_id: String,
     redirect_url: String,
-    http_client: Arc<EitherHttpClient>,
+    http_client: Arc<IHttpClient>,
 ) -> Result<Oid4vciSession, Oid4vciError> {
     let credential_offer =
         serde_json::from_str::<CredentialOfferParameters<CoreProfilesOffer>>(&credential_offer)
@@ -172,7 +172,7 @@ pub async fn oid4vci_initiate(
     base_url: String,
     client_id: String,
     redirect_url: String,
-    http_client: Arc<EitherHttpClient>,
+    http_client: Arc<IHttpClient>,
 ) -> Result<Oid4vciSession, Oid4vciError> {
     let base_url = IssuerUrl::new(base_url)
         .map_err(|e| e.to_string())
@@ -210,7 +210,7 @@ pub async fn oid4vci_initiate(
 #[uniffi::export]
 pub async fn oid4vci_exchange_token(
     session: Arc<Oid4vciSession>,
-    http_client: Arc<EitherHttpClient>,
+    http_client: Arc<IHttpClient>,
 ) -> Result<Option<String>, Oid4vciError> {
     // TODO: refactor with `try {}` once it stabilizes.
     let authorization_code = (|| -> Result<String, Oid4vciError> {
@@ -250,7 +250,7 @@ pub async fn oid4vci_exchange_token(
 pub async fn oid4vci_exchange_credential(
     session: Arc<Oid4vciSession>,
     proofs_of_possession: Vec<String>,
-    http_client: Arc<EitherHttpClient>,
+    http_client: Arc<IHttpClient>,
 ) -> Result<Vec<CredentialResponse>, Oid4vciError> {
     let credential_requests = session.get_credential_requests()?.clone();
 
