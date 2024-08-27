@@ -7,7 +7,6 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use anyhow::Result;
 use isomdl::{
     definitions::{
         device_engagement::{CentralClientMode, DeviceRetrievalMethods},
@@ -38,11 +37,16 @@ impl Wallet {
         &self,
         mdoc_id: &str,
         uuid: Uuid,
-    ) -> Result<(MdlPresentationSession, String, String)> {
+    ) -> Result<MdlPresentationSession, SessionError> {
         let document = self
             .vdc_collection
-            .get(mdoc_id, &self.storage_manager)?
-            .ok_or(Err("No credential with that ID in the VDC collection."))?;
+            .get(mdoc_id, &self.storage_manager)
+            .map_err(|_| SessionError::Generic {
+                value: "Error in VDC Collection".to_string(),
+            })?
+            .ok_or(SessionError::Generic {
+                value: "No credential with that ID in the VDC collection.".to_string(),
+            })?;
 
         let mdoc = MDoc::from_cbor(document.payload());
         let drms = DeviceRetrievalMethods::new(DeviceRetrievalMethod::BLE(BleOptions {
@@ -50,7 +54,7 @@ impl Wallet {
             central_client_mode: Some(CentralClientMode { uuid }),
         }));
         let session = SessionManagerInit::initialise(
-            NonEmptyMap::new("org.iso.18013.5.1.mDL".into(), mdoc),
+            NonEmptyMap::new("org.iso.18013.5.1.mDL".into(), mdoc.0.clone()),
             Some(drms),
             None,
         )
@@ -69,44 +73,67 @@ impl Wallet {
             session.qr_engagement().map_err(|e| SessionError::Generic {
                 value: format!("Could not generate qr engagement: {e:?}"),
             })?;
-        Ok((
-            MdlPresentationSession::Engaged(engaged_state),
+        Ok(MdlPresentationSession {
+            state: Mutex::new(MdlPresentationState::Engaged),
+            engaged: Some(engaged_state),
+            in_process: None,
             qr_code_uri,
             ble_ident,
-        ))
+        })
     }
 }
 
-#[derive(uniffi::Enum)]
-pub enum MdlPresentationSession {
-    Engaged(device::SessionManagerEngaged),
-    InProcess(InProcessRecord),
+#[derive(uniffi::Object)]
+pub struct MdlPresentationSession {
+    state: Mutex<MdlPresentationState>,
+    engaged: Option<device::SessionManagerEngaged>,
+    in_process: Option<Mutex<InProcessRecord>>,
+    qr_code_uri: String,
+    ble_ident: String,
 }
 
+#[derive(uniffi::Enum)]
+pub enum MdlPresentationState {
+    Engaged,
+    InProcess,
+}
+
+#[derive(uniffi::Object)]
 struct InProcessRecord {
-    session: Mutex<device::SessionManager>,
+    session: device::SessionManager,
     items_request: Vec<ItemsRequest>,
 }
 
 #[uniffi::export]
 impl MdlPresentationSession {
-    pub fn handle_request(self, request: Vec<u8>) -> Result<RequestData, RequestError> {
+    pub fn handle_request(&self, request: Vec<u8>) -> Result<RequestData, RequestError> {
+        let mut state = self.state.lock().unwrap();
         let (session_manager, items_requests) = {
             let session_establishment: SessionEstablishment = serde_cbor::from_slice(&request)
                 .map_err(|e| RequestError::Generic {
                     value: format!("Could not deserialize request: {e:?}"),
                 })?;
-            if let MdlPresentationSession::Engaged(session) = self {
-                session
+            // Mutexes only return Err if another thread has panicked while holding the mutex
+            // If that has happened, its probably better to just crash. This is what the stdandard documentation recommends.
+            // See https://doc.rust-lang.org/std/sync/struct.Mutex.html
+            if let MdlPresentationState::Engaged = *state {
+                // If the state is `Engaged`, then self.engaged must have been set at the same time, so safe to unwrap
+                self.engaged
+                    .as_ref()
+                    .unwrap()
                     .clone()
                     .process_session_establishment(session_establishment)
                     .map_err(|e| RequestError::Generic {
                         value: format!("Could not process process session establishment: {e:?}"),
                     })?
+            } else {
+                return Err(RequestError::Generic {
+                    value: "Not in the correct state to handle request".to_string(),
+                });
             }
         };
 
-        self = MdlPresentationSession::InProcess(Mutex::new(session_manager));
+        *state = MdlPresentationState::InProcess;
         Ok(RequestData {
             session_manager: Arc::new(SessionManager {
                 inner: Mutex::new(session_manager),
