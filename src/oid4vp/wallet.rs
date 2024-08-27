@@ -278,16 +278,16 @@ impl RequestVerifier for Wallet {
         decoded_request: &AuthorizationRequestObject,
         request_jwt: String,
     ) -> Result<()> {
-        let trusted_dids = self
-            .trust_manager
-            .get_trusted_dids(&self.storage_manager)
-            .ok();
+        // let trusted_dids =
+        // .get_trusted_dids(&self.storage_manager)
+        // .ok();
 
         verify_with_resolver(
-            self.metadata.as_ref(),
+            &self.metadata,
             decoded_request,
             request_jwt,
-            trusted_dids.as_ref().map(|did| did.as_slice()),
+            // trusted_dids.as_ref().map(|did| did.as_slice()),
+            Some(self.trust_manager.as_slice()),
             &self.jwk()?,
         )
         .await?;
@@ -304,7 +304,7 @@ impl OID4VPWallet for Wallet {
     }
 
     fn metadata(&self) -> &WalletMetadata {
-        self.metadata.as_ref()
+        &self.metadata
     }
 }
 
@@ -350,26 +350,26 @@ impl RequestSigner for Wallet {
 impl JWSSigner for Wallet {
     async fn fetch_info(
         &self,
-    ) -> Result<ssi_claims::jws::JWSSignerInfo, ssi_claims::SignatureError> {
+    ) -> Result<ssi::claims::jws::JWSSignerInfo, ssi::claims::SignatureError> {
         let jwk = self
             .jwk()
-            .map_err(|e| ssi_claims::SignatureError::Other(e.to_string()))?;
+            .map_err(|e| ssi::claims::SignatureError::Other(e.to_string()))?;
 
-        let algorithm = jwk.algorithm.ok_or(ssi_claims::SignatureError::Other(
+        let algorithm = jwk.algorithm.ok_or(ssi::claims::SignatureError::Other(
             "JWK algorithm not found.".into(),
         ))?;
 
         let key_id = jwk.key_id.clone();
 
-        Ok(ssi_claims::jws::JWSSignerInfo { algorithm, key_id })
+        Ok(ssi::claims::jws::JWSSignerInfo { algorithm, key_id })
     }
 
     async fn sign_bytes(
         &self,
         signing_bytes: &[u8],
-    ) -> Result<Vec<u8>, ssi_claims::SignatureError> {
+    ) -> Result<Vec<u8>, ssi::claims::SignatureError> {
         self.try_sign(signing_bytes).await.map_err(|e| {
-            ssi_claims::SignatureError::Other(format!("Failed to sign bytes: {}", e).into())
+            ssi::claims::SignatureError::Other(format!("Failed to sign bytes: {}", e).into())
         })
     }
 }

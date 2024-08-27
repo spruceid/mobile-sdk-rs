@@ -8,6 +8,7 @@ const DATASTORE_PATH: &str = "sprucekit-datastore";
 /// A version of secure storage for debugging purposes, and as a minimal interface example.  Do not
 /// use in production!  This encrypts nothing, uses a path relative to the current working directory,
 /// and is generally cavalier about errors it encounters along the way.
+#[derive(Debug)]
 pub struct LocalStore;
 
 impl StorageManagerInterface for LocalStore {
