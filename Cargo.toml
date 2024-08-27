@@ -30,6 +30,7 @@ uniffi = { version = "0.28.1", features = ["cli"] }
 url = "2.5.2"
 uuid = { version = "1.6.1", features = ["v4"] }
 w3c-vc-barcodes = { git = "https://github.com/spruceid/w3c-vc-barcodes", rev = "372ff39" }
+anyhow = "1.0.86"
 
 [dev-dependencies]
 uniffi = { version = "0.28.1", features = ["bindgen-tests"] }
