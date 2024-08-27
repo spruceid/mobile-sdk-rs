@@ -1,6 +1,7 @@
 uniffi::setup_scaffolding!();
 
 pub mod common;
+pub mod key_manager;
 pub mod local_store;
 pub mod mdl;
 pub mod storage_manager;
