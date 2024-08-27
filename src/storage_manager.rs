@@ -1,5 +1,7 @@
 use crate::common::*;
 
+use std::fmt::Debug;
+
 use thiserror::Error;
 
 /// Enum: StorageManagerError
@@ -41,7 +43,7 @@ pub enum StorageManagerError {
 /// We use the older callback_interface to keep the required version level of our Android API
 /// low.
 #[uniffi::export(with_foreign)]
-pub trait StorageManagerInterface: Send + Sync {
+pub trait StorageManagerInterface: Send + Sync + Debug {
     /// Function: add
     ///
     /// Adds a key-value pair to storage.  Should the key already exist, the value will be

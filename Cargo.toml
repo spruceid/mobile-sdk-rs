@@ -31,6 +31,7 @@ url = "2.5.2"
 uuid = { version = "1.6.1", features = ["v4"] }
 w3c-vc-barcodes = { git = "https://github.com/spruceid/w3c-vc-barcodes", rev = "372ff39" }
 anyhow = "1.0.86"
+async-trait = "0.1.81"
 
 [dev-dependencies]
 uniffi = { version = "0.28.1", features = ["bindgen-tests"] }
@@ -45,5 +46,4 @@ isomdl = { git = "https://github.com/spruceid/isomdl", rev = "1f4f762" }
 
 [patch.'https://github.com/spruceid/oid4vp-rs']
 # TODO: replace this once oid4vp is merged.
-# oid4vp = { git = "https://github.com/Ryanmtate/oid4vp-rs", rev = "915b922" }
 oid4vp = { path = "../oid4vp-rs" }

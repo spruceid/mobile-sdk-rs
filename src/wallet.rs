@@ -32,8 +32,8 @@ pub enum WalletError {
     Storage(#[from] storage_manager::StorageManagerError),
     #[error(transparent)]
     VdcCollection(#[from] VdcCollectionError),
-    #[error(transparent)]
-    MetadataManager(#[from] MetadataManagerError),
+    // #[error(transparent)]
+    // MetadataManager(#[from] MetadataManagerError),
     #[error(transparent)]
     KeyManager(#[from] KeyManagerError),
     #[error("Required credential not found for input descriptor id: {0}")]
@@ -96,13 +96,13 @@ impl From<uniffi::UnexpectedUniFFICallbackError> for WalletError {
 #[derive(uniffi::Object, Debug)]
 pub struct Wallet {
     pub(crate) client: oid4vp::core::util::ReqwestClient,
-    pub(crate) metadata: MetadataManager,
+    // pub(crate) metadata: MetadataManager,
     pub(crate) vdc_collection: VdcCollection,
     // NOTE: The wallet has internal access to the trust manager APIs, but
     // is currently not exposing them to the foreign function interface.
     // This is because the trust manager is intended to be used internally by the wallet.
     // The [TrustManager] does not implement uniffi bindings.
-    pub(crate) trust_manager: TrustManager,
+    // pub(crate) trust_manager: TrustManager,
     pub(crate) key_manager: Box<dyn KeyManagerInterface>,
     pub(crate) storage_manager: Box<dyn StorageManagerInterface>,
     // // The active key index is used to determine which key to used for signing.
@@ -142,15 +142,15 @@ impl Wallet {
         // Initalized the metdata manager with the device storage.
         // This will load any existing metadata from storage, otherwise
         // it will create a new metadata instance.
-        let metadata = MetadataManager::initialize(&storage_manager)?;
+        // let metadata = MetadataManager::initialize(&storage_manager)?;
 
         Ok(Arc::new(Self {
             client,
-            metadata,
+            // metadata,
             key_manager,
             storage_manager,
             vdc_collection: VdcCollection::new(),
-            trust_manager: TrustManager::new(),
+            // trust_manager: TrustManager::new(),
             // TODO: Remove the key should be determined by the
             // requested credential to be presented.
             // active_key_index: Arc::new(RwLock::new(DEFAULT_KEY_INDEX)),
