@@ -1,12 +1,8 @@
 use crate::common::*;
 
+use std::fmt::Debug;
+
 use thiserror::Error;
-
-// uniffi::custom_newtype!(Key, String);
-// pub struct Key(pub String);
-
-// uniffi::custom_newtype!(Value, Vec<u8>);
-// pub struct Value(pub Vec<u8>);
 
 /// Enum: StorageManagerError
 ///
@@ -47,7 +43,7 @@ pub enum StorageManagerError {
 /// We use the older callback_interface to keep the required version level of our Android API
 /// low.
 #[uniffi::export(callback_interface)]
-pub trait StorageManagerInterface: Send + Sync {
+pub trait StorageManagerInterface: Send + Sync + Debug {
     /// Function: add
     ///
     /// Adds a key-value pair to storage.  Should the key already exist, the value will be
