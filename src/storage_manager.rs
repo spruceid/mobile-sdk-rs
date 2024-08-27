@@ -1,10 +1,12 @@
+use crate::common::*;
+
 use thiserror::Error;
 
-uniffi::custom_newtype!(Key, String);
-pub struct Key(pub String);
+// uniffi::custom_newtype!(Key, String);
+// pub struct Key(pub String);
 
-uniffi::custom_newtype!(Value, Vec<u8>);
-pub struct Value(pub Vec<u8>);
+// uniffi::custom_newtype!(Value, Vec<u8>);
+// pub struct Value(pub Vec<u8>);
 
 /// Enum: StorageManagerError
 ///
