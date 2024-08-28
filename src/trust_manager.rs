@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::common::{Key, Value};
 use crate::storage_manager::{StorageManagerError, StorageManagerInterface};
 
@@ -63,9 +65,9 @@ impl TrustManager {
     pub fn add_did(
         &self,
         did_key: String,
-        storage: &Box<dyn StorageManagerInterface>,
+        storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<(), TrustManagerError> {
-        if self.is_blocked_key(&did_key, storage)? {
+        if self.is_blocked_key(&did_key, storage.clone())? {
             return Err(TrustManagerError::DIDBlocked(did_key));
         }
 
@@ -90,7 +92,7 @@ impl TrustManager {
     pub fn remove_did(
         &self,
         did_key: String,
-        storage: &Box<dyn StorageManagerInterface>,
+        storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<(), TrustManagerError> {
         storage
             .remove(Key::with_prefix(KEY_PREFIX, &did_key))
@@ -119,7 +121,7 @@ impl TrustManager {
     pub fn block_did(
         &self,
         did_key: String,
-        storage: &Box<dyn StorageManagerInterface>,
+        storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<(), TrustManagerError> {
         storage
             .add(Key::with_prefix(KEY_PREFIX, &did_key), Value::from(false))
@@ -145,9 +147,9 @@ impl TrustManager {
     pub fn unblock_did(
         &self,
         did_key: String,
-        storage: &Box<dyn StorageManagerInterface>,
+        storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<(), TrustManagerError> {
-        if !self.is_blocked_key(&did_key, storage)? {
+        if !self.is_blocked_key(&did_key, storage.clone())? {
             return Ok(()); // Noop if the key is not blocked.
         }
 
@@ -170,14 +172,14 @@ impl TrustManager {
     /// retrieved from the wallet due to a storage error.
     pub fn get_trusted_dids(
         &self,
-        storage: &Box<dyn StorageManagerInterface>,
+        storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<Vec<String>, TrustManagerError> {
         let list = storage
             .list()
             .map_err(TrustManagerError::Storage)?
             .into_iter()
             .filter_map(|id| id.strip_prefix(KEY_PREFIX))
-            .filter_map(|key| match self.is_trusted_key(&key, storage) {
+            .filter_map(|key| match self.is_trusted_key(&key, storage.clone()) {
                 Ok(true) => Some(key),
                 _ => None,
             })
@@ -200,14 +202,14 @@ impl TrustManager {
     /// retrieved from the wallet due to a storage error.
     pub fn get_blocked_dids(
         &self,
-        storage: &Box<dyn StorageManagerInterface>,
+        storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<Vec<String>, TrustManagerError> {
         let list = storage
             .list()
             .map_err(TrustManagerError::Storage)?
             .into_iter()
             .filter_map(|id| id.strip_prefix(KEY_PREFIX))
-            .filter_map(|key| match self.is_blocked_key(&key, storage) {
+            .filter_map(|key| match self.is_blocked_key(&key, storage.clone()) {
                 Ok(true) => Some(key),
                 _ => None,
             })
@@ -232,7 +234,7 @@ impl TrustManager {
     pub fn is_trusted_did(
         &self,
         did_key: String,
-        storage: &Box<dyn StorageManagerInterface>,
+        storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<bool, TrustManagerError> {
         self.is_trusted_key(&did_key, storage)
     }
@@ -253,7 +255,7 @@ impl TrustManager {
     pub fn is_blocked_did(
         &self,
         did_key: String,
-        storage: &Box<dyn StorageManagerInterface>,
+        storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<bool, TrustManagerError> {
         self.is_blocked_key(&did_key, storage)
     }
@@ -262,7 +264,7 @@ impl TrustManager {
     fn is_trusted_key(
         &self,
         key: &String,
-        storage: &Box<dyn StorageManagerInterface>,
+        storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<bool, TrustManagerError> {
         match storage.get(Key::with_prefix(KEY_PREFIX, key)) {
             Ok(Some(val)) => Ok(val == Value::from(true)),
@@ -277,7 +279,7 @@ impl TrustManager {
     fn is_blocked_key(
         &self,
         key: &String,
-        storage: &Box<dyn StorageManagerInterface>,
+        storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<bool, TrustManagerError> {
         match storage.get(Key::with_prefix(KEY_PREFIX, key)) {
             Ok(Some(val)) => Ok(val == Value::from(false)),

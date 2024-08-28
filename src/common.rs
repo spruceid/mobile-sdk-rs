@@ -53,7 +53,7 @@ impl UniffiCustomTypeConverter for Url {
 
 uniffi::custom_newtype!(Key, String);
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Key(pub String);
 
 impl Key {

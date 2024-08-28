@@ -104,8 +104,8 @@ pub struct Wallet {
     // This is because the trust manager is intended to be used internally by the wallet.
     // The [TrustManager] does not implement uniffi bindings.
     pub(crate) trust_manager: TrustManager,
-    pub(crate) key_manager: Box<dyn KeyManagerInterface>,
-    pub(crate) storage_manager: Box<dyn StorageManagerInterface>,
+    pub(crate) key_manager: Arc<dyn KeyManagerInterface>,
+    pub(crate) storage_manager: Arc<dyn StorageManagerInterface>,
     // // The active key index is used to determine which key to used for signing.
     // // By default, this is set to the 0-index key.
     // pub(crate) active_key_index: Arc<RwLock<u8>>,
@@ -134,8 +134,8 @@ impl Wallet {
     /// * If there is a storage error when initializing the metadata manager.
     #[uniffi::constructor]
     pub fn new(
-        storage_manager: Box<dyn StorageManagerInterface>,
-        key_manager: Box<dyn KeyManagerInterface>,
+        storage_manager: Arc<dyn StorageManagerInterface>,
+        key_manager: Arc<dyn KeyManagerInterface>,
     ) -> Result<Arc<Self>, WalletError> {
         let client = oid4vp::core::util::ReqwestClient::new()
             .map_err(|e| WalletError::HttpClientInitialization(format!("{e}")))?;
@@ -143,7 +143,7 @@ impl Wallet {
         // Initalized the metdata manager with the device storage.
         // This will load any existing metadata from storage, otherwise
         // it will create a new metadata instance.
-        let metadata = MetadataManager::initialize(&storage_manager)?;
+        let metadata = MetadataManager::initialize(storage_manager.clone())?;
 
         Ok(Arc::new(Self {
             client,
@@ -167,7 +167,7 @@ impl Wallet {
             Arc::into_inner(credential).ok_or(WalletError::InvalidCredentialReference)?;
 
         self.vdc_collection
-            .add(credential, &self.storage_manager)
+            .add(credential, self.storage_manager.clone())
             .map_err(Into::into)
     }
 

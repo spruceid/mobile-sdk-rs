@@ -280,7 +280,7 @@ impl RequestVerifier for Wallet {
     ) -> Result<()> {
         let trusted_dids = self
             .trust_manager
-            .get_trusted_dids(&self.storage_manager)
+            .get_trusted_dids(self.storage_manager.clone())
             .ok();
 
         verify_with_resolver(

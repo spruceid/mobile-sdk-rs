@@ -117,7 +117,7 @@ impl VdcCollection {
     pub fn add(
         &self,
         credential: Credential,
-        storage: &Box<dyn StorageManagerInterface>,
+        storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<(), VdcCollectionError> {
         let val = match serde_cbor::to_vec(&credential) {
             Ok(x) => x,
@@ -134,7 +134,7 @@ impl VdcCollection {
     pub fn get(
         &self,
         id: &str,
-        storage: &Box<dyn StorageManagerInterface>,
+        storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<Option<Credential>, VdcCollectionError> {
         let raw = match storage.get(self.str_to_key(id)) {
             Ok(Some(x)) => x,
@@ -152,7 +152,7 @@ impl VdcCollection {
     pub fn delete(
         &self,
         id: &str,
-        storage: &Box<dyn StorageManagerInterface>,
+        storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<(), VdcCollectionError> {
         match storage.remove(self.str_to_key(id)) {
             Ok(_) => Ok(()),
@@ -163,7 +163,7 @@ impl VdcCollection {
     /// Get a list of all the credentials.
     pub fn all_entries(
         &self,
-        storage: &Box<dyn StorageManagerInterface>,
+        storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<Vec<String>, VdcCollectionError> {
         let mut r = Vec::new();
 
@@ -189,14 +189,14 @@ impl VdcCollection {
     pub fn all_entries_by_type(
         &self,
         ctype: CredentialType,
-        storage: &Box<dyn StorageManagerInterface>,
+        storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<Vec<String>, VdcCollectionError> {
         let mut r = Vec::new();
 
-        match self.all_entries(storage) {
+        match self.all_entries(storage.clone()) {
             Ok(list) => {
                 for key in list {
-                    let cred = self.get(&key, storage);
+                    let cred = self.get(&key, storage.clone());
 
                     if let Ok(Some(x)) = cred {
                         if x.ctype == ctype {
@@ -222,12 +222,12 @@ impl VdcCollection {
     }
 
     /// Dump the contents of the credential set to the logger.
-    pub fn dump(&self, storage: &Box<dyn StorageManagerInterface>) {
+    pub fn dump(&self, storage: Arc<dyn StorageManagerInterface>) {
         let span = info_span!("All Credentials");
-        span.in_scope(|| match self.all_entries(storage) {
+        span.in_scope(|| match self.all_entries(storage.clone()) {
             Ok(list) => {
                 for key in list {
-                    if let Ok(x) = self.get(&key, storage) {
+                    if let Ok(x) = self.get(&key, storage.clone()) {
                         info!("{:?}", x);
                     }
                 }
@@ -245,7 +245,7 @@ mod tests {
 
     #[test]
     fn test_vdc() {
-        let smi: Box<dyn StorageManagerInterface> = Box::new(LocalStore);
+        let smi: Arc<dyn StorageManagerInterface> = Arc::new(LocalStore);
         let vdc = VdcCollection::new();
         let payload_1: Vec<u8> = "Some random collection of bytes. ⚛".into();
         let payload_2: Vec<u8> = "Some other random collection of bytes. 📯".into();
@@ -258,7 +258,7 @@ mod tests {
                 CredentialType::Iso18013_5_1mDl,
                 payload_1.clone(),
             ),
-            &smi,
+            smi.clone(),
         )
         .expect("Unable to add the first value.");
 
@@ -269,7 +269,7 @@ mod tests {
                 CredentialType::Iso18013_5_1mDl,
                 payload_2.clone(),
             ),
-            &smi,
+            smi.clone(),
         )
         .expect("Unable to add the second value.");
 
@@ -280,29 +280,29 @@ mod tests {
                 CredentialType::Iso18013_5_1mDl,
                 payload_3.clone(),
             ),
-            &smi,
+            smi.clone(),
         )
         .expect("Unable to add the third value.");
 
-        vdc.get("00000000-0000-0000-0000-000000000002", &smi)
+        vdc.get("00000000-0000-0000-0000-000000000002", smi.clone())
             .expect("Failed to get the second value");
-        vdc.get("00000000-0000-0000-0000-000000000001", &smi)
+        vdc.get("00000000-0000-0000-0000-000000000001", smi.clone())
             .expect("Failed to get the first value");
-        vdc.get("00000000-0000-0000-0000-000000000003", &smi)
+        vdc.get("00000000-0000-0000-0000-000000000003", smi.clone())
             .expect("Failed to get the third value");
 
-        assert!(vdc.all_entries(&smi).unwrap().len() == 3);
+        assert!(vdc.all_entries(smi.clone()).unwrap().len() == 3);
 
-        vdc.delete("00000000-0000-0000-0000-000000000002", &smi)
+        vdc.delete("00000000-0000-0000-0000-000000000002", smi.clone())
             .expect("Failed to delete the second value.");
 
-        assert!(vdc.all_entries(&smi).unwrap().len() == 2);
+        assert!(vdc.all_entries(smi.clone()).unwrap().len() == 2);
 
-        vdc.delete("00000000-0000-0000-0000-000000000001", &smi)
+        vdc.delete("00000000-0000-0000-0000-000000000001", smi.clone())
             .expect("Failed to delete the first value.");
-        vdc.delete("00000000-0000-0000-0000-000000000003", &smi)
+        vdc.delete("00000000-0000-0000-0000-000000000003", smi.clone())
             .expect("Failed to delete the third value.");
 
-        assert!(vdc.all_entries(&smi).unwrap().len() == 0);
+        assert!(vdc.all_entries(smi.clone()).unwrap().len() == 0);
     }
 }

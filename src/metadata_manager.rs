@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::common::Value;
 use crate::storage_manager::{StorageManagerError, StorageManagerInterface};
 
@@ -47,14 +49,14 @@ impl AsRef<WalletMetadata> for MetadataManager {
 
 impl MetadataManager {
     pub fn initialize(
-        storage: &Box<dyn StorageManagerInterface>,
+        storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<Self, MetadataManagerError> {
-        match Self::get_metadata(storage) {
+        match Self::get_metadata(storage.clone()) {
             Ok(metadata) => Ok(Self { cache: metadata }),
             Err(MetadataManagerError::NoMetadataFound) => {
                 // Add default metadata to the wallet.
-                Self::add_metadata(&WalletMetadata::openid4vp_scheme_static(), storage)?;
-                Self::initialize(storage)
+                Self::add_metadata(&WalletMetadata::openid4vp_scheme_static(), storage.clone())?;
+                Self::initialize(storage.clone())
             }
             Err(e) => Err(e),
         }
@@ -64,7 +66,7 @@ impl MetadataManager {
     pub fn add_request_object_signing_alg(
         &mut self,
         algorithm: String,
-        storage: &Box<dyn StorageManagerInterface>,
+        storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<(), MetadataManagerError> {
         self.cache
             .add_request_object_signing_alg(algorithm)
@@ -79,7 +81,7 @@ impl MetadataManager {
         &mut self,
         algorithm: String,
         claim_format: &ClaimFormatDesignation,
-        storage: &Box<dyn StorageManagerInterface>,
+        storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<(), MetadataManagerError> {
         self.cache
             .vp_formats_supported_mut()
@@ -106,7 +108,7 @@ impl MetadataManager {
     // Internal method for adding wallet metadata to the wallet.
     fn add_metadata(
         metadata_value: &WalletMetadata,
-        storage: &Box<dyn StorageManagerInterface>,
+        storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<(), MetadataManagerError> {
         let value = serde_json::to_vec(metadata_value)
             .map_err(|e| MetadataManagerError::SerializationError(e.to_string()))?;
@@ -118,7 +120,7 @@ impl MetadataManager {
 
     // Internal method for getting the wallet metadata from the wallet.
     fn get_metadata(
-        storage: &Box<dyn StorageManagerInterface>,
+        storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<WalletMetadata, MetadataManagerError> {
         let value = storage
             .get(DEFAULT_WALLET_METADATA_KEY.into())
