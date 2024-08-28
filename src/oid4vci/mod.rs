@@ -10,6 +10,7 @@ pub use http_client::*;
 pub use metadata::*;
 pub use proof_of_possession::*;
 pub use session::*;
+use url::Url;
 pub use wrapper::*;
 
 use std::sync::Arc;
@@ -28,7 +29,10 @@ use oid4vci::{
     credential::ResponseEnum,
     credential_offer::CredentialOfferParameters,
     metadata::AuthorizationMetadata,
-    openidconnect::{AuthorizationCode, ClientId, IssuerUrl, OAuth2TokenResponse, RedirectUrl},
+    openidconnect::{
+        core::CoreGrantType, AuthorizationCode, ClientId, IssuerUrl, OAuth2TokenResponse,
+        RedirectUrl,
+    },
     profiles::CredentialConfigurationProfile,
     proof_of_possession::Proof,
 };
@@ -49,9 +53,20 @@ pub async fn oid4vci_initiate_with_offer(
     redirect_url: String,
     http_client: Arc<IHttpClient>,
 ) -> Result<Oid4vciSession, Oid4vciError> {
+    let credential_offer = Url::parse(&credential_offer).map_err(|_| {
+        Oid4vciError::InvalidParameter("invalid credential_offer: failed to parse url".into())
+    })?;
+
+    let credential_offer = credential_offer
+        .query_pairs()
+        .find(|(k, _)| k == "credential_offer")
+        .ok_or(Oid4vciError::InvalidParameter(
+            "invalid credential_offer: missing query parameter".into(),
+        ))?;
+
     let credential_offer =
-        serde_json::from_str::<CredentialOfferParameters<CoreProfilesOffer>>(&credential_offer)
-            .map_err(|_| Oid4vciError::SerdeJsonError("".into()))?;
+        serde_json::from_str::<CredentialOfferParameters<CoreProfilesOffer>>(&credential_offer.1)
+            .map_err(|e| Oid4vciError::SerdeJsonError(e.to_string()))?;
 
     let base_url = match &credential_offer {
         CredentialOfferParameters::Value {
@@ -69,13 +84,45 @@ pub async fn oid4vci_initiate_with_offer(
         }
     }?;
 
-    let authorization_metadata = match &http_client.0 {
-        Either::Left(sync_client) => {
-            AuthorizationMetadata::discover(&issuer_metadata, None, sync_client)
+    let grants = match &credential_offer {
+        CredentialOfferParameters::Value { grants, .. } => grants,
+        CredentialOfferParameters::Reference { grants, .. } => grants,
+    }
+    .clone();
+
+    let authorization_metadata = if let Some(grants) = &grants {
+        // TODO: maybe offer a way for the wallet to pick grant ordering
+        // when multiple options are present
+        let grant_type = if grants.authorization_code().is_some() {
+            Ok(Some(CoreGrantType::AuthorizationCode))
+        } else if grants.pre_authorized_code().is_some() {
+            Ok(Some(CoreGrantType::Extension(
+                "urn:ietf:params:oauth:grant-type:pre-authorized_code".into(),
+            )))
+        } else {
+            Err(Oid4vciError::InvalidParameter(
+                "Invalid missing parameter".into(),
+            ))
+        }?;
+
+        match &http_client.0 {
+            Either::Left(sync_client) => {
+                AuthorizationMetadata::discover(&issuer_metadata, grant_type, sync_client)
+            }
+            Either::Right(async_client) => {
+                AuthorizationMetadata::discover_async(&issuer_metadata, grant_type, async_client)
+                    .await
+            }
         }
-        Either::Right(async_client) => {
-            AuthorizationMetadata::discover_async(&issuer_metadata, None, async_client).await
-        }
+    } else {
+        // TODO: if grants isn't present in the credential offer
+        // we must determine the grant type by using the metadata.
+        // Potentially defer to caller using a ForeignTrait after
+        // obtaining `grant_types_supported` from authorization server
+        // metadata. Future solution must keep in mind that the
+        // `authorization_servers` field is an array, so multiple
+        // grant options from different servers may be available.
+        todo!("determine grant type with metadata")
     }?;
 
     let credential_requests: Vec<profiles::CoreProfilesRequest> = match &credential_offer {
@@ -143,14 +190,6 @@ pub async fn oid4vci_initiate_with_offer(
             })
             .collect(),
     };
-
-    let grants = match &credential_offer {
-        CredentialOfferParameters::Value { grants, .. } => grants,
-        CredentialOfferParameters::Reference { grants, .. } => grants,
-    }
-    .clone()
-    .ok_or("missing grants".to_string())
-    .map_err(Oid4vciError::from)?;
 
     let client = client::Client::from_issuer_metadata(
         issuer_metadata.clone(),

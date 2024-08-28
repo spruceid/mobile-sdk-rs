@@ -114,14 +114,14 @@ impl Oid4vciSession {
             .ok_or(Oid4vciError::LockError("grants".into()))?
             .as_ref()
             .map(|w| w.0.clone())
-            .ok_or(Oid4vciError::InvalidSession("token_response unset".into()))
+            .ok_or(Oid4vciError::InvalidSession("grants unset".into()))
     }
 
-    pub fn set_grants(&self, grants: CredentialOfferGrants) -> Result<(), Oid4vciError> {
+    pub fn set_grants(&self, grants: Option<CredentialOfferGrants>) -> Result<(), Oid4vciError> {
         *(self
             .grants
             .try_lock()
-            .ok_or(Oid4vciError::LockError("grants".into()))?) = Some(grants.into());
+            .ok_or(Oid4vciError::LockError("grants".into()))?) = grants.map(|g| g.into());
 
         Ok(())
     }
