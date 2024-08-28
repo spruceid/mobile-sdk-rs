@@ -8,7 +8,7 @@ pub const KEY_MANAGER_PREFIX: &str = "SSIKeyManager.";
 /// This is the default index for a key in the key manager.
 pub const DEFAULT_KEY_INDEX: u8 = 0;
 
-#[uniffi::export(callback_interface)]
+#[uniffi::export(with_foreign)]
 pub trait SecretKeyInterface: Send + Sync {
     // TODO: Review available methods in android and cryptokit to implement here
 }
@@ -73,7 +73,7 @@ impl EncryptedPayload {
 /// KeyManager for interacting with the device's
 /// cryptographic device APIs for signing and encrypting
 /// messages.
-#[uniffi::export]
+#[uniffi::export(with_foreign)]
 pub trait KeyManagerInterface: Send + Sync + Debug {
     /// Reset the key manager, removing all keys.
     fn reset(&self) -> bool;
@@ -81,7 +81,7 @@ pub trait KeyManagerInterface: Send + Sync + Debug {
     /// Check if a key exists in the key manager.
     fn key_exists(&self, id: Key) -> bool;
 
-    // /// Get a secret key from the key manager.
+    // /// Get a secret key fr#0e271com the key manager.
     // fn get_secret_key(&self, id: Key) -> Option<Box<dyn SecretKeyInterface>>;
 
     /// Generate a signing key in the key manager.

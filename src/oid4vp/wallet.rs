@@ -8,6 +8,7 @@ use crate::{
 
 use std::{
     str::FromStr,
+    sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -125,7 +126,7 @@ impl Wallet {
     pub(crate) async fn handle_unencoded_authorization_request(
         &self,
         request: &AuthorizationRequestObject,
-        callback: &Box<dyn CredentialCallbackInterface>,
+        callback: Arc<dyn CredentialCallbackInterface>,
     ) -> Result<AuthorizationResponse, WalletError> {
         // Resolve the presentation definition.
         let presentation_definition = request

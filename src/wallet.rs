@@ -196,7 +196,7 @@ impl Wallet {
     pub async fn handle_oid4vp_request(
         &self,
         url: Url,
-        callback: &Box<dyn CredentialCallbackInterface>,
+        callback: Arc<dyn CredentialCallbackInterface>,
     ) -> Result<Option<Url>, WalletError> {
         let request = self
             .validate_request(url)
@@ -205,7 +205,7 @@ impl Wallet {
 
         let response = match request.response_mode() {
             ResponseMode::DirectPost => {
-                self.handle_unencoded_authorization_request(&request, callback)
+                self.handle_unencoded_authorization_request(&request, callback.clone())
                     .await?
             }
             // TODO: Implement support for other response modes?

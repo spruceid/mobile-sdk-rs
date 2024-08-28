@@ -42,7 +42,7 @@ pub enum StorageManagerError {
 ///
 /// We use the older callback_interface to keep the required version level of our Android API
 /// low.
-#[uniffi::export]
+#[uniffi::export(with_foreign)]
 pub trait StorageManagerInterface: Send + Sync + Debug {
     /// Function: add
     ///

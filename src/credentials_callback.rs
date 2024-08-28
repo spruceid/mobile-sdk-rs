@@ -13,7 +13,7 @@ pub enum CredentialCallbackError {
 ///
 /// For example, this is used to provide methods for the client to select a credential to present,
 /// retrieved from the wallet.
-#[uniffi::export(callback_interface)]
+#[uniffi::export(with_foreign)]
 pub trait CredentialCallbackInterface: Send + Sync + Debug {
     /// Permit the verifier to request the information defined in the presentation definition.
     ///
