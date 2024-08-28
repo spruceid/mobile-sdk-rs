@@ -22,8 +22,6 @@ isomdl = { git = "https://github.com/spruceid/isomdl", rev = "1f4f762" }
 oid4vci = { git = "https://github.com/spruceid/oid4vci-rs", branch = "feat/updates-for-sprucekit-integration" }
 ssi = { version = "0.8.1", features = ["secp256r1", "secp384r1"] }
 
-ssi = "0.8.1"
-
 async-trait = "0.1"
 either = "1.13"
 futures = "0.3"
