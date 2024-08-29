@@ -7,9 +7,6 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-// Re-export reader
-pub use reader::*;
-
 use isomdl::{
     definitions::{
         device_engagement::{CentralClientMode, DeviceRetrievalMethods},
