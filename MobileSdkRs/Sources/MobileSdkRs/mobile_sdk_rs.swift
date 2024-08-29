@@ -504,7 +504,7 @@ open class MdlSessionManager:
     }
 
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_wallet_sdk_rs_fn_clone_mdlsessionmanager(self.pointer, $0) }
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_mdlsessionmanager(self.pointer, $0) }
     }
     // No primary constructor declared for this class.
 
@@ -513,7 +513,7 @@ open class MdlSessionManager:
             return
         }
 
-        try! rustCall { uniffi_wallet_sdk_rs_fn_free_mdlsessionmanager(pointer, $0) }
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_mdlsessionmanager(pointer, $0) }
     }
 
     
@@ -1252,7 +1252,11 @@ public struct FfiConverterTypeMDLReaderRequestBuildError: FfiConverterRustBuffer
 
 extension MdlReaderRequestBuildError: Equatable, Hashable {}
 
-extension MdlReaderRequestBuildError: Error { }
+extension MdlReaderRequestBuildError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 public enum MdlReaderResponseError {
@@ -1324,7 +1328,11 @@ public struct FfiConverterTypeMDLReaderResponseError: FfiConverterRustBuffer {
 
 extension MdlReaderResponseError: Equatable, Hashable {}
 
-extension MdlReaderResponseError: Error { }
+extension MdlReaderResponseError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 public enum MdlReaderSessionError {
@@ -1372,7 +1380,11 @@ public struct FfiConverterTypeMDLReaderSessionError: FfiConverterRustBuffer {
 
 extension MdlReaderSessionError: Equatable, Hashable {}
 
-extension MdlReaderSessionError: Error { }
+extension MdlReaderSessionError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 public enum MDocInitError {
@@ -2472,25 +2484,6 @@ fileprivate struct FfiConverterSequenceTypeItemsRequest: FfiConverterRustBuffer 
     }
 }
 
-<<<<<<< HEAD:MobileSdkRs/Sources/MobileSdkRs/mobile_sdk_rs.swift
-fileprivate struct FfiConverterSequenceTypeKey: FfiConverterRustBuffer {
-    typealias SwiftType = [Key]
-
-    public static func write(_ value: [Key], into buf: inout [UInt8]) {
-        let len = Int32(value.count)
-        writeInt(&buf, len)
-        for item in value {
-            FfiConverterTypeKey.write(item, into: &buf)
-        }
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Key] {
-        let len: Int32 = try readInt(&buf)
-        var seq = [Key]()
-        seq.reserveCapacity(Int(len))
-        for _ in 0 ..< len {
-            seq.append(try FfiConverterTypeKey.read(from: &buf))
-=======
 fileprivate struct FfiConverterSequenceTypeMDocItem: FfiConverterRustBuffer {
     typealias SwiftType = [MDocItem]
 
@@ -2508,7 +2501,28 @@ fileprivate struct FfiConverterSequenceTypeMDocItem: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeMDocItem.read(from: &buf))
->>>>>>> 90981a7 (Fix returned mdoc data):WalletSdkRs/Sources/WalletSdkRs/wallet_sdk_rs.swift
+        }
+        return seq
+    }
+}
+
+fileprivate struct FfiConverterSequenceTypeKey: FfiConverterRustBuffer {
+    typealias SwiftType = [Key]
+
+    public static func write(_ value: [Key], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeKey.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Key] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [Key]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeKey.read(from: &buf))
         }
         return seq
     }
@@ -2776,7 +2790,6 @@ public func FfiConverterTypeValue_lower(_ value: Value) -> RustBuffer {
     return FfiConverterTypeValue.lower(value)
 }
 
-<<<<<<< HEAD:MobileSdkRs/Sources/MobileSdkRs/mobile_sdk_rs.swift
 private let UNIFFI_RUST_FUTURE_POLL_READY: Int8 = 0
 private let UNIFFI_RUST_FUTURE_POLL_MAYBE_READY: Int8 = 1
 
@@ -2822,16 +2835,15 @@ fileprivate func uniffiFutureContinuationCallback(handle: UInt64, pollResult: In
     } else {
         print("uniffiFutureContinuationCallback invalid handle")
     }
-=======
+}
 public func establishSession(uri: String, requestedItems: [String: [String: Bool]], trustAnchorRegistry: [String]?)throws  -> MdlReaderSessionData {
     return try  FfiConverterTypeMDLReaderSessionData.lift(try rustCallWithError(FfiConverterTypeMDLReaderSessionError.lift) {
-    uniffi_wallet_sdk_rs_fn_func_establish_session(
+    uniffi_mobile_sdk_rs_fn_func_establish_session(
         FfiConverterString.lower(uri),
         FfiConverterDictionaryStringDictionaryStringBool.lower(requestedItems),
         FfiConverterOptionSequenceString.lower(trustAnchorRegistry),$0
     )
 })
->>>>>>> 0885014 (Add mDL reader functions):WalletSdkRs/Sources/WalletSdkRs/wallet_sdk_rs.swift
 }
 public func handleRequest(state: SessionManagerEngaged, request: Data)throws  -> RequestData {
     return try  FfiConverterTypeRequestData.lift(try rustCallWithError(FfiConverterTypeRequestError.lift) {
@@ -2843,7 +2855,7 @@ public func handleRequest(state: SessionManagerEngaged, request: Data)throws  ->
 }
 public func handleResponse(state: MdlSessionManager, response: Data)throws  -> MdlReaderResponseData {
     return try  FfiConverterTypeMDLReaderResponseData.lift(try rustCallWithError(FfiConverterTypeMDLReaderResponseError.lift) {
-    uniffi_wallet_sdk_rs_fn_func_handle_response(
+    uniffi_mobile_sdk_rs_fn_func_handle_response(
         FfiConverterTypeMDLSessionManager.lower(state),
         FfiConverterData.lower(response),$0
     )
@@ -2859,7 +2871,7 @@ public func initialiseSession(document: MDoc, uuid: Uuid)throws  -> SessionData 
 }
 public func newRequest(state: MdlSessionManager, requestedItems: [String: [String: Bool]])throws  -> MdlReaderRequest {
     return try  FfiConverterTypeMDLReaderRequest.lift(try rustCallWithError(FfiConverterTypeMDLReaderRequestBuildError.lift) {
-    uniffi_wallet_sdk_rs_fn_func_new_request(
+    uniffi_mobile_sdk_rs_fn_func_new_request(
         FfiConverterTypeMDLSessionManager.lower(state),
         FfiConverterDictionaryStringDictionaryStringBool.lower(requestedItems),$0
     )
@@ -2973,32 +2985,22 @@ private var initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-<<<<<<< HEAD:MobileSdkRs/Sources/MobileSdkRs/mobile_sdk_rs.swift
+    if (uniffi_mobile_sdk_rs_checksum_func_establish_session() != 26937) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mobile_sdk_rs_checksum_func_handle_request() != 26058) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_func_handle_response() != 43961) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_func_initialise_session() != 57560) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mobile_sdk_rs_checksum_func_new_request() != 57829) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mobile_sdk_rs_checksum_func_submit_response() != 50547) {
-=======
-    if (uniffi_wallet_sdk_rs_checksum_func_establish_session() != 37251) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_wallet_sdk_rs_checksum_func_handle_request() != 47905) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_wallet_sdk_rs_checksum_func_handle_response() != 14089) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_wallet_sdk_rs_checksum_func_initialise_session() != 18213) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_wallet_sdk_rs_checksum_func_new_request() != 20896) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_wallet_sdk_rs_checksum_func_submit_response() != 17438) {
->>>>>>> 0885014 (Add mDL reader functions):WalletSdkRs/Sources/WalletSdkRs/wallet_sdk_rs.swift
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_func_submit_signature() != 17097) {

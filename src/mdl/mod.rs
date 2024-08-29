@@ -1,9 +1,14 @@
+pub mod reader;
+
 use crate::UniffiCustomTypeConverter;
 
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
 };
+
+// Re-export reader
+pub use reader::*;
 
 use isomdl::{
     definitions::{
