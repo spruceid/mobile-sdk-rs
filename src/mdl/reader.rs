@@ -196,7 +196,7 @@ pub enum MDocItem {
     Bool(bool),
     Integer(i64),
     // Bytes(Vec<u8>), // already converted in string
-    Map(HashMap<String, MDocItem>),
+    ItemMap(HashMap<String, MDocItem>),
     Array(Vec<MDocItem>),
     // Image(Vec<u8>) maybe?
 }
@@ -217,7 +217,7 @@ impl From<serde_json::Value> for MDocItem {
             serde_json::Value::Array(a) => {
                 Self::Array(a.iter().map(|o| Into::<Self>::into(o.clone())).collect())
             }
-            serde_json::Value::Object(m) => Self::Map(
+            serde_json::Value::Object(m) => Self::ItemMap(
                 m.iter()
                     .map(|(k, v)| (k.clone(), Into::<Self>::into(v.clone())))
                     .collect(),
