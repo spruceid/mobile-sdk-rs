@@ -253,6 +253,16 @@ impl MdlPresentationSession {
         })?;
         Ok(msg_bytes)
     }
+
+    /// Returns the generated QR code
+    pub fn get_qr_code_uri(&self) -> String {
+        self.qr_code_uri.clone()
+    }
+
+    /// Returns the BLE identification
+    pub fn get_ble_ident(&self) -> Vec<u8> {
+        self.ble_ident.clone()
+    }
 }
 
 #[derive(thiserror::Error, uniffi::Error, Debug)]
