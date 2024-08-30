@@ -28,13 +28,13 @@ impl Credential {
         format: ClaimFormatDesignation,
         ctype: CredentialType,
         payload: Vec<u8>,
-    ) -> Self {
-        Self {
+    ) -> Arc<Self> {
+        Arc::new(Self {
             id,
             format,
             ctype,
             payload,
-        }
+        })
     }
 
     /// Get the ID of the credential.
@@ -64,7 +64,21 @@ impl Credential {
 
     /// Return the credential storage key prefix with credential type index as a string.
     pub fn as_storage_key_prefix(&self) -> String {
-        format!("{KEY_PREFIX}{}.", self.ctype)
+        format!("{KEY_PREFIX}{}.", &self.ctype)
+    }
+
+    /// Return the credential as a serialized CBOR bytes suitable for writing to storage.
+    pub fn to_cbor(&self) -> Result<Vec<u8>, VdcCollectionError> {
+        serde_cbor::to_vec(self).map_err(|e| VdcCollectionError::SerializeFailed(e.to_string()))
+    }
+
+    /// Return the credential as a deserialized CBOR bytes suitable for runtime use.
+    ///
+    #[uniffi::constructor]
+    pub fn from_cbor(bytes: &[u8]) -> Result<Arc<Self>, VdcCollectionError> {
+        serde_cbor::from_slice(bytes)
+            .map(Arc::new)
+            .map_err(|e| VdcCollectionError::DeserializeFailed(e.to_string()))
     }
 }
 
@@ -115,13 +129,12 @@ impl VdcCollection {
     /// The storage key can be computed from a credential via the [Credential::as_storage_key] method.
     pub fn add(
         &self,
-        credential: Credential,
+        credential: Arc<Credential>,
         storage: &Arc<dyn StorageManagerInterface>,
     ) -> Result<Key, VdcCollectionError> {
-        let val = serde_cbor::to_vec(&credential)
-            .map_err(|e| VdcCollectionError::SerializeFailed(e.to_string()))?;
+        let value = credential.to_cbor()?;
 
-        storage.add(credential.as_storage_key(), Value(val))?;
+        storage.add(credential.as_storage_key(), Value(value))?;
 
         // Return the key of the credential in the storage manager, in case
         // the caller needs to cache it.
@@ -133,10 +146,10 @@ impl VdcCollection {
         &self,
         key: Key,
         storage: &Arc<dyn StorageManagerInterface>,
-    ) -> Result<Option<Credential>, VdcCollectionError> {
+    ) -> Result<Option<Arc<Credential>>, VdcCollectionError> {
         storage
             .get(key)?
-            .map(|x| serde_cbor::de::from_slice(&x.0))
+            .map(|x| Credential::from_cbor(&x.0))
             .transpose()
             .map_err(|e| VdcCollectionError::DeserializeFailed(e.to_string()))
     }
