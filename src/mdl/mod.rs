@@ -84,14 +84,12 @@ impl Wallet {
         .map_err(|e| SessionError::Generic {
             value: format!("Could not initialize session: {e:?}"),
         })?;
-        let mut ble_ident =
-            session
+        let ble_ident = session
                 .ble_ident()
-                .map(hex::encode)
                 .map_err(|e| SessionError::Generic {
-                    value: format!("Could not encode hex BLE ident: {e:?}"),
-                })?;
-        ble_ident.insert_str(0, "0x");
+                value: format!("Couldn't get BLE identification: {e:?}").to_string(),
+            })?
+            .to_vec();
         let (engaged_state, qr_code_uri) =
             session.qr_engagement().map_err(|e| SessionError::Generic {
                 value: format!("Could not generate qr engagement: {e:?}"),
@@ -113,7 +111,7 @@ pub struct MdlPresentationSession {
     engaged: Option<device::SessionManagerEngaged>,
     in_process: Mutex<Option<InProcessRecord>>,
     pub qr_code_uri: String,
-    pub ble_ident: String,
+    pub ble_ident: Vec<u8>,
     key_manager: Arc<dyn KeyManagerInterface>,
 }
 
