@@ -1,7 +1,5 @@
 use crate::{
-    common::Key,
     credentials_callback::CredentialCallbackInterface,
-    key_manager::KEY_MANAGER_PREFIX,
     vdc_collection::Credential,
     wallet::{Wallet, WalletError},
 };
@@ -28,16 +26,16 @@ use oid4vp::{
     verifier::request_signer::RequestSigner,
     wallet::Wallet as OID4VPWallet,
 };
-use ssi_claims::{jws::JWSSigner, jwt::VerifiablePresentation, JWSPayload, JWTClaims};
-use ssi_dids::{
+use ssi::claims::vc::v2::syntax::VERIFIABLE_PRESENTATION_TYPE;
+use ssi::claims::{jws::JWSSigner, jwt::VerifiablePresentation, JWSPayload, JWTClaims};
+use ssi::dids::{
     ssi_json_ld::{
         syntax::{Object, Value},
         CREDENTIALS_V1_CONTEXT,
     },
     DIDKey, DIDURLBuf,
 };
-use ssi_jwk::JWK;
-use ssi_vc::v2::syntax::VERIFIABLE_PRESENTATION_TYPE;
+use ssi::jwk::JWK;
 
 // 5 minute default expiration.
 const DEFAULT_EXPIRATION_IN_SECONDS: u64 = 60 * 5;
@@ -48,7 +46,7 @@ impl Wallet {
     /// storage based on the presentation definition.
     fn retrieve_credentials(
         &self,
-        presentation_definition: &PresentationDefinition,
+        _presentation_definition: &PresentationDefinition,
     ) -> Result<Vec<Credential>, WalletError> {
         unimplemented!()
         // presentation_definition
@@ -126,7 +124,7 @@ impl Wallet {
     pub(crate) async fn handle_unencoded_authorization_request(
         &self,
         request: &AuthorizationRequestObject,
-        callback: Arc<dyn CredentialCallbackInterface>,
+        callback: &Arc<dyn CredentialCallbackInterface>,
     ) -> Result<AuthorizationResponse, WalletError> {
         // Resolve the presentation definition.
         let presentation_definition = request
@@ -279,16 +277,16 @@ impl RequestVerifier for Wallet {
         decoded_request: &AuthorizationRequestObject,
         request_jwt: String,
     ) -> Result<()> {
-        let trusted_dids = self
-            .trust_manager
-            .get_trusted_dids(self.storage_manager.clone())
-            .ok();
+        // let trusted_dids =
+        // .get_trusted_dids(&self.storage_manager)
+        // .ok();
 
         verify_with_resolver(
-            self.metadata.as_ref(),
+            &self.metadata,
             decoded_request,
             request_jwt,
-            trusted_dids.as_ref().map(|did| did.as_slice()),
+            // trusted_dids.as_ref().map(|did| did.as_slice()),
+            Some(self.trust_manager.as_slice()),
             &self.jwk()?,
         )
         .await?;
@@ -296,6 +294,9 @@ impl RequestVerifier for Wallet {
         Ok(())
     }
 }
+
+// TODO: The wallet should provide a `factory` for wallet instances
+// that implement the protocol-sepecific traits, e.g. `Wallet` in OID4VP.
 
 impl OID4VPWallet for Wallet {
     type HttpClient = oid4vp::core::util::ReqwestClient;
@@ -305,7 +306,7 @@ impl OID4VPWallet for Wallet {
     }
 
     fn metadata(&self) -> &WalletMetadata {
-        self.metadata.as_ref()
+        &self.metadata
     }
 }
 
@@ -337,7 +338,7 @@ impl RequestSigner for Wallet {
         Vec::with_capacity(0)
     }
 
-    async fn try_sign(&self, payload: &[u8]) -> Result<Vec<u8>, Self::Error> {
+    async fn try_sign(&self, _payload: &[u8]) -> Result<Vec<u8>, Self::Error> {
         unimplemented!()
         // let index = self.get_active_key_index()?;
         // let key_id = Key::with_prefix(KEY_MANAGER_PREFIX, &format!("{index}"));
@@ -351,26 +352,26 @@ impl RequestSigner for Wallet {
 impl JWSSigner for Wallet {
     async fn fetch_info(
         &self,
-    ) -> Result<ssi_claims::jws::JWSSignerInfo, ssi_claims::SignatureError> {
+    ) -> Result<ssi::claims::jws::JWSSignerInfo, ssi::claims::SignatureError> {
         let jwk = self
             .jwk()
-            .map_err(|e| ssi_claims::SignatureError::Other(e.to_string()))?;
+            .map_err(|e| ssi::claims::SignatureError::Other(e.to_string()))?;
 
-        let algorithm = jwk.algorithm.ok_or(ssi_claims::SignatureError::Other(
+        let algorithm = jwk.algorithm.ok_or(ssi::claims::SignatureError::Other(
             "JWK algorithm not found.".into(),
         ))?;
 
         let key_id = jwk.key_id.clone();
 
-        Ok(ssi_claims::jws::JWSSignerInfo { algorithm, key_id })
+        Ok(ssi::claims::jws::JWSSignerInfo { algorithm, key_id })
     }
 
     async fn sign_bytes(
         &self,
         signing_bytes: &[u8],
-    ) -> Result<Vec<u8>, ssi_claims::SignatureError> {
+    ) -> Result<Vec<u8>, ssi::claims::SignatureError> {
         self.try_sign(signing_bytes).await.map_err(|e| {
-            ssi_claims::SignatureError::Other(format!("Failed to sign bytes: {}", e).into())
+            ssi::claims::SignatureError::Other(format!("Failed to sign bytes: {}", e).into())
         })
     }
 }

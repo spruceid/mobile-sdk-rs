@@ -11,13 +11,12 @@ pub mod oid4vp;
 pub mod storage_manager;
 pub mod trust_manager;
 pub mod vdc_collection;
+pub mod w3c_vc_barcodes;
 pub mod wallet;
 
-// Re-export at the top-level
-pub use crate::common::*;
-pub use crate::key_manager::*;
-pub use crate::mdl::*;
-pub use crate::storage_manager::*;
-pub use crate::trust_manager::*;
-pub use crate::vdc_collection::*;
-pub use crate::wallet::*;
+pub use common::*;
+pub use key_manager::*;
+pub use mdl::*;
+pub use storage_manager::*;
+pub use vdc_collection::*;
+pub use wallet::*;

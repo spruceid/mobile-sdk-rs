@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::common::Value;
 use crate::storage_manager::{StorageManagerError, StorageManagerInterface};
 
-use oid4vp::core::{credential_format::ClaimFormatDesignation, metadata::WalletMetadata};
+use oid4vp::core::metadata::WalletMetadata;
 
 /// Internal prefix for the wallet metadata.
 const DEFAULT_WALLET_METADATA_KEY: &str = "WalletMetadata.default";
@@ -60,37 +60,6 @@ impl MetadataManager {
             }
             Err(e) => Err(e),
         }
-    }
-
-    /// Add a new supported request object signing algorithm to the wallet metadata.
-    pub fn add_request_object_signing_alg(
-        &mut self,
-        algorithm: String,
-        storage: Arc<dyn StorageManagerInterface>,
-    ) -> Result<(), MetadataManagerError> {
-        self.cache
-            .add_request_object_signing_alg(algorithm)
-            .map_err(|e| MetadataManagerError::RequestObjectSigningAlgorithm(e.to_string()))?;
-
-        // Overwrite the metadata with the new algorithm.
-        Self::add_metadata(&self.cache, storage)
-    }
-
-    /// Add a new claim format algorithm supported to the wallet.
-    pub fn add_claim_format_alg_values_supported(
-        &mut self,
-        algorithm: String,
-        claim_format: &ClaimFormatDesignation,
-        storage: Arc<dyn StorageManagerInterface>,
-    ) -> Result<(), MetadataManagerError> {
-        self.cache
-            .vp_formats_supported_mut()
-            .0
-            .get_mut(claim_format)
-            .map(|formats| formats.add_alg(algorithm));
-
-        // Overwrite the metadata with the new algorithm.
-        Self::add_metadata(&self.cache, storage)
     }
 
     /// Returns a reference to the wallet metadata.

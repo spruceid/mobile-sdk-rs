@@ -19,7 +19,7 @@
 //! // the requested information. If so...
 //! let signed_response_bytes = presentation_session.submit_response(user_permitted_items, key_id)?;
 //! // Presenting software then sends response_bytes over BLE to the reader, completing the exchange.
-use crate::{KeyManagerInterface, Wallet};
+use crate::{vdc_collection::VdcCollection, KeyManagerInterface, Wallet};
 
 use super::common::*;
 
@@ -59,9 +59,11 @@ impl Wallet {
         mdoc_id: &str,
         uuid: Uuid,
     ) -> Result<MdlPresentationSession, SessionError> {
+        let key = VdcCollection::storage_key(&CredentialType::Iso18013_5_1mDl, mdoc_id);
+
         let document = self
             .vdc_collection
-            .get(mdoc_id, self.storage_manager.clone())
+            .get(key, &self.storage_manager)
             .map_err(|_| SessionError::Generic {
                 value: "Error in VDC Collection".to_string(),
             })?
@@ -382,7 +384,7 @@ mod tests {
                     CredentialType::Iso18013_5_1mDl,
                     mdoc_bytes,
                 ),
-                second_smi,
+                &second_smi,
             )
             .unwrap();
 

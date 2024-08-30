@@ -95,7 +95,7 @@ impl KeyManagerInterface for LocalKeyManager {
         let mut iv: Vec<u8> = Vec::with_capacity(payload.len());
         OsRng.fill_bytes(&mut iv);
         let ciphertext = payload.iter().zip(iv.clone()).map(|(p, i)| p ^ i).collect();
-        Ok(Arc::new(EncryptedPayload::new(iv, ciphertext)))
+        Ok(EncryptedPayload::new(iv, ciphertext))
     }
 
     #[doc = " Decrypt a ciphertext with a key in the key manager. Returns a"]
@@ -113,10 +113,12 @@ impl KeyManagerInterface for LocalKeyManager {
             .ok_or(KeyManagerError::KeyNotFound)?
             .clone();
 
-        Ok(encrypted_payload
-            .ciphertext()
+        let iv_bytes = encrypted_payload.iv();
+        let ciphertext_bytes = encrypted_payload.ciphertext();
+
+        Ok(ciphertext_bytes
             .iter()
-            .zip(encrypted_payload.iv())
+            .zip(iv_bytes)
             .map(|(c, i)| c ^ i)
             .collect())
     }

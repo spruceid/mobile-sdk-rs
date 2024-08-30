@@ -1,19 +1,19 @@
 use crate::{
     common::{Key, Url},
     credentials_callback::{CredentialCallbackError, CredentialCallbackInterface},
-    key_manager::{KeyManagerError, KeyManagerInterface, DEFAULT_KEY_INDEX, KEY_MANAGER_PREFIX},
-    metadata_manager::{MetadataManager, MetadataManagerError},
+    key_manager::{KeyManagerError, KeyManagerInterface},
+    // metadata_manager::{MetadataManager, MetadataManagerError},
     storage_manager::{self, StorageManagerInterface},
-    trust_manager::TrustManager,
-    vdc_collection::{VdcCollection, VdcCollectionError},
-    Credential,
+    // trust_manager::TrustManager,
+    vdc_collection::{Credential, VdcCollection, VdcCollectionError},
 };
 
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use anyhow::Result;
 use oid4vp::{
-    core::authorization_request::parameters::ResponseMode, wallet::Wallet as OID4VPWallet,
+    core::{authorization_request::parameters::ResponseMode, metadata::WalletMetadata},
+    wallet::Wallet as OID4VPWallet,
 };
 use thiserror::Error;
 
@@ -33,8 +33,6 @@ pub enum WalletError {
     Storage(#[from] storage_manager::StorageManagerError),
     #[error(transparent)]
     VdcCollection(#[from] VdcCollectionError),
-    #[error(transparent)]
-    MetadataManager(#[from] MetadataManagerError),
     #[error(transparent)]
     KeyManager(#[from] KeyManagerError),
     #[error("Required credential not found for input descriptor id: {0}")]
@@ -97,13 +95,17 @@ impl From<uniffi::UnexpectedUniFFICallbackError> for WalletError {
 #[derive(uniffi::Object, Debug)]
 pub struct Wallet {
     pub(crate) client: oid4vp::core::util::ReqwestClient,
-    pub(crate) metadata: MetadataManager,
+    pub(crate) metadata: WalletMetadata,
+    // TODO: Use `MetadataManager` once merged.
+    // pub(crate) metadata: MetadataManager,
     pub(crate) vdc_collection: VdcCollection,
     // NOTE: The wallet has internal access to the trust manager APIs, but
     // is currently not exposing them to the foreign function interface.
     // This is because the trust manager is intended to be used internally by the wallet.
     // The [TrustManager] does not implement uniffi bindings.
-    pub(crate) trust_manager: TrustManager,
+    // pub(crate) trust_manager: TrustManager,
+    // TODO: Use the `TrustManager` once merged.
+    pub(crate) trust_manager: Vec<String>,
     pub(crate) key_manager: Arc<dyn KeyManagerInterface>,
     pub(crate) storage_manager: Arc<dyn StorageManagerInterface>,
     // // The active key index is used to determine which key to used for signing.
@@ -143,15 +145,17 @@ impl Wallet {
         // Initalized the metdata manager with the device storage.
         // This will load any existing metadata from storage, otherwise
         // it will create a new metadata instance.
-        let metadata = MetadataManager::initialize(storage_manager.clone())?;
+        // let metadata = MetadataManager::initialize(&storage_manager)?;
 
         Ok(Arc::new(Self {
             client,
-            metadata,
+            // TODO: Replace with `MetadataManager` once merged.
+            metadata: WalletMetadata::openid4vp_scheme_static(),
             key_manager,
             storage_manager,
             vdc_collection: VdcCollection::new(),
-            trust_manager: TrustManager::new(),
+            trust_manager: Vec::new(),
+            // trust_manager: TrustManager::new(),
             // TODO: Remove the key should be determined by the
             // requested credential to be presented.
             // active_key_index: Arc::new(RwLock::new(DEFAULT_KEY_INDEX)),
@@ -161,13 +165,13 @@ impl Wallet {
     /// Add a credential to the wallet.
     ///
     /// This method will add a verifiable credential to the wallet.
-    pub fn add_credential(&self, credential: Arc<Credential>) -> Result<(), WalletError> {
+    pub fn add_credential(&self, credential: Arc<Credential>) -> Result<Key, WalletError> {
         // NOTE: This will fail if there is more than one strong reference to the credential.
         let credential =
             Arc::into_inner(credential).ok_or(WalletError::InvalidCredentialReference)?;
 
         self.vdc_collection
-            .add(credential, self.storage_manager.clone())
+            .add(credential, &self.storage_manager)
             .map_err(Into::into)
     }
 
@@ -196,6 +200,7 @@ impl Wallet {
     pub async fn handle_oid4vp_request(
         &self,
         url: Url,
+        // NOTE: The callback handles UI interactions.
         callback: Arc<dyn CredentialCallbackInterface>,
     ) -> Result<Option<Url>, WalletError> {
         let request = self
@@ -205,7 +210,7 @@ impl Wallet {
 
         let response = match request.response_mode() {
             ResponseMode::DirectPost => {
-                self.handle_unencoded_authorization_request(&request, callback.clone())
+                self.handle_unencoded_authorization_request(&request, &callback)
                     .await?
             }
             // TODO: Implement support for other response modes?

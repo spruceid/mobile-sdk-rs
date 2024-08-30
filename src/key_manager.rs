@@ -55,17 +55,17 @@ pub struct EncryptedPayload {
 #[uniffi::export]
 impl EncryptedPayload {
     #[uniffi::constructor]
-    pub fn new(iv: Vec<u8>, ciphertext: Vec<u8>) -> Self {
-        Self { iv, ciphertext }
+    pub fn new(iv: Vec<u8>, ciphertext: Vec<u8>) -> Arc<Self> {
+        Arc::new(Self { iv, ciphertext })
     }
 
     /// Get the initialization vector (IV) for the encrypted payload.
-    pub fn iv(&self) -> Vec<u8> {
+    pub fn iv(self: &Arc<Self>) -> Vec<u8> {
         self.iv.clone()
     }
 
     /// Get the ciphertext for the encrypted payload.
-    pub fn ciphertext(&self) -> Vec<u8> {
+    pub fn ciphertext(self: &Arc<Self>) -> Vec<u8> {
         self.ciphertext.clone()
     }
 }
@@ -81,8 +81,8 @@ pub trait KeyManagerInterface: Send + Sync + Debug {
     /// Check if a key exists in the key manager.
     fn key_exists(&self, id: Key) -> bool;
 
-    // /// Get a secret key fr#0e271com the key manager.
-    // fn get_secret_key(&self, id: Key) -> Option<Box<dyn SecretKeyInterface>>;
+    // /// Get a secret key from the key manager.
+    // fn get_secret_key(&self, id: Key) -> Option<Arc<dyn SecretKeyInterface>>;
 
     /// Generate a signing key in the key manager.
     fn generate_signing_key(&self, id: Key) -> bool;
