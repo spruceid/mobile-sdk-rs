@@ -44,4 +44,5 @@ isomdl = { git = "https://github.com/spruceid/isomdl", rev = "1f4f762" }
 
 [patch.'https://github.com/spruceid/oid4vp-rs']
 # TODO: replace this once oid4vp is merged.
-oid4vp = { git = "https://github.com/Ryanmtate/oid4vp-rs", rev = "915b922" }
+# oid4vp = { git = "https://github.com/Ryanmtate/oid4vp-rs", rev = "915b922" }
+oid4vp = { path = "../oid4vp-rs" }

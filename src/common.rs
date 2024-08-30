@@ -12,7 +12,7 @@ impl UniffiCustomTypeConverter for CredentialType {
         Ok(CredentialType::from(credential_type.as_str()))
     }
     fn from_custom(credential_type: Self) -> Self::Builtin {
-        credential_type.into()
+        (&credential_type).into()
     }
 }
 
@@ -54,7 +54,7 @@ impl UniffiCustomTypeConverter for Url {
 uniffi::custom_newtype!(Key, String);
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Key(pub String);
+pub struct Key(pub(crate) String);
 
 impl Key {
     /// Create a new key with a prefix
@@ -77,6 +77,12 @@ impl From<Key> for String {
 impl From<String> for Key {
     fn from(key: String) -> Self {
         Self(key)
+    }
+}
+
+impl From<&Key> for String {
+    fn from(key: &Key) -> Self {
+        key.0.to_owned()
     }
 }
 

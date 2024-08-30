@@ -3614,7 +3614,6 @@ dependencies = [
 [[package]]
 name = "oid4vp"
 version = "0.1.0"
-source = "git+https://github.com/Ryanmtate/oid4vp-rs?rev=915b922#915b92264d31990fb9797755ebe8ee599b663cac"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3644,7 +3643,6 @@ dependencies = [
 [[package]]
 name = "oid4vp-frontend"
 version = "0.1.0"
-source = "git+https://github.com/Ryanmtate/oid4vp-rs?rev=915b922#915b92264d31990fb9797755ebe8ee599b663cac"
 dependencies = [
  "serde",
  "serde_json",
