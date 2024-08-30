@@ -85,8 +85,8 @@ impl Wallet {
             value: format!("Could not initialize session: {e:?}"),
         })?;
         let ble_ident = session
-                .ble_ident()
-                .map_err(|e| SessionError::Generic {
+            .ble_ident()
+            .map_err(|e| SessionError::Generic {
                 value: format!("Couldn't get BLE identification: {e:?}").to_string(),
             })?
             .to_vec();
