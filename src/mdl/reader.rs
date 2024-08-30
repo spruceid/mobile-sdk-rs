@@ -224,7 +224,8 @@ impl From<serde_json::Value> for MDocItem {
 #[derive(uniffi::Record, Debug)]
 pub struct MDLReaderResponseData {
     state: Arc<MDLSessionManager>,
-    verified_response: HashMap<String, HashMap<String, HashMap<String, MDocItem>>>,
+    /// Contains the namespaces for the mDL directly, without top-level doc types
+    verified_response: HashMap<String, HashMap<String, MDocItem>>,
 }
 
 #[uniffi::export]
@@ -234,6 +235,16 @@ pub fn handle_response(
 ) -> Result<MDLReaderResponseData, MDLReaderResponseError> {
     let mut state = state.0.clone();
     let validated_response = state.handle_response(&response);
+    if !validated_response.errors.is_empty() {
+        return Err(MDLReaderResponseError::Generic {
+            value: serde_json::to_string(&validated_response.errors).map_err(|e| {
+                MDLReaderResponseError::Generic {
+                    value: format!("Could not serialze errors: {e:?}"),
+                }
+            })?,
+        });
+    }
+    // These checks should be unreachable as they always have a corresponding entry in `errors`
     if let validated_response::Status::Invalid = validated_response.decryption {
         return Err(MDLReaderResponseError::InvalidDecryption);
     }
@@ -246,43 +257,20 @@ pub fn handle_response(
     if let validated_response::Status::Invalid = validated_response.device_authentication {
         return Err(MDLReaderResponseError::InvalidDeviceAuthentication);
     }
-    if !validated_response.errors.is_empty() {
-        return Err(MDLReaderResponseError::Generic {
-            value: serde_json::to_string(&validated_response.errors).map_err(|e| {
-                MDLReaderResponseError::Generic {
-                    value: format!("Could not serialze errors: {e:?}"),
-                }
-            })?,
-        });
-    }
+    // We get the namespaces directly without the top-level doc types
     let verified_response: Result<_, _> = validated_response
         .response
         .into_iter()
-        .map(|(doc_type, namespaces)| {
-            if let Some(namespaces) = namespaces.as_object() {
-                let namespaces: Result<_, _> = namespaces
-                    .into_iter()
-                    .map(|(namespace, items)| {
-                        if let Some(items) = items.as_object() {
-                            let items = items
-                                .iter()
-                                .map(|(item, value)| (item.clone(), value.clone().into()))
-                                .collect();
-                            Ok((namespace.to_string(), items))
-                        } else {
-                            Err(MDLReaderResponseError::Generic {
-                                value: "Items not array".to_string(),
-                            })
-                        }
-                    })
+        .map(|(namespace, items)| {
+            if let Some(items) = items.as_object() {
+                let items = items
+                    .iter()
+                    .map(|(item, value)| (item.clone(), value.clone().into()))
                     .collect();
-                let namespaces = namespaces.map_err(|e| MDLReaderResponseError::Generic {
-                    value: format!("Unable to parse response: {e:?}"),
-                })?;
-                Ok((doc_type, namespaces))
+                Ok((namespace.to_string(), items))
             } else {
                 Err(MDLReaderResponseError::Generic {
-                    value: "Non-hashmap namespaces".to_string(),
+                    value: format!("Items not object, instead: {items:#?}"),
                 })
             }
         })

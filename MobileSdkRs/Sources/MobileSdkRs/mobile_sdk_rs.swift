@@ -959,11 +959,17 @@ public func FfiConverterTypeMDLReaderRequest_lower(_ value: MdlReaderRequest) ->
 
 public struct MdlReaderResponseData {
     public var state: MdlSessionManager
-    public var verifiedResponse: [String: [String: [String: MDocItem]]]
+    /**
+     * Contains the namespaces for the mDL directly, without top-level doc types
+     */
+    public var verifiedResponse: [String: [String: MDocItem]]
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(state: MdlSessionManager, verifiedResponse: [String: [String: [String: MDocItem]]]) {
+    public init(state: MdlSessionManager, 
+        /**
+         * Contains the namespaces for the mDL directly, without top-level doc types
+         */verifiedResponse: [String: [String: MDocItem]]) {
         self.state = state
         self.verifiedResponse = verifiedResponse
     }
@@ -976,13 +982,13 @@ public struct FfiConverterTypeMDLReaderResponseData: FfiConverterRustBuffer {
         return
             try MdlReaderResponseData(
                 state: FfiConverterTypeMDLSessionManager.read(from: &buf), 
-                verifiedResponse: FfiConverterDictionaryStringDictionaryStringDictionaryStringTypeMDocItem.read(from: &buf)
+                verifiedResponse: FfiConverterDictionaryStringDictionaryStringTypeMDocItem.read(from: &buf)
         )
     }
 
     public static func write(_ value: MdlReaderResponseData, into buf: inout [UInt8]) {
         FfiConverterTypeMDLSessionManager.write(value.state, into: &buf)
-        FfiConverterDictionaryStringDictionaryStringDictionaryStringTypeMDocItem.write(value.verifiedResponse, into: &buf)
+        FfiConverterDictionaryStringDictionaryStringTypeMDocItem.write(value.verifiedResponse, into: &buf)
     }
 }
 
@@ -2660,29 +2666,6 @@ fileprivate struct FfiConverterDictionaryStringDictionaryStringSequenceString: F
         for _ in 0..<len {
             let key = try FfiConverterString.read(from: &buf)
             let value = try FfiConverterDictionaryStringSequenceString.read(from: &buf)
-            dict[key] = value
-        }
-        return dict
-    }
-}
-
-fileprivate struct FfiConverterDictionaryStringDictionaryStringDictionaryStringTypeMDocItem: FfiConverterRustBuffer {
-    public static func write(_ value: [String: [String: [String: MDocItem]]], into buf: inout [UInt8]) {
-        let len = Int32(value.count)
-        writeInt(&buf, len)
-        for (key, value) in value {
-            FfiConverterString.write(key, into: &buf)
-            FfiConverterDictionaryStringDictionaryStringTypeMDocItem.write(value, into: &buf)
-        }
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String: [String: [String: MDocItem]]] {
-        let len: Int32 = try readInt(&buf)
-        var dict = [String: [String: [String: MDocItem]]]()
-        dict.reserveCapacity(Int(len))
-        for _ in 0..<len {
-            let key = try FfiConverterString.read(from: &buf)
-            let value = try FfiConverterDictionaryStringDictionaryStringTypeMDocItem.read(from: &buf)
             dict[key] = value
         }
         return dict
