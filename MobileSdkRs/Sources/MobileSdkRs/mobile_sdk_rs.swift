@@ -1000,11 +1000,11 @@ public struct MdlReaderSessionData {
     public var state: MdlSessionManager
     public var uuid: Uuid
     public var request: Data
-    public var bleIdent: String
+    public var bleIdent: Data
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(state: MdlSessionManager, uuid: Uuid, request: Data, bleIdent: String) {
+    public init(state: MdlSessionManager, uuid: Uuid, request: Data, bleIdent: Data) {
         self.state = state
         self.uuid = uuid
         self.request = request
@@ -1021,7 +1021,7 @@ public struct FfiConverterTypeMDLReaderSessionData: FfiConverterRustBuffer {
                 state: FfiConverterTypeMDLSessionManager.read(from: &buf), 
                 uuid: FfiConverterTypeUuid.read(from: &buf), 
                 request: FfiConverterData.read(from: &buf), 
-                bleIdent: FfiConverterString.read(from: &buf)
+                bleIdent: FfiConverterData.read(from: &buf)
         )
     }
 
@@ -1029,7 +1029,7 @@ public struct FfiConverterTypeMDLReaderSessionData: FfiConverterRustBuffer {
         FfiConverterTypeMDLSessionManager.write(value.state, into: &buf)
         FfiConverterTypeUuid.write(value.uuid, into: &buf)
         FfiConverterData.write(value.request, into: &buf)
-        FfiConverterString.write(value.bleIdent, into: &buf)
+        FfiConverterData.write(value.bleIdent, into: &buf)
     }
 }
 
@@ -1085,11 +1085,11 @@ public func FfiConverterTypeRequestData_lower(_ value: RequestData) -> RustBuffe
 public struct SessionData {
     public var state: SessionManagerEngaged
     public var qrCodeUri: String
-    public var bleIdent: String
+    public var bleIdent: Data
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(state: SessionManagerEngaged, qrCodeUri: String, bleIdent: String) {
+    public init(state: SessionManagerEngaged, qrCodeUri: String, bleIdent: Data) {
         self.state = state
         self.qrCodeUri = qrCodeUri
         self.bleIdent = bleIdent
@@ -1104,14 +1104,14 @@ public struct FfiConverterTypeSessionData: FfiConverterRustBuffer {
             try SessionData(
                 state: FfiConverterTypeSessionManagerEngaged.read(from: &buf), 
                 qrCodeUri: FfiConverterString.read(from: &buf), 
-                bleIdent: FfiConverterString.read(from: &buf)
+                bleIdent: FfiConverterData.read(from: &buf)
         )
     }
 
     public static func write(_ value: SessionData, into buf: inout [UInt8]) {
         FfiConverterTypeSessionManagerEngaged.write(value.state, into: &buf)
         FfiConverterString.write(value.qrCodeUri, into: &buf)
-        FfiConverterString.write(value.bleIdent, into: &buf)
+        FfiConverterData.write(value.bleIdent, into: &buf)
     }
 }
 

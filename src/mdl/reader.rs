@@ -38,7 +38,7 @@ pub struct MDLReaderSessionData {
     pub state: Arc<MDLSessionManager>,
     uuid: Uuid,
     pub request: Vec<u8>,
-    ble_ident: String,
+    ble_ident: Vec<u8>,
 }
 
 #[uniffi::export]
@@ -97,14 +97,10 @@ pub fn establish_session(
                 value: "the device did not transmit a central client uuid".to_string(),
             })?;
 
-    // TODO this must be wrong -- it's encoded as a hex string, but then advertised as raw bytes
-    let mut ble_ident = hex::encode(ble_ident);
-    ble_ident.insert_str(0, "0x");
-
     Ok(MDLReaderSessionData {
         state: Arc::new(MDLSessionManager(manager)),
         request,
-        ble_ident,
+        ble_ident: ble_ident.to_vec(),
         uuid: *uuid,
     })
 }

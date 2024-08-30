@@ -34,7 +34,7 @@ pub struct SessionManagerEngaged(device::SessionManagerEngaged);
 struct SessionData {
     state: Arc<SessionManagerEngaged>,
     qr_code_uri: String,
-    ble_ident: String,
+    ble_ident: Vec<u8>,
 }
 
 uniffi::custom_type!(Uuid, String);
@@ -144,14 +144,12 @@ fn initialise_session(document: Arc<MDoc>, uuid: Uuid) -> Result<SessionData, Se
     .map_err(|e| SessionError::Generic {
         value: format!("Could not initialize session: {e:?}"),
     })?;
-    let mut ble_ident =
-        session
-            .ble_ident()
-            .map(hex::encode)
-            .map_err(|e| SessionError::Generic {
-                value: format!("Could not encode hex BLE ident: {e:?}"),
-            })?;
-    ble_ident.insert_str(0, "0x");
+    let ble_ident = session
+        .ble_ident()
+        .map_err(|e| SessionError::Generic {
+            value: format!("Could not get BLE ident: {e:?}"),
+        })?
+        .to_vec();
     let (engaged_state, qr_code_uri) =
         session.qr_engagement().map_err(|e| SessionError::Generic {
             value: format!("Could not generate qr engagement: {e:?}"),
