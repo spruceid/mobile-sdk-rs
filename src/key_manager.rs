@@ -81,8 +81,8 @@ pub trait KeyManagerInterface: Send + Sync + Debug {
     /// Check if a key exists in the key manager.
     fn key_exists(&self, id: Key) -> bool;
 
-    // /// Get a secret key from the key manager.
-    // fn get_secret_key(&self, id: Key) -> Option<Box<dyn SecretKeyInterface>>;
+    /// Get a secret key from the key manager.
+    fn get_secret_key(&self, id: Key) -> Option<Arc<dyn SecretKeyInterface>>;
 
     /// Generate a signing key in the key manager.
     fn generate_signing_key(&self, id: Key) -> Result<bool, KeyManagerError>;
