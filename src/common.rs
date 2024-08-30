@@ -53,6 +53,11 @@ impl UniffiCustomTypeConverter for Url {
 
 uniffi::custom_newtype!(Key, String);
 
+/// Generic key type for storage.
+///
+/// This type is used to store and retrieve values from the storage manager.
+///
+/// The key is a string, and can be prefixed with a string to group keys together.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Key(pub(crate) String);
 
@@ -60,11 +65,6 @@ impl Key {
     /// Create a new key with a prefix
     pub fn with_prefix(prefix: &str, key: &str) -> Self {
         Self(format!("{}{}", prefix, key))
-    }
-
-    /// Strip the prefix from the key, returning the key without the prefix
-    pub fn strip_prefix(&self, prefix: &str) -> Option<String> {
-        self.0.strip_prefix(prefix).map(ToOwned::to_owned)
     }
 }
 

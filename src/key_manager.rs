@@ -8,7 +8,7 @@ pub const KEY_MANAGER_PREFIX: &str = "SSIKeyManager.";
 /// This is the default index for a key in the key manager.
 pub const DEFAULT_KEY_INDEX: u8 = 0;
 
-#[uniffi::export(callback_interface)]
+#[uniffi::export(with_foreign)]
 pub trait SecretKeyInterface: Send + Sync {
     // TODO: Review available methods in android and cryptokit to implement here
 }
@@ -55,17 +55,17 @@ pub struct EncryptedPayload {
 #[uniffi::export]
 impl EncryptedPayload {
     #[uniffi::constructor]
-    pub fn new(iv: Vec<u8>, ciphertext: Vec<u8>) -> Self {
-        Self { iv, ciphertext }
+    pub fn new(iv: Vec<u8>, ciphertext: Vec<u8>) -> Arc<Self> {
+        Arc::new(Self { iv, ciphertext })
     }
 
     /// Get the initialization vector (IV) for the encrypted payload.
-    pub fn iv(&self) -> Vec<u8> {
+    pub fn iv(self: Arc<Self>) -> Vec<u8> {
         self.iv.clone()
     }
 
     /// Get the ciphertext for the encrypted payload.
-    pub fn ciphertext(&self) -> Vec<u8> {
+    pub fn ciphertext(self: Arc<Self>) -> Vec<u8> {
         self.ciphertext.clone()
     }
 }
@@ -73,7 +73,7 @@ impl EncryptedPayload {
 /// KeyManager for interacting with the device's
 /// cryptographic device APIs for signing and encrypting
 /// messages.
-#[uniffi::export(callback_interface)]
+#[uniffi::export(with_foreign)]
 pub trait KeyManagerInterface: Send + Sync + Debug {
     /// Reset the key manager, removing all keys.
     fn reset(&self) -> bool;
