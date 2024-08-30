@@ -1449,7 +1449,7 @@ public enum MDocItem {
     )
     case integer(Int64
     )
-    case map([String: MDocItem]
+    case itemMap([String: MDocItem]
     )
     case array([MDocItem]
     )
@@ -1472,7 +1472,7 @@ public struct FfiConverterTypeMDocItem: FfiConverterRustBuffer {
         case 3: return .integer(try FfiConverterInt64.read(from: &buf)
         )
         
-        case 4: return .map(try FfiConverterDictionaryStringTypeMDocItem.read(from: &buf)
+        case 4: return .itemMap(try FfiConverterDictionaryStringTypeMDocItem.read(from: &buf)
         )
         
         case 5: return .array(try FfiConverterSequenceTypeMDocItem.read(from: &buf)
@@ -1501,7 +1501,7 @@ public struct FfiConverterTypeMDocItem: FfiConverterRustBuffer {
             FfiConverterInt64.write(v1, into: &buf)
             
         
-        case let .map(v1):
+        case let .itemMap(v1):
             writeInt(&buf, Int32(4))
             FfiConverterDictionaryStringTypeMDocItem.write(v1, into: &buf)
             
