@@ -54,7 +54,7 @@ impl Wallet {
     /// A Result, with the `Ok` containing a tuple consisting of an enum representing
     /// the state of the presentation, a String containing the QR code URI, and a
     /// String containing the BLE ident.
-    pub fn initialize_mdl_presentation(
+    pub async fn initialize_mdl_presentation(
         &self,
         mdoc_id: &str,
         uuid: Uuid,
@@ -64,6 +64,7 @@ impl Wallet {
         let document = self
             .vdc_collection
             .get(key, &self.storage_manager)
+            .await
             .map_err(|_| SessionError::Generic {
                 value: "Error in VDC Collection".to_string(),
             })?
@@ -368,8 +369,8 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn end_to_end_ble_presentment() {
+    #[tokio::test]
+    async fn end_to_end_ble_presentment() {
         let mdoc_b64 = include_str!("../../tests/res/mdoc.b64");
         let mdoc_bytes = BASE64_STANDARD.decode(mdoc_b64).unwrap();
         let mdoc_id = Uuid::new_v4();
@@ -394,11 +395,13 @@ mod tests {
                 ),
                 &second_smi,
             )
+            .await
             .unwrap();
 
         // Start a new presentation session
         let session = wallet
             .initialize_mdl_presentation(&mdoc_id.to_string(), Uuid::new_v4())
+            .await
             .unwrap();
 
         let namespaces: device_request::Namespaces = [(

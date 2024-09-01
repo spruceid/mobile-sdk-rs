@@ -48,15 +48,17 @@ impl AsRef<WalletMetadata> for MetadataManager {
 }
 
 impl MetadataManager {
-    pub fn initialize(
+    pub async fn initialize(
         storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<Self, MetadataManagerError> {
-        match Self::get_metadata(storage.clone()) {
+        match Self::get_metadata(storage.clone()).await {
             Ok(metadata) => Ok(Self { cache: metadata }),
             Err(MetadataManagerError::NoMetadataFound) => {
                 // Add default metadata to the wallet.
-                Self::add_metadata(&WalletMetadata::openid4vp_scheme_static(), storage.clone())?;
-                Self::initialize(storage.clone())
+                let cache = WalletMetadata::openid4vp_scheme_static();
+                Self::add_metadata(&cache, storage.clone()).await?;
+
+                Ok(Self { cache })
             }
             Err(e) => Err(e),
         }
@@ -75,7 +77,7 @@ impl MetadataManager {
     }
 
     // Internal method for adding wallet metadata to the wallet.
-    fn add_metadata(
+    async fn add_metadata(
         metadata_value: &WalletMetadata,
         storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<(), MetadataManagerError> {
@@ -84,15 +86,17 @@ impl MetadataManager {
 
         storage
             .add(DEFAULT_WALLET_METADATA_KEY.into(), Value(value))
+            .await
             .map_err(MetadataManagerError::Storage)
     }
 
     // Internal method for getting the wallet metadata from the wallet.
-    fn get_metadata(
+    async fn get_metadata(
         storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<WalletMetadata, MetadataManagerError> {
         let value = storage
             .get(DEFAULT_WALLET_METADATA_KEY.into())
+            .await
             .map_err(MetadataManagerError::Storage)?
             .ok_or(MetadataManagerError::NoMetadataFound)?;
 

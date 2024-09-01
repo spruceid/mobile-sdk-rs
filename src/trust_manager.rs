@@ -62,17 +62,18 @@ impl TrustManager {
     /// Returns a [TrustManagerError] if the DID could not be
     /// added to the wallet due to a storage error or if the DID is blocked.
     ///
-    pub fn add_did(
+    pub async fn add_did(
         &self,
         did_key: String,
         storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<(), TrustManagerError> {
-        if self.is_blocked_key(&did_key, storage.clone())? {
+        if self.is_blocked_key(&did_key, storage.clone()).await? {
             return Err(TrustManagerError::DIDBlocked(did_key));
         }
 
         storage
             .add(Key::with_prefix(KEY_PREFIX, &did_key), Value::from(true))
+            .await
             .map_err(TrustManagerError::Storage)
     }
 
@@ -89,13 +90,14 @@ impl TrustManager {
     /// removed from the wallet due to a storage error.
     ///
     ///
-    pub fn remove_did(
+    pub async fn remove_did(
         &self,
         did_key: String,
         storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<(), TrustManagerError> {
         storage
             .remove(Key::with_prefix(KEY_PREFIX, &did_key))
+            .await
             .map_err(TrustManagerError::Storage)
     }
 
@@ -118,13 +120,14 @@ impl TrustManager {
     ///
     /// Returns a [TrustManagerError] if the DID could not be
     /// blocked from the wallet due to a storage error.
-    pub fn block_did(
+    pub async fn block_did(
         &self,
         did_key: String,
         storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<(), TrustManagerError> {
         storage
             .add(Key::with_prefix(KEY_PREFIX, &did_key), Value::from(false))
+            .await
             .map_err(TrustManagerError::Storage)
     }
 
@@ -144,17 +147,18 @@ impl TrustManager {
     ///
     /// Returns a [TrustManagerError] if the DID could not be
     /// unblocked from the wallet due to a storage error.
-    pub fn unblock_did(
+    pub async fn unblock_did(
         &self,
         did_key: String,
         storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<(), TrustManagerError> {
-        if !self.is_blocked_key(&did_key, storage.clone())? {
+        if !self.is_blocked_key(&did_key, storage.clone()).await? {
             return Ok(()); // Noop if the key is not blocked.
         }
 
         storage
             .add(Key::with_prefix(KEY_PREFIX, &did_key), Value::from(true))
+            .await
             .map_err(TrustManagerError::Storage)
     }
 
@@ -170,21 +174,24 @@ impl TrustManager {
     ///
     /// Returns a [TrustManagerError] if the DIDs could not be
     /// retrieved from the wallet due to a storage error.
-    pub fn get_trusted_dids(
+    pub async fn get_trusted_dids(
         &self,
         storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<Vec<String>, TrustManagerError> {
-        let list = storage
+        let ids: Vec<String> = storage
             .list()
+            .await
             .map_err(TrustManagerError::Storage)?
             .into_iter()
             .filter_map(|id| id.strip_prefix(KEY_PREFIX))
-            .filter_map(|key| match self.is_trusted_key(&key, storage.clone()) {
-                Ok(true) => Some(key),
-                _ => None,
-            })
-            .collect::<Vec<String>>();
-
+            .collect();
+        let mut list: Vec<String> = Vec::with_capacity(ids.len());
+        for id in ids {
+            match self.is_trusted_key(&id, storage.clone()).await {
+                Ok(true) => list.push(id),
+                _ => (),
+            }
+        }
         Ok(list)
     }
 
@@ -200,20 +207,24 @@ impl TrustManager {
     ///
     /// Returns a [TrustManagerError] if the blocked DIDs could not be
     /// retrieved from the wallet due to a storage error.
-    pub fn get_blocked_dids(
+    pub async fn get_blocked_dids(
         &self,
         storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<Vec<String>, TrustManagerError> {
-        let list = storage
+        let ids: Vec<String> = storage
             .list()
+            .await
             .map_err(TrustManagerError::Storage)?
             .into_iter()
             .filter_map(|id| id.strip_prefix(KEY_PREFIX))
-            .filter_map(|key| match self.is_blocked_key(&key, storage.clone()) {
-                Ok(true) => Some(key),
-                _ => None,
-            })
-            .collect::<Vec<String>>();
+            .collect();
+        let mut list: Vec<String> = Vec::with_capacity(ids.len());
+        for id in ids {
+            match self.is_blocked_key(&id, storage.clone()).await {
+                Ok(true) => list.push(id),
+                _ => (),
+            }
+        }
 
         Ok(list)
     }
@@ -231,12 +242,12 @@ impl TrustManager {
     ///
     /// Returns a [TrustManagerError] if the DID could not be
     /// checked if it is trusted due to a storage error.
-    pub fn is_trusted_did(
+    pub async fn is_trusted_did(
         &self,
         did_key: String,
         storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<bool, TrustManagerError> {
-        self.is_trusted_key(&did_key, storage)
+        self.is_trusted_key(&did_key, storage).await
     }
 
     /// Check if a DID is blocked.
@@ -252,21 +263,21 @@ impl TrustManager {
     ///
     /// Returns a [TrustManagerError] if the DID could not be
     /// checked if it is blocked due to a storage error.
-    pub fn is_blocked_did(
+    pub async fn is_blocked_did(
         &self,
         did_key: String,
         storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<bool, TrustManagerError> {
-        self.is_blocked_key(&did_key, storage)
+        self.is_blocked_key(&did_key, storage).await
     }
 
     /// Internal method to check if a key is trusted.
-    fn is_trusted_key(
+    async fn is_trusted_key(
         &self,
         key: &String,
         storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<bool, TrustManagerError> {
-        match storage.get(Key::with_prefix(KEY_PREFIX, key)) {
+        match storage.get(Key::with_prefix(KEY_PREFIX, key)).await {
             Ok(Some(val)) => Ok(val == Value::from(true)),
             Ok(None) => Ok(false),
             Err(e) => Err(TrustManagerError::Storage(e)),
@@ -276,12 +287,12 @@ impl TrustManager {
     /// Internal method to check if a key is blocked.
     ///
     /// This is used internally to check if a key is blocked.
-    fn is_blocked_key(
+    async fn is_blocked_key(
         &self,
         key: &String,
         storage: Arc<dyn StorageManagerInterface>,
     ) -> Result<bool, TrustManagerError> {
-        match storage.get(Key::with_prefix(KEY_PREFIX, key)) {
+        match storage.get(Key::with_prefix(KEY_PREFIX, key)).await {
             Ok(Some(val)) => Ok(val == Value::from(false)),
             Ok(None) => Ok(false),
             Err(e) => Err(TrustManagerError::Storage(e)),

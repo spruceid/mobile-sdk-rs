@@ -165,13 +165,14 @@ impl Wallet {
     /// Add a credential to the wallet.
     ///
     /// This method will add a verifiable credential to the wallet.
-    pub fn add_credential(&self, credential: Arc<Credential>) -> Result<Key, WalletError> {
+    pub async fn add_credential(&self, credential: Arc<Credential>) -> Result<Key, WalletError> {
         // NOTE: This will fail if there is more than one strong reference to the credential.
         let credential =
             Arc::into_inner(credential).ok_or(WalletError::InvalidCredentialReference)?;
 
         self.vdc_collection
             .add(credential, &self.storage_manager)
+            .await
             .map_err(Into::into)
     }
 
