@@ -4,6 +4,8 @@ use crate::storage_manager::*;
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
+use ssi::claims::jwt::VerifiableCredential;
+use ssi::json_ld::syntax::Value;
 use thiserror::Error;
 use tracing::{info, info_span};
 
@@ -11,7 +13,7 @@ use tracing::{info, info_span};
 const KEY_PREFIX: &str = "Credential.";
 
 /// An individual credential.
-#[derive(Debug, uniffi::Object, Serialize, Deserialize)]
+#[derive(Debug, Clone, uniffi::Object, Serialize, Deserialize)]
 pub struct Credential {
     id: Uuid,
     format: ClaimFormatDesignation,
@@ -39,7 +41,7 @@ impl Credential {
 
     /// Get the ID of the credential.
     pub fn id(&self) -> Uuid {
-        self.id.clone()
+        self.id
     }
 
     /// Get the format of the credential.
@@ -82,10 +84,31 @@ impl Credential {
     }
 }
 
+// Internal methods for the Credential struct.
+impl Credential {
+    /// Serialize the credential into a JSON representation
+    /// of its underlying credential format type.
+    pub fn to_json(&self) -> Result<Value, VdcCollectionError> {
+        match self.format() {
+            ClaimFormatDesignation::JwtVc => {
+                let vc: VerifiableCredential = serde_cbor::from_slice(&self.payload)
+                    .map_err(|e| VdcCollectionError::DeserializeFailed(e.to_string()))?;
+
+                let json = serde_json::to_value(vc)
+                    .map_err(|e| VdcCollectionError::SerializeFailed(e.to_string()))?;
+
+                Ok(Value::from_serde_json(json))
+            }
+            // TODO: Add MDoc support.
+            format => Err(VdcCollectionError::UnsupportedFormat(format)),
+        }
+    }
+}
+
 /// Verifiable Digital Credential Collection
 ///
 /// This is the main interface to credentials.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct VdcCollection;
 
 #[derive(Error, Debug, uniffi::Error)]
@@ -105,6 +128,10 @@ pub enum VdcCollectionError {
     /// A Storage Manager Error occurred.
     #[error(transparent)]
     Storage(#[from] StorageManagerError),
+
+    /// The requested format is not supported.
+    #[error("The requested format is not supported: {0}")]
+    UnsupportedFormat(ClaimFormatDesignation),
 }
 
 // Handle unexpected errors when calling a foreign callback
@@ -177,7 +204,7 @@ impl VdcCollection {
     }
 
     /// Get a list of all the credentials that match a specified type.
-    pub fn all_entries_by_type(
+    pub fn entries_by_type(
         &self,
         ctype: &CredentialType,
         storage: &Arc<dyn StorageManagerInterface>,

@@ -14,7 +14,7 @@ pub enum StorageManagerError {
     #[error("Invalid Lookup Key")]
     InvalidLookupKey,
 
-    /// This error occurrs when we can retrieve a value, but could not decrypt it
+    /// This error occurs when we can retrieve a value, but could not decrypt it
     #[error("Could not decrypt retrieved value")]
     CouldNotDecryptValue,
 
@@ -30,6 +30,10 @@ pub enum StorageManagerError {
     /// An internal problem occurred in the storage manager.
     #[error("Internal Error")]
     InternalError,
+
+    /// This error occurs when the value does not exist for a key, but is required.
+    #[error("Value does not exist for key: {0}")]
+    NotFound(Key),
 }
 
 /// Interface: StorageManagerInterface

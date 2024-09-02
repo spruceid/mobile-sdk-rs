@@ -1,20 +1,17 @@
 use crate::{
-    common::{Key, Url},
-    credentials_callback::{CredentialCallbackError, CredentialCallbackInterface},
-    key_manager::{KeyManagerError, KeyManagerInterface, DEFAULT_KEY_INDEX, KEY_MANAGER_PREFIX},
+    common::*,
+    credentials_callback::CredentialCallbackError,
+    key_manager::{KeyManagerError, KeyManagerInterface},
     // metadata_manager::{MetadataManager, MetadataManagerError},
     storage_manager::{self, StorageManagerInterface},
     // trust_manager::TrustManager,
     vdc_collection::{Credential, VdcCollection, VdcCollectionError},
 };
 
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
-use anyhow::{bail, Result};
-use oid4vp::{
-    core::{authorization_request::parameters::ResponseMode, metadata::WalletMetadata},
-    wallet::Wallet as OID4VPWallet,
-};
+use anyhow::Result;
+use oid4vp::core::metadata::WalletMetadata;
 use thiserror::Error;
 
 /// The [WalletError] enum represents the errors that can occur
@@ -29,6 +26,8 @@ pub enum WalletError {
     OID4VPRequestValidation(String),
     #[error("Failed to resolve the presentation definition: {0}")]
     OID4VPPresentationDefinitionResolution(String),
+    #[error("Failed to create verifiable presentation token: {0}")]
+    OID4VPToken(String),
     #[error(transparent)]
     Storage(#[from] storage_manager::StorageManagerError),
     #[error(transparent)]
@@ -108,7 +107,7 @@ pub struct Wallet {
     // pub(crate) trust_manager: TrustManager,
     // TODO: Use the `TrustManager` once merged.
     pub(crate) trust_manager: Vec<String>,
-    pub(crate) key_manager: Arc<dyn KeyManagerInterface>,
+    pub(crate) _key_manager: Arc<dyn KeyManagerInterface>,
     pub(crate) storage_manager: Arc<dyn StorageManagerInterface>,
     // // The active key index is used to determine which key to used for signing.
     // // By default, this is set to the 0-index key.
@@ -139,7 +138,7 @@ impl Wallet {
     #[uniffi::constructor]
     pub fn new(
         storage_manager: Arc<dyn StorageManagerInterface>,
-        key_manager: Arc<dyn KeyManagerInterface>,
+        _key_manager: Arc<dyn KeyManagerInterface>,
     ) -> Result<Arc<Self>, WalletError> {
         let client = oid4vp::core::util::ReqwestClient::new()
             .map_err(|e| WalletError::HttpClientInitialization(format!("{e}")))?;
@@ -153,7 +152,7 @@ impl Wallet {
             client,
             // TODO: Replace with `MetadataManager` once merged.
             metadata: WalletMetadata::openid4vp_scheme_static(),
-            key_manager,
+            _key_manager,
             storage_manager,
             vdc_collection: VdcCollection::new(),
             trust_manager: Vec::new(),
@@ -173,50 +172,12 @@ impl Wallet {
             .map_err(Into::into)
     }
 
-    /// Handle an OID4VP authorization request provided as a URL.
-    ///
-    /// This method will validate and process the request, returning a
-    /// redirect URL with the encoded verifiable presentation token,
-    /// if the presentation exchange was successful.
-    ///
-    /// If the request is invalid or cannot be processed, an error will be returned.
-    ///
-    /// # Arguments
-    ///
-    /// * `url` - The URL containing the OID4VP authorization request.
-    ///
-    /// # Returns
-    ///
-    /// An optional URL containing the OID4VP response.
-    ///
-    /// # Errors
-    ///
-    /// * If the request is invalid;
-    /// * If the response mode is not supported;
-    /// * If the response submission fails.
-    ///
-    pub async fn handle_oid4vp_request(
-        &self,
-        url: Url,
-        // NOTE: The callback handles UI interactions.
-        callback: &Box<dyn CredentialCallbackInterface>,
-    ) -> Result<Option<Url>, WalletError> {
-        let request = self
-            .validate_request(url)
-            .await
-            .map_err(|e| WalletError::OID4VPRequestValidation(e.to_string()))?;
-
-        let response = match request.response_mode() {
-            ResponseMode::DirectPost => {
-                self.handle_unencoded_authorization_request(&request, callback)
-                    .await?
-            }
-            // TODO: Implement support for other response modes?
-            mode => return Err(WalletError::OID4VPUnsupportedResponseMode(mode.to_string())),
-        };
-
-        self.submit_response(request, response)
-            .await
-            .map_err(|e| WalletError::OID4VPResponseSubmission(e.to_string()))
+    /// Retrieve a credential from the wallet.
+    pub fn get_credential(&self, key: Key) -> Result<Arc<Credential>, WalletError> {
+        self.vdc_collection
+            .get(key.clone(), &self.storage_manager)
+            .map_err(WalletError::from)?
+            .ok_or(storage_manager::StorageManagerError::NotFound(key))
+            .map_err(WalletError::from)
     }
 }

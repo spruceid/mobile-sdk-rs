@@ -97,6 +97,12 @@ impl From<&str> for Key {
     }
 }
 
+impl std::fmt::Display for Key {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 uniffi::custom_newtype!(Value, Vec<u8>);
 
 #[derive(Debug, PartialEq)]
