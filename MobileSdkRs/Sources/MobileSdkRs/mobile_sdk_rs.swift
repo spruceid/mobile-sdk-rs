@@ -1339,10 +1339,10 @@ public convenience init() {
     }
 
     
-public static func newWithAsyncClient(client: SyncHttpClient) -> Oid4vci {
+public static func newWithAsyncClient(client: AsyncHttpClient) -> Oid4vci {
     return try!  FfiConverterTypeOid4vci.lift(try! rustCall() {
     uniffi_mobile_sdk_rs_fn_constructor_oid4vci_new_with_async_client(
-        FfiConverterTypeSyncHttpClient.lower(client),$0
+        FfiConverterTypeAsyncHttpClient.lower(client),$0
     )
 })
 }
@@ -4738,7 +4738,7 @@ private var initializationResult: InitializationResult = {
     if (uniffi_mobile_sdk_rs_checksum_constructor_oid4vci_new() != 27200) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_constructor_oid4vci_new_with_async_client() != 29232) {
+    if (uniffi_mobile_sdk_rs_checksum_constructor_oid4vci_new_with_async_client() != 57260) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_constructor_oid4vci_new_with_default_async_client() != 51040) {
