@@ -160,9 +160,15 @@ impl Wallet {
                         let credential_descriptor_tuple = (
                             DescriptorMap::new(
                                 input_descriptor_id,
+                                ClaimFormatDesignation::JwtVpJson,
+                                "$".into(),
+                            )
+                            // Credentials will be nested within a `vp` JSON object.
+                            .set_path_nested(DescriptorMap::new(
+                                credential.id().to_string(),
                                 credential.format(),
-                                format!("$.vp.verifiableCredential[{index}]"),
-                            ),
+                                format!("$.verifiableCredential[{index}]"),
+                            )),
                             credential.to_owned(),
                         );
 
