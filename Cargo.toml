@@ -19,7 +19,7 @@ path = "uniffi-bindgen.rs"
 uniffi = { version = "0.28.1", features = ["cli"] }
 
 isomdl = { git = "https://github.com/spruceid/isomdl", rev = "1f4f762" }
-oid4vci = { git = "https://github.com/spruceid/oid4vci-rs", branch = "feat/updates-for-sprucekit-integration" }
+oid4vci = { git = "https://github.com/spruceid/oid4vci-rs", rev = "020887f" }
 ssi = { version = "0.8.1", features = ["secp256r1", "secp384r1"] }
 
 async-trait = "0.1"
