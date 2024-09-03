@@ -2,8 +2,8 @@ use std::sync::{Arc, Mutex};
 
 use super::{
     oid4vci_exchange_credential, oid4vci_exchange_token, oid4vci_get_metadata, oid4vci_initiate,
-    oid4vci_initiate_with_offer, CredentialResponse, IHttpClient, Oid4vciError, Oid4vciMetadata,
-    Oid4vciSession, SyncHttpClient,
+    oid4vci_initiate_with_offer, AsyncHttpClient, CredentialResponse, IHttpClient, Oid4vciError,
+    Oid4vciMetadata, Oid4vciSession, SyncHttpClient,
 };
 
 #[derive(uniffi::Object)]
@@ -74,7 +74,7 @@ impl Oid4vci {
     }
 
     #[uniffi::constructor(name = "new_with_async_client")]
-    fn with_async_client(client: Arc<dyn SyncHttpClient>) -> Arc<Self> {
+    fn with_async_client(client: Arc<dyn AsyncHttpClient>) -> Arc<Self> {
         let http_client = Arc::new(client.into());
         Self {
             session: Mutex::new(None),
