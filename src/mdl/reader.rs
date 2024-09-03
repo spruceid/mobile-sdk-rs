@@ -136,15 +136,16 @@ pub enum MDLReaderResponseError {
     Generic { value: String },
 }
 
+// Currently, a lot of information is lost in `isomdl`. For example, bytes are
+// converted to strings, but we could also imagine detecting images and having
+// a specific enum variant for them.
 #[derive(uniffi::Enum, Debug)]
 pub enum MDocItem {
     Text(String),
     Bool(bool),
     Integer(i64),
-    // Bytes(Vec<u8>), // already converted in string
     ItemMap(HashMap<String, MDocItem>),
     Array(Vec<MDocItem>),
-    // Image(Vec<u8>) maybe?
 }
 
 impl From<serde_json::Value> for MDocItem {
