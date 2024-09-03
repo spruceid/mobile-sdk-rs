@@ -3,6 +3,8 @@ use oid4vci::{
     openidconnect::{DiscoveryError, ErrorResponse, RequestTokenError},
 };
 
+use super::HttpClientError;
+
 #[derive(thiserror::Error, uniffi::Error, Debug)]
 #[uniffi(flat_error)]
 pub enum Oid4vciError {
@@ -76,8 +78,15 @@ where
         Oid4vciError::RequestError(value.to_string())
     }
 }
+
 impl From<oid4vci::client::Error> for Oid4vciError {
     fn from(value: oid4vci::client::Error) -> Self {
+        Oid4vciError::RequestError(value.to_string())
+    }
+}
+
+impl From<HttpClientError> for Oid4vciError {
+    fn from(value: HttpClientError) -> Self {
         Oid4vciError::RequestError(value.to_string())
     }
 }

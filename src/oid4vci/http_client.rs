@@ -186,6 +186,18 @@ impl From<Arc<dyn AsyncHttpClient>> for IHttpClient {
     }
 }
 
+impl IHttpClient {
+    pub(crate) async fn call(
+        &self,
+        request: ExtHttpRequest,
+    ) -> Result<ExtHttpResponse, HttpClientError> {
+        match &self.0 {
+            Either::Left(sync_client) => sync_client.call(request),
+            Either::Right(async_client) => async_client.call(request).await,
+        }
+    }
+}
+
 /// Internal Arc Wrapper to be able to impl traits for it
 /// Examples include:
 ///  - `openidconnect::(As|S)yncHttpClient` for `uniffi`'s foreign trait

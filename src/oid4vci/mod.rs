@@ -23,15 +23,15 @@ use oid4vci::{
         profiles::{
             self,
             w3c::{CredentialDefinition, CredentialDefinitionLD},
-            CoreProfilesConfiguration, CoreProfilesOffer, CoreProfilesResponse,
+            CoreProfilesConfiguration, CoreProfilesResponse,
         },
     },
     credential::ResponseEnum,
     credential_offer::CredentialOfferParameters,
     metadata::AuthorizationMetadata,
     openidconnect::{
-        core::CoreGrantType, AuthorizationCode, ClientId, IssuerUrl, OAuth2TokenResponse,
-        RedirectUrl,
+        core::CoreGrantType, http::Request as ExtRequest, AuthorizationCode, ClientId, IssuerUrl,
+        OAuth2TokenResponse, RedirectUrl,
     },
     profiles::CredentialConfigurationProfile,
     proof_of_possession::Proof,
@@ -57,16 +57,32 @@ pub async fn oid4vci_initiate_with_offer(
         Oid4vciError::InvalidParameter("invalid credential_offer: failed to parse url".into())
     })?;
 
-    let credential_offer = credential_offer
+    let credential_offer = if let Some((_, uri)) = credential_offer
+        .query_pairs()
+        .find(|(k, _)| k == "credential_offer_uri")
+    {
+        let request = ExtRequest::get(&uri.to_string()).body(vec![]).unwrap();
+        let response = http_client.call(request).await?;
+
+        serde_json::from_slice(response.body()).map_err(|_| {
+            Oid4vciError::InvalidParameter(
+                "invalid credential_offer: failed to parse response".into(),
+            )
+        })
+    } else if let Some((_, offer)) = credential_offer
         .query_pairs()
         .find(|(k, _)| k == "credential_offer")
-        .ok_or(Oid4vciError::InvalidParameter(
+    {
+        serde_json::from_str(&offer).map_err(|_| {
+            Oid4vciError::InvalidParameter(
+                "invalid credential_offer: failed to parse object".into(),
+            )
+        })
+    } else {
+        Err(Oid4vciError::InvalidParameter(
             "invalid credential_offer: missing query parameter".into(),
-        ))?;
-
-    let credential_offer =
-        serde_json::from_str::<CredentialOfferParameters<CoreProfilesOffer>>(&credential_offer.1)
-            .map_err(|e| Oid4vciError::SerdeJsonError(e.to_string()))?;
+        ))
+    }?;
 
     let base_url = match &credential_offer {
         CredentialOfferParameters::Value {
