@@ -122,56 +122,6 @@ fn names_only_registry_from_pem(pem: &str) -> Result<TrustAnchor, x509::error::E
     Ok(anchor)
 }
 
-// TODO what was this for? Reusing the same reader?
-#[derive(thiserror::Error, uniffi::Error, Debug)]
-pub enum MDLReaderRequestBuildError {
-    #[error("{value}")]
-    Generic { value: String },
-}
-
-#[derive(uniffi::Record)]
-struct MDLReaderRequest {
-    state: Arc<MDLSessionManager>,
-    request: Vec<u8>,
-}
-
-#[uniffi::export]
-fn new_request(
-    state: Arc<MDLSessionManager>,
-    requested_items: HashMap<String, HashMap<String, bool>>,
-) -> Result<MDLReaderRequest, MDLReaderRequestBuildError> {
-    let namespaces: Result<BTreeMap<_, NonEmptyMap<_, _>>, non_empty_map::Error> = requested_items
-        .into_iter()
-        .map(|(doc_type, namespaces)| {
-            let namespaces: BTreeMap<_, _> = namespaces.into_iter().collect();
-            match namespaces.try_into() {
-                Ok(n) => Ok((doc_type, n)),
-                Err(e) => Err(e),
-            }
-        })
-        .collect();
-    let namespaces = namespaces.map_err(|e| MDLReaderRequestBuildError::Generic {
-        value: format!("Unable to build data elements: {e:?}"),
-    })?;
-    let namespaces: device_request::Namespaces =
-        namespaces
-            .try_into()
-            .map_err(|e| MDLReaderRequestBuildError::Generic {
-                value: format!("Unable to build namespaces: {e:?}"),
-            })?;
-    let mut state = state.0.clone();
-    let request =
-        state
-            .new_request(namespaces)
-            .map_err(|e| MDLReaderRequestBuildError::Generic {
-                value: format!("unable to build request: {e:?}"),
-            })?;
-    Ok(MDLReaderRequest {
-        state: Arc::new(MDLSessionManager(state)),
-        request,
-    })
-}
-
 #[derive(thiserror::Error, uniffi::Error, Debug, PartialEq)]
 pub enum MDLReaderResponseError {
     #[error("Invalid decryption")]
