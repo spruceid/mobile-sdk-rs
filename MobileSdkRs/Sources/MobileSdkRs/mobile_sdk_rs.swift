@@ -918,45 +918,6 @@ public func FfiConverterTypeItemsRequest_lower(_ value: ItemsRequest) -> RustBuf
 }
 
 
-public struct MdlReaderRequest {
-    public var state: MdlSessionManager
-    public var request: Data
-
-    // Default memberwise initializers are never public by default, so we
-    // declare one manually.
-    public init(state: MdlSessionManager, request: Data) {
-        self.state = state
-        self.request = request
-    }
-}
-
-
-
-public struct FfiConverterTypeMDLReaderRequest: FfiConverterRustBuffer {
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdlReaderRequest {
-        return
-            try MdlReaderRequest(
-                state: FfiConverterTypeMDLSessionManager.read(from: &buf), 
-                request: FfiConverterData.read(from: &buf)
-        )
-    }
-
-    public static func write(_ value: MdlReaderRequest, into buf: inout [UInt8]) {
-        FfiConverterTypeMDLSessionManager.write(value.state, into: &buf)
-        FfiConverterData.write(value.request, into: &buf)
-    }
-}
-
-
-public func FfiConverterTypeMDLReaderRequest_lift(_ buf: RustBuffer) throws -> MdlReaderRequest {
-    return try FfiConverterTypeMDLReaderRequest.lift(buf)
-}
-
-public func FfiConverterTypeMDLReaderRequest_lower(_ value: MdlReaderRequest) -> RustBuffer {
-    return FfiConverterTypeMDLReaderRequest.lower(value)
-}
-
-
 public struct MdlReaderResponseData {
     public var state: MdlSessionManager
     /**
@@ -1207,58 +1168,6 @@ public struct FfiConverterTypeKeyTransformationError: FfiConverterRustBuffer {
 extension KeyTransformationError: Equatable, Hashable {}
 
 extension KeyTransformationError: Foundation.LocalizedError {
-    public var errorDescription: String? {
-        String(reflecting: self)
-    }
-}
-
-
-public enum MdlReaderRequestBuildError {
-
-    
-    
-    case Generic(value: String
-    )
-}
-
-
-public struct FfiConverterTypeMDLReaderRequestBuildError: FfiConverterRustBuffer {
-    typealias SwiftType = MdlReaderRequestBuildError
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdlReaderRequestBuildError {
-        let variant: Int32 = try readInt(&buf)
-        switch variant {
-
-        
-
-        
-        case 1: return .Generic(
-            value: try FfiConverterString.read(from: &buf)
-            )
-
-         default: throw UniffiInternalError.unexpectedEnumCase
-        }
-    }
-
-    public static func write(_ value: MdlReaderRequestBuildError, into buf: inout [UInt8]) {
-        switch value {
-
-        
-
-        
-        
-        case let .Generic(value):
-            writeInt(&buf, Int32(1))
-            FfiConverterString.write(value, into: &buf)
-            
-        }
-    }
-}
-
-
-extension MdlReaderRequestBuildError: Equatable, Hashable {}
-
-extension MdlReaderRequestBuildError: Foundation.LocalizedError {
     public var errorDescription: String? {
         String(reflecting: self)
     }
@@ -2852,14 +2761,6 @@ public func initialiseSession(document: MDoc, uuid: Uuid)throws  -> SessionData 
     )
 })
 }
-public func newRequest(state: MdlSessionManager, requestedItems: [String: [String: Bool]])throws  -> MdlReaderRequest {
-    return try  FfiConverterTypeMDLReaderRequest.lift(try rustCallWithError(FfiConverterTypeMDLReaderRequestBuildError.lift) {
-    uniffi_mobile_sdk_rs_fn_func_new_request(
-        FfiConverterTypeMDLSessionManager.lower(state),
-        FfiConverterDictionaryStringDictionaryStringBool.lower(requestedItems),$0
-    )
-})
-}
 public func submitResponse(sessionManager: SessionManager, permittedItems: [String: [String: [String]]])throws  -> Data {
     return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeResponseError.lift) {
     uniffi_mobile_sdk_rs_fn_func_submit_response(
@@ -2978,9 +2879,6 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_func_initialise_session() != 57560) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_mobile_sdk_rs_checksum_func_new_request() != 57829) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_func_submit_response() != 50547) {
