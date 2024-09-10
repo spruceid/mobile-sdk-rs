@@ -38,8 +38,20 @@ which is a manually triggered action.
 
 ```bash
 cd kotlin
-./gradlew build
+./gradlew buildCargoNdkDebug
 ```
+
+If you get this error:
+```
+> java.io.FileNotFoundException: .../local.properties (No such file or directory)
+```
+
+run:
+```bash
+touch local.properties
+```
+
+and try the build again.
 
 ### Swift
 
