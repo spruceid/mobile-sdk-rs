@@ -1398,15 +1398,40 @@ dependencies = [
 
 [[package]]
 name = "der"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f1a467a65c5e759bce6e65eaf91cc29f466cdc57cb65777bd646872a8a1fd4de"
+dependencies = [
+ "const-oid 0.9.6",
+ "der_derive 0.6.1",
+ "flagset",
+ "pem-rfc7468 0.6.0",
+ "zeroize",
+]
+
+[[package]]
+name = "der"
 version = "0.7.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f55bf8e7b65898637379c1b74eb1551107c8294ed26d855ceb9fd1a09cfc9bc0"
 dependencies = [
  "const-oid 0.9.6",
- "der_derive",
+ "der_derive 0.7.3",
  "flagset",
  "pem-rfc7468 0.7.0",
  "zeroize",
+]
+
+[[package]]
+name = "der_derive"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ef71ddb5b3a1f53dee24817c8f70dfa1cb29e804c18d88c228d4bc9c86ee3b9"
+dependencies = [
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -1623,6 +1648,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 
 [[package]]
+name = "dyn-clone"
+version = "1.0.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0d6ef0072f8a535281e4876be788938b528e9a1d43900b82c2569af7da799125"
+
+[[package]]
 name = "ecdsa"
 version = "0.16.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1685,6 +1716,12 @@ dependencies = [
  "quote",
  "syn 2.0.72",
 ]
+
+[[package]]
+name = "either"
+version = "1.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60b1af1c220855b6ceac025d3f6ecdd2b7c4894bfe9cd9bda4fbb4bc7c0d4cf0"
 
 [[package]]
 name = "elliptic-curve"
@@ -2731,7 +2768,7 @@ dependencies = [
  "hex-literal",
  "hkdf",
  "hmac",
- "isomdl-macros",
+ "isomdl-macros 0.1.0 (git+https://github.com/spruceid/isomdl?rev=1f4f762)",
  "p256",
  "p384",
  "pem-rfc7468 0.7.0",
@@ -2746,7 +2783,42 @@ dependencies = [
  "thiserror",
  "time",
  "uuid",
- "x509-cert",
+ "x509-cert 0.2.5",
+ "zeroize",
+]
+
+[[package]]
+name = "isomdl"
+version = "0.1.0"
+source = "git+https://github.com/spruceid/isomdl?rev=90ce218#90ce2180a7336715ff4682dcab9bb7cfad898740"
+dependencies = [
+ "aes",
+ "aes-gcm",
+ "anyhow",
+ "async-signature",
+ "base64 0.13.1",
+ "cose-rs",
+ "ecdsa",
+ "elliptic-curve",
+ "hex-literal",
+ "hkdf",
+ "hmac",
+ "isomdl-macros 0.1.0 (git+https://github.com/spruceid/isomdl?rev=90ce218)",
+ "p256",
+ "p384",
+ "pem-rfc7468 0.7.0",
+ "rand",
+ "sec1",
+ "serde",
+ "serde_cbor",
+ "serde_json",
+ "sha2 0.10.8",
+ "signature",
+ "ssi-jwk 0.1.2",
+ "thiserror",
+ "time",
+ "uuid",
+ "x509-cert 0.1.1",
  "zeroize",
 ]
 
@@ -2758,6 +2830,25 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "isomdl-macros"
+version = "0.1.0"
+source = "git+https://github.com/spruceid/isomdl?rev=90ce218#90ce2180a7336715ff4682dcab9bb7cfad898740"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "itertools"
+version = "0.10.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
+dependencies = [
+ "either",
 ]
 
 [[package]]
@@ -3382,16 +3473,23 @@ dependencies = [
 name = "mobile-sdk-rs"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "base64 0.22.1",
+ "either",
+ "futures",
  "hex",
- "isomdl",
+ "isomdl 0.1.0 (git+https://github.com/spruceid/isomdl?rev=1f4f762)",
+ "oid4vci",
  "oid4vp",
  "p256",
+ "pem-rfc7468 0.7.0",
+ "reqwest 0.11.27",
  "serde",
  "serde_cbor",
  "serde_json",
  "ssi",
  "thiserror",
+ "time",
  "tokio",
  "tracing",
  "uniffi",
@@ -3603,12 +3701,57 @@ dependencies = [
 ]
 
 [[package]]
+name = "oauth2"
+version = "5.0.0-alpha.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "098af5a5110b4deacf3200682963713b143ae9d28762b739bdb7b98429dfaf68"
+dependencies = [
+ "base64 0.22.1",
+ "chrono",
+ "getrandom",
+ "http 1.1.0",
+ "rand",
+ "reqwest 0.12.5",
+ "serde",
+ "serde_json",
+ "serde_path_to_error",
+ "sha2 0.10.8",
+ "thiserror",
+ "url",
+]
+
+[[package]]
 name = "object"
 version = "0.36.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f203fa8daa7bb185f760ae12bd8e097f63d17041dcdcaf675ac54cdf863170e"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "oid4vci"
+version = "0.1.0"
+source = "git+https://github.com/spruceid/oid4vci-rs?rev=020887f#020887fadd7aa755acdd0c90b1732861705d2225"
+dependencies = [
+ "async-signature",
+ "base64 0.21.7",
+ "isomdl 0.1.0 (git+https://github.com/spruceid/isomdl?rev=90ce218)",
+ "oauth2",
+ "openidconnect",
+ "rand",
+ "serde",
+ "serde_json",
+ "serde_path_to_error",
+ "serde_urlencoded",
+ "serde_with 3.9.0",
+ "ssi-claims",
+ "ssi-dids-core",
+ "ssi-jwk 0.2.1",
+ "thiserror",
+ "time",
+ "tracing",
+ "url",
 ]
 
 [[package]]
@@ -3638,7 +3781,7 @@ dependencies = [
  "tracing",
  "url",
  "uuid",
- "x509-cert",
+ "x509-cert 0.2.5",
 ]
 
 [[package]]
@@ -3661,6 +3804,37 @@ name = "opaque-debug"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
+
+[[package]]
+name = "openidconnect"
+version = "4.0.0-alpha.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd4c74c00c2727896cebfcd04018dea51902881e711c69f76a446314ab5596e2"
+dependencies = [
+ "base64 0.21.7",
+ "chrono",
+ "dyn-clone",
+ "ed25519-dalek",
+ "hmac",
+ "http 1.1.0",
+ "itertools",
+ "log",
+ "oauth2",
+ "p256",
+ "p384",
+ "rand",
+ "rsa 0.9.6",
+ "serde",
+ "serde-value",
+ "serde_json",
+ "serde_path_to_error",
+ "serde_plain",
+ "serde_with 3.9.0",
+ "sha2 0.10.8",
+ "subtle",
+ "thiserror",
+ "url",
+]
 
 [[package]]
 name = "openssl"
@@ -3714,6 +3888,15 @@ dependencies = [
  "openssl-src",
  "pkg-config",
  "vcpkg",
+]
+
+[[package]]
+name = "ordered-float"
+version = "2.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68f19d67e5a2795c94e73e0bb1cc1a7edeb2e28efd39e2e1c9b7a40c1108b11c"
+dependencies = [
+ "num-traits",
 ]
 
 [[package]]
@@ -3842,6 +4025,15 @@ dependencies = [
 
 [[package]]
 name = "pem-rfc7468"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "24d159833a9105500e0398934e205e0773f0b27529557134ecfc51c27646adac"
+dependencies = [
+ "base64ct",
+]
+
+[[package]]
+name = "pem-rfc7468"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "88b39c9bfcfc231068454382784bb460aae594343fb030d46e9f50a645418412"
@@ -3913,6 +4105,17 @@ dependencies = [
  "der 0.5.1",
  "pkcs8 0.8.0",
  "zeroize",
+]
+
+[[package]]
+name = "pkcs1"
+version = "0.7.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c8ffb9f10fa047879315e6625af03c164b16962a5368d724ed16323b68ace47f"
+dependencies = [
+ "der 0.7.9",
+ "pkcs8 0.10.2",
+ "spki 0.7.3",
 ]
 
 [[package]]
@@ -4418,10 +4621,30 @@ dependencies = [
  "num-integer",
  "num-iter",
  "num-traits",
- "pkcs1",
+ "pkcs1 0.3.3",
  "pkcs8 0.8.0",
  "rand_core",
  "smallvec",
+ "subtle",
+ "zeroize",
+]
+
+[[package]]
+name = "rsa"
+version = "0.9.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d0e5124fcb30e76a7e79bfee683a2746db83784b86289f6251b54b7950a0dfc"
+dependencies = [
+ "const-oid 0.9.6",
+ "digest 0.10.7",
+ "num-bigint-dig",
+ "num-integer",
+ "num-traits",
+ "pkcs1 0.7.5",
+ "pkcs8 0.10.2",
+ "rand_core",
+ "signature",
+ "spki 0.7.3",
  "subtle",
  "zeroize",
 ]
@@ -4690,6 +4913,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde-value"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f3a1a3341211875ef120e117ea7fd5228530ae7e7036a779fdc9117be6b3282c"
+dependencies = [
+ "ordered-float 2.10.1",
+ "serde",
+]
+
+[[package]]
 name = "serde_bytes"
 version = "0.11.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4744,6 +4977,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_path_to_error"
+version = "0.1.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af99884400da37c88f5e9146b7f1fd0fbcae8f6eec4e9da38b67d05486f814a6"
+dependencies = [
+ "itoa",
+ "serde",
+]
+
+[[package]]
+name = "serde_plain"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ce1fc6db65a611022b23a0dec6975d63fb80a302cb3388835ff02c097258d50"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "serde_spanned"
 version = "0.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4792,6 +5044,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_with"
+version = "3.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "69cecfa94848272156ea67b2b1a53f20fc7bc638c4a46d2f8abde08f05f4b857"
+dependencies = [
+ "base64 0.22.1",
+ "chrono",
+ "hex",
+ "indexmap 1.9.3",
+ "indexmap 2.3.0",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "serde_with_macros 3.9.0",
+ "time",
+]
+
+[[package]]
 name = "serde_with_macros"
 version = "1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4808,6 +5078,18 @@ name = "serde_with_macros"
 version = "2.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "881b6f881b17d13214e5d494c939ebab463d01264ce1811e9d4ac3a882e7695f"
+dependencies = [
+ "darling 0.20.10",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.72",
+]
+
+[[package]]
+name = "serde_with_macros"
+version = "3.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a8fee4991ef4f274617a51ad4af30519438dacb2f56ac773b08a1922ff743350"
 dependencies = [
  "darling 0.20.10",
  "proc-macro2",
@@ -4962,6 +5244,15 @@ checksum = "44d01ac02a6ccf3e07db148d2be087da624fea0221a16152ed01f0496a6b0a27"
 dependencies = [
  "base64ct",
  "der 0.5.1",
+]
+
+[[package]]
+name = "spki"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "67cf02bbac7a337dc36e4f5a693db6c21e7863f45070f7064577eb4367a3212b"
+dependencies = [
+ "der 0.6.1",
 ]
 
 [[package]]
@@ -5387,7 +5678,7 @@ dependencies = [
  "num-traits",
  "p256",
  "rand",
- "rsa",
+ "rsa 0.6.1",
  "serde",
  "simple_asn1",
  "ssi-crypto 0.1.1",
@@ -5418,7 +5709,7 @@ dependencies = [
  "p256",
  "p384",
  "rand",
- "rsa",
+ "rsa 0.6.1",
  "serde",
  "serde_jcs",
  "serde_json",
@@ -5447,7 +5738,7 @@ dependencies = [
  "p256",
  "p384",
  "rand",
- "rsa",
+ "rsa 0.6.1",
  "serde",
  "serde_json",
  "sha2 0.10.8",
@@ -6833,6 +7124,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "05f360fc0b24296329c78fda852a1e9ae82de9cf7b27dae4b7f62f118f77b9ed"
 dependencies = [
  "tap",
+]
+
+[[package]]
+name = "x509-cert"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "99d224a125dec5adda27d0346b9cae9794830279c4f9c27e4ab0b6c408d54012"
+dependencies = [
+ "const-oid 0.9.6",
+ "der 0.6.1",
+ "flagset",
+ "spki 0.6.0",
 ]
 
 [[package]]

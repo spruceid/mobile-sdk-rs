@@ -16,18 +16,25 @@ name = "uniffi-bindgen"
 path = "uniffi-bindgen.rs"
 
 [dependencies]
-isomdl = "0.1.0"
+async-trait = "0.1"
+either = "1.13"
+futures = "0.3"
 hex = "0.4.3"
+isomdl = { git = "https://github.com/spruceid/isomdl", rev = "1f4f762" }
+oid4vci = { git = "https://github.com/spruceid/oid4vci-rs", rev = "020887f" }
 oid4vp = { git = "https://github.com/spruceid/oid4vp-rs" }
 p256 = { version = "0.13.2", features = ["pkcs8"] }
+pem-rfc7468 = "0.7.0"
+reqwest = { version = "0.11", features = ["blocking"] }
 serde = { version = "1.0.204", features = ["derive"] }
 serde_cbor = "0.11.2"
 serde_json = "1.0.111"
 ssi = { version = "0.8.1", features = ["secp256r1", "secp384r1"] }
 thiserror = "1.0.56"
+time = { version = "0.3.29", features = ["serde"] }
 tracing = "0.1.40"
 uniffi = { version = "0.28.1", features = ["cli"] }
-url = "2.5.2"
+url = { version = "2.5", features = ["serde"] }
 uuid = { version = "1.6.1", features = ["v4"] }
 w3c-vc-barcodes = { git = "https://github.com/spruceid/w3c-vc-barcodes", rev = "372ff39" }
 
@@ -38,9 +45,6 @@ base64 = "0.22.0"
 
 [build-dependencies]
 uniffi = { version = "0.28.1", features = ["build"] }
-
-[patch.crates-io]
-isomdl = { git = "https://github.com/spruceid/isomdl", rev = "1f4f762" }
 
 [patch.'https://github.com/spruceid/oid4vp-rs']
 # TODO: replace this once oid4vp is merged.

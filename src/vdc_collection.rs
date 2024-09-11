@@ -9,16 +9,17 @@ use tracing::{info, info_span};
 const KEY_PREFIX: &str = "Credential.";
 
 /// Supported credential formats.
-#[derive(PartialEq, Debug, Serialize, Deserialize)]
+#[derive(uniffi::Enum, PartialEq, Debug, Serialize, Deserialize)]
 pub enum CredentialFormat {
     MsoMdoc,
     JwtVcJson,
+    JwtVcJsonLd,
     LdpVc,
     Other(String), // For ease of expansion.
 }
 
 /// Supported credential types.
-#[derive(PartialEq, Debug, Serialize, Deserialize)]
+#[derive(uniffi::Enum, PartialEq, Debug, Serialize, Deserialize)]
 pub enum CredentialType {
     Iso18013_5_1mDl,
     VehicleTitle,
@@ -36,7 +37,7 @@ pub struct Credential {
 
 impl Credential {
     /// Create a new credential.
-    fn new(
+    pub(crate) fn new(
         id: Uuid,
         format: CredentialFormat,
         ctype: CredentialType,
@@ -258,6 +259,6 @@ mod tests {
         vdc.delete("00000000-0000-0000-0000-000000000003")
             .expect("Failed to delete the third value.");
 
-        assert!(vdc.all_entries().unwrap().len() == 0);
+        assert!(vdc.all_entries().unwrap().is_empty());
     }
 }
