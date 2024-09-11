@@ -63,7 +63,7 @@ cargo swift package -p ios -n MobileSdkRs --release
 > You will need `cargo-swift` which you can install with `cargo install cargo-swift`.
 
 ## Test
-In order to run the tests you'll need to download a copy of JNA
+In order to run the tests you'll need to [install the kotlin compiler](https://kotlinlang.org/docs/command-line.html) and download a copy of JNA
 
 ```
 wget https://repo1.maven.org/maven2/net/java/dev/jna/jna/5.14.0/jna-5.14.0.jar
