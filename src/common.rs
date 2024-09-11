@@ -90,9 +90,3 @@ uniffi::custom_newtype!(Value, Vec<u8>);
 
 #[derive(Debug, PartialEq)]
 pub struct Value(pub Vec<u8>);
-
-impl From<bool> for Value {
-    fn from(value: bool) -> Self {
-        Self(vec![value as u8])
-    }
-}
