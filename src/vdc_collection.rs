@@ -1,8 +1,9 @@
-use super::storage_manager::*;
+use crate::common::*;
+use crate::storage_manager::*;
+
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tracing::{info, info_span};
-use uuid::Uuid;
 
 /// Internal prefix for credential keys.
 const KEY_PREFIX: &str = "Credential.";

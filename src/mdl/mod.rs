@@ -1,6 +1,5 @@
+use crate::common::*;
 pub mod reader;
-
-use crate::UniffiCustomTypeConverter;
 
 use std::{
     collections::HashMap,
@@ -19,7 +18,6 @@ use ssi::{
     claims::vc::v1::{data_integrity::any_credential_from_json_str, ToJwtClaims},
     dids::{AnyDidMethod, DIDResolver},
 };
-use uuid::Uuid;
 
 #[derive(thiserror::Error, uniffi::Error, Debug)]
 pub enum SessionError {
@@ -35,17 +33,6 @@ struct SessionData {
     state: Arc<SessionManagerEngaged>,
     qr_code_uri: String,
     ble_ident: Vec<u8>,
-}
-
-uniffi::custom_type!(Uuid, String);
-impl UniffiCustomTypeConverter for Uuid {
-    type Builtin = String;
-    fn into_custom(uuid: Self::Builtin) -> uniffi::Result<Self> {
-        Ok(uuid.parse()?)
-    }
-    fn from_custom(uuid: Self) -> Self::Builtin {
-        uuid.to_string()
-    }
 }
 
 #[derive(thiserror::Error, uniffi::Error, Debug)]
