@@ -1,6 +1,10 @@
-use uniffi::deps::anyhow::Context;
+use uniffi::deps::anyhow::{anyhow, Context};
 use x509_cert::der::{asn1, Encode};
 
+// TODO: Determine whether to keep this method and expose as a FFI.
+// There was a notion for a `KeyManager` trait, but it may be out of favor
+// versus more direct methods to call into the native crypto libraries
+// for maximal flexibility over a generic interface.
 pub trait Crypto {
     fn p256_verify(
         &self,
@@ -38,15 +42,17 @@ pub struct CoseP256Signature {
 }
 
 impl TryFrom<&[u8]> for CoseP256Signature {
-    type Error = Box<dyn std::error::Error + Sync + Send + 'static>;
+    type Error = signature::Error;
 
     fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
         let (r, s) = value.split_at(32);
         Ok(Self {
-            r: r.try_into()
-                .context("failed to parse 'r' parameter from slice")?,
-            s: s.try_into()
-                .context("failed to parse 's' parameter from slice")?,
+            r: r.try_into().map_err(|e| {
+                Self::Error::from_source(anyhow!("failed to parse 'r' parameter from slice: {e}"))
+            })?,
+            s: s.try_into().map_err(|e| {
+                Self::Error::from_source(anyhow!("failed to parse 's' parameter from slice: {e}"))
+            })?,
         })
     }
 }

@@ -1,13 +1,14 @@
 use std::time::SystemTime;
 
-use crate::{
-    anyhow::{bail, Context, Result},
-    verifier::outcome::{ClaimValue, Failure},
-};
+use crate::verifier::outcome::{ClaimValue, Failure};
 use cose_rs::{cwt::ClaimsSet, CoseSign1};
 use serde_cbor::Value;
 use time::Date;
 use time_macros::format_description;
+use uniffi::deps::{
+    anyhow::{bail, Context, Result},
+    log::debug,
+};
 use x509_cert::{
     der::{oid::AssociatedOid, Decode},
     ext::pkix::{CrlDistributionPoints, KeyUsage},
@@ -51,7 +52,7 @@ pub fn extract_extensions(certificate: &Certificate) -> Result<(KeyUsage, CrlDis
             CrlDistributionPoints::OID => crl_dp = Some(&extension.extn_value),
             oid if extension.critical => bail!("unexpected critical extension: {oid}"),
             oid => {
-                crate::log::debug!("skipping certificate extension {oid}")
+                debug!("skipping certificate extension {oid}")
             }
         }
     }
@@ -102,7 +103,7 @@ pub trait Claim: Sized {
     fn from_value(value: &Value) -> crate::verifier::outcome::Result<Self>;
 }
 
-pub fn check_validity(validity: &Validity) -> crate::anyhow::Result<()> {
+pub fn check_validity(validity: &Validity) -> Result<()> {
     let nbf = validity.not_before.to_system_time();
     let exp = validity.not_after.to_system_time();
 

@@ -4,12 +4,9 @@ pub mod outcome;
 
 use std::collections::HashMap;
 
-use crate::{
-    anyhow::{anyhow, bail},
-    verifier::{
-        crypto::{CoseP256Verifier, Crypto},
-        outcome::{ClaimValue, CredentialInfo, Failure, Outcome, Result},
-    },
+use crate::verifier::{
+    crypto::{CoseP256Verifier, Crypto},
+    outcome::{ClaimValue, CredentialInfo, Failure, Outcome, Result},
 };
 use cose_rs::{
     cwt::{claim::ExpirationTime, ClaimsSet},
@@ -20,7 +17,7 @@ use num_bigint::BigUint;
 use num_traits::Num as _;
 use ssi_status::token_status_list::{json::JsonStatusList, DecodeError};
 use time::OffsetDateTime;
-use uniffi::deps::anyhow::Context;
+use uniffi::deps::anyhow::{self, anyhow, bail, Context, Error};
 use x509_cert::{certificate::CertificateInner, der::Encode, Certificate};
 
 pub trait Credential {
@@ -31,18 +28,15 @@ pub trait Credential {
     fn parse_claims(claims: ClaimsSet) -> Result<HashMap<String, ClaimValue>>;
 }
 
-pub fn retrieve_entry_from_status_list(
-    status_list: String,
-    idx: usize,
-) -> Result<u8, crate::anyhow::Error> {
+pub fn retrieve_entry_from_status_list(status_list: String, idx: usize) -> Result<u8, Error> {
     let status_list: JsonStatusList = serde_json::from_str(status_list.as_str())
-        .map_err(|_: serde_json::Error| crate::anyhow::anyhow!("Unable to parse JSON String"))?;
-    let bitstring = status_list.decode(None).map_err(|_: DecodeError| {
-        crate::anyhow::anyhow!("Unable to decode JsonStatusList bitstring")
-    })?;
+        .map_err(|_: serde_json::Error| anyhow!("Unable to parse JSON String"))?;
+    let bitstring = status_list
+        .decode(None)
+        .map_err(|_: DecodeError| anyhow!("Unable to decode JsonStatusList bitstring"))?;
     bitstring
         .get(idx)
-        .ok_or(crate::anyhow::anyhow!("Unable to get idx from bitstring"))
+        .ok_or(anyhow!("Unable to get idx from bitstring"))
 }
 
 pub trait Verifiable: Credential {
@@ -146,7 +140,7 @@ pub trait Verifiable: Credential {
         crypto: &dyn Crypto,
         cwt: &CoseSign1,
         root_certificate: CertificateInner,
-    ) -> crate::anyhow::Result<()> {
+    ) -> anyhow::Result<()> {
         let signer_certificate = helpers::get_signer_certificate(cwt)?;
 
         // Root validation.
@@ -183,7 +177,7 @@ pub trait Verifiable: Credential {
                 signer_signature,
             )
             .into_result()
-            .map_err(crate::anyhow::Error::msg)
+            .map_err(Error::msg)
             .context("failed to verify the signature on the signer certificate")?;
 
         // Signer validation.

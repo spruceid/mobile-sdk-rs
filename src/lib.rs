@@ -14,5 +14,3 @@ pub mod verifier;
 pub use common::*;
 pub use mdl::reader::*;
 pub use mdl::*;
-
-use uniffi::deps::{anyhow, log};

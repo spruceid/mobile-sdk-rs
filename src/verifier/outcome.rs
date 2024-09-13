@@ -1,4 +1,5 @@
 use std::{collections::HashMap, fmt};
+use uniffi::deps::anyhow;
 
 pub type Result<T, E = Failure> = ::std::result::Result<T, E>;
 
@@ -36,6 +37,8 @@ pub enum ClaimValue {
     MapClaim { value: HashMap<String, String> },
 }
 
+// TODO: This is intended to be replaced by an enumerative `#[uniffi::Error]` type.
+// It has an existing use, and therefore is on a deprecated path when the new type is implemented.
 #[derive(uniffi::Record, Debug)]
 /// A verification failure with a code and reason.
 pub struct Failure {
@@ -130,7 +133,7 @@ impl Failure {
         }
     }
 
-    pub fn trust(error: crate::anyhow::Error) -> Failure {
+    pub fn trust(error: anyhow::Error) -> Failure {
         Failure {
             code: 10,
             reason: "Signature Invalid: The credentials signature is incorrect.".to_string(),
@@ -146,7 +149,7 @@ impl Failure {
         }
     }
 
-    pub fn load_root_certificates(error: crate::anyhow::Error) -> Failure {
+    pub fn load_root_certificates(error: anyhow::Error) -> Failure {
         Failure {
             code: 12,
             reason: "Trust could not be established in the credential".to_string(),
