@@ -1,10 +1,7 @@
 use uniffi::deps::anyhow::{anyhow, Context};
 use x509_cert::der::{asn1, Encode};
 
-// TODO: Determine whether to keep this method and expose as a FFI.
-// There was a notion for a `KeyManager` trait, but it may be out of favor
-// versus more direct methods to call into the native crypto libraries
-// for maximal flexibility over a generic interface.
+// TODO: Replace this with a foreign function interface into native code.
 pub trait Crypto {
     fn p256_verify(
         &self,
