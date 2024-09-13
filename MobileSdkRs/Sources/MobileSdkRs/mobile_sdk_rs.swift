@@ -50,9 +50,11 @@ fileprivate extension ForeignBytes {
 
 fileprivate extension Data {
     init(rustBuffer: RustBuffer) {
-        // TODO: This copies the buffer. Can we read directly from a
-        // Rust buffer?
-        self.init(bytes: rustBuffer.data!, count: Int(rustBuffer.len))
+        self.init(
+            bytesNoCopy: rustBuffer.data!,
+            count: Int(rustBuffer.len),
+            deallocator: .none
+        )
     }
 }
 
@@ -153,7 +155,7 @@ fileprivate func writeDouble(_ writer: inout [UInt8], _ value: Double) {
 }
 
 // Protocol for types that transfer other types across the FFI. This is
-// analogous go the Rust trait of the same name.
+// analogous to the Rust trait of the same name.
 fileprivate protocol FfiConverter {
     associatedtype FfiType
     associatedtype SwiftType
@@ -253,18 +255,19 @@ fileprivate extension RustCallStatus {
 }
 
 private func rustCall<T>(_ callback: (UnsafeMutablePointer<RustCallStatus>) -> T) throws -> T {
-    try makeRustCall(callback, errorHandler: nil)
+    let neverThrow: ((RustBuffer) throws -> Never)? = nil
+    return try makeRustCall(callback, errorHandler: neverThrow)
 }
 
-private func rustCallWithError<T>(
-    _ errorHandler: @escaping (RustBuffer) throws -> Error,
+private func rustCallWithError<T, E: Swift.Error>(
+    _ errorHandler: @escaping (RustBuffer) throws -> E,
     _ callback: (UnsafeMutablePointer<RustCallStatus>) -> T) throws -> T {
     try makeRustCall(callback, errorHandler: errorHandler)
 }
 
-private func makeRustCall<T>(
+private func makeRustCall<T, E: Swift.Error>(
     _ callback: (UnsafeMutablePointer<RustCallStatus>) -> T,
-    errorHandler: ((RustBuffer) throws -> Error)?
+    errorHandler: ((RustBuffer) throws -> E)?
 ) throws -> T {
     uniffiEnsureInitialized()
     var callStatus = RustCallStatus.init()
@@ -273,9 +276,9 @@ private func makeRustCall<T>(
     return returnedVal
 }
 
-private func uniffiCheckCallStatus(
+private func uniffiCheckCallStatus<E: Swift.Error>(
     callStatus: RustCallStatus,
-    errorHandler: ((RustBuffer) throws -> Error)?
+    errorHandler: ((RustBuffer) throws -> E)?
 ) throws {
     switch callStatus.code {
         case CALL_SUCCESS:
@@ -3225,20 +3228,24 @@ public struct FfiConverterTypeHttpClientError: FfiConverterRustBuffer {
 
 extension HttpClientError: Equatable, Hashable {}
 
-extension HttpClientError: Error { }
+extension HttpClientError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
-// Note that we don't yet support `indirect` for enums.
-// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
 public enum KeyTransformationError {
+
     
-    case toPkcs8(value: String
+    
+    case ToPkcs8(value: String
     )
-    case fromPkcs8(value: String
+    case FromPkcs8(value: String
     )
-    case fromSec1(value: String
+    case FromSec1(value: String
     )
-    case toSec1(value: String
+    case ToSec1(value: String
     )
 }
 
@@ -3249,43 +3256,50 @@ public struct FfiConverterTypeKeyTransformationError: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> KeyTransformationError {
         let variant: Int32 = try readInt(&buf)
         switch variant {
+
         
-        case 1: return .toPkcs8(value: try FfiConverterString.read(from: &buf)
-        )
+
         
-        case 2: return .fromPkcs8(value: try FfiConverterString.read(from: &buf)
-        )
-        
-        case 3: return .fromSec1(value: try FfiConverterString.read(from: &buf)
-        )
-        
-        case 4: return .toSec1(value: try FfiConverterString.read(from: &buf)
-        )
-        
-        default: throw UniffiInternalError.unexpectedEnumCase
+        case 1: return .ToPkcs8(
+            value: try FfiConverterString.read(from: &buf)
+            )
+        case 2: return .FromPkcs8(
+            value: try FfiConverterString.read(from: &buf)
+            )
+        case 3: return .FromSec1(
+            value: try FfiConverterString.read(from: &buf)
+            )
+        case 4: return .ToSec1(
+            value: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
     public static func write(_ value: KeyTransformationError, into buf: inout [UInt8]) {
         switch value {
+
+        
+
         
         
-        case let .toPkcs8(value):
+        case let .ToPkcs8(value):
             writeInt(&buf, Int32(1))
             FfiConverterString.write(value, into: &buf)
             
         
-        case let .fromPkcs8(value):
+        case let .FromPkcs8(value):
             writeInt(&buf, Int32(2))
             FfiConverterString.write(value, into: &buf)
             
         
-        case let .fromSec1(value):
+        case let .FromSec1(value):
             writeInt(&buf, Int32(3))
             FfiConverterString.write(value, into: &buf)
             
         
-        case let .toSec1(value):
+        case let .ToSec1(value):
             writeInt(&buf, Int32(4))
             FfiConverterString.write(value, into: &buf)
             
@@ -3294,19 +3308,13 @@ public struct FfiConverterTypeKeyTransformationError: FfiConverterRustBuffer {
 }
 
 
-public func FfiConverterTypeKeyTransformationError_lift(_ buf: RustBuffer) throws -> KeyTransformationError {
-    return try FfiConverterTypeKeyTransformationError.lift(buf)
-}
-
-public func FfiConverterTypeKeyTransformationError_lower(_ value: KeyTransformationError) -> RustBuffer {
-    return FfiConverterTypeKeyTransformationError.lower(value)
-}
-
-
-
 extension KeyTransformationError: Equatable, Hashable {}
 
-
+extension KeyTransformationError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 public enum MdlReaderResponseError {
@@ -3378,7 +3386,11 @@ public struct FfiConverterTypeMDLReaderResponseError: FfiConverterRustBuffer {
 
 extension MdlReaderResponseError: Equatable, Hashable {}
 
-extension MdlReaderResponseError: Error { }
+extension MdlReaderResponseError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 public enum MdlReaderSessionError {
@@ -3426,7 +3438,11 @@ public struct FfiConverterTypeMDLReaderSessionError: FfiConverterRustBuffer {
 
 extension MdlReaderSessionError: Equatable, Hashable {}
 
-extension MdlReaderSessionError: Error { }
+extension MdlReaderSessionError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 public enum MDocInitError {
@@ -3474,7 +3490,11 @@ public struct FfiConverterTypeMDocInitError: FfiConverterRustBuffer {
 
 extension MDocInitError: Equatable, Hashable {}
 
-extension MDocInitError: Error { }
+extension MDocInitError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
@@ -3661,7 +3681,11 @@ public struct FfiConverterTypeOid4vciError: FfiConverterRustBuffer {
 
 extension Oid4vciError: Equatable, Hashable {}
 
-extension Oid4vciError: Error { }
+extension Oid4vciError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 public enum RequestError {
@@ -3709,7 +3733,11 @@ public struct FfiConverterTypeRequestError: FfiConverterRustBuffer {
 
 extension RequestError: Equatable, Hashable {}
 
-extension RequestError: Error { }
+extension RequestError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 public enum ResponseError {
@@ -3763,7 +3791,11 @@ public struct FfiConverterTypeResponseError: FfiConverterRustBuffer {
 
 extension ResponseError: Equatable, Hashable {}
 
-extension ResponseError: Error { }
+extension ResponseError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 public enum SessionError {
@@ -3811,7 +3843,11 @@ public struct FfiConverterTypeSessionError: FfiConverterRustBuffer {
 
 extension SessionError: Equatable, Hashable {}
 
-extension SessionError: Error { }
+extension SessionError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 public enum SignatureError {
@@ -3875,7 +3911,11 @@ public struct FfiConverterTypeSignatureError: FfiConverterRustBuffer {
 
 extension SignatureError: Equatable, Hashable {}
 
-extension SignatureError: Error { }
+extension SignatureError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 /**
@@ -3965,7 +4005,11 @@ public struct FfiConverterTypeStorageManagerError: FfiConverterRustBuffer {
 
 extension StorageManagerError: Equatable, Hashable {}
 
-extension StorageManagerError: Error { }
+extension StorageManagerError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 public enum TerminationError {
@@ -4013,7 +4057,11 @@ public struct FfiConverterTypeTerminationError: FfiConverterRustBuffer {
 
 extension TerminationError: Equatable, Hashable {}
 
-extension TerminationError: Error { }
+extension TerminationError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 public enum VcbVerificationError {
@@ -4067,7 +4115,11 @@ public struct FfiConverterTypeVCBVerificationError: FfiConverterRustBuffer {
 
 extension VcbVerificationError: Equatable, Hashable {}
 
-extension VcbVerificationError: Error { }
+extension VcbVerificationError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 public enum VcVerificationError {
@@ -4115,7 +4167,11 @@ public struct FfiConverterTypeVCVerificationError: FfiConverterRustBuffer {
 
 extension VcVerificationError: Equatable, Hashable {}
 
-extension VcVerificationError: Error { }
+extension VcVerificationError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 public enum VpError {
@@ -4185,7 +4241,11 @@ public struct FfiConverterTypeVPError: FfiConverterRustBuffer {
 
 extension VpError: Equatable, Hashable {}
 
-extension VpError: Error { }
+extension VpError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 public enum VdcCollectionError {
@@ -4231,13 +4291,13 @@ public struct FfiConverterTypeVdcCollectionError: FfiConverterRustBuffer {
         case 1: return .SerializeFailed
         case 2: return .DeserializeFailed
         case 3: return .StoreFailed(
-            : try FfiConverterTypeStorageManagerError.read(from: &buf)
+            try FfiConverterTypeStorageManagerError.read(from: &buf)
             )
         case 4: return .LoadFailed(
-            : try FfiConverterTypeStorageManagerError.read(from: &buf)
+            try FfiConverterTypeStorageManagerError.read(from: &buf)
             )
         case 5: return .DeleteFailed(
-            : try FfiConverterTypeStorageManagerError.read(from: &buf)
+            try FfiConverterTypeStorageManagerError.read(from: &buf)
             )
 
          default: throw UniffiInternalError.unexpectedEnumCase
@@ -4259,19 +4319,19 @@ public struct FfiConverterTypeVdcCollectionError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(2))
         
         
-        case let .StoreFailed():
+        case let .StoreFailed(v1):
             writeInt(&buf, Int32(3))
-            FfiConverterTypeStorageManagerError.write(, into: &buf)
+            FfiConverterTypeStorageManagerError.write(v1, into: &buf)
             
         
-        case let .LoadFailed():
+        case let .LoadFailed(v1):
             writeInt(&buf, Int32(4))
-            FfiConverterTypeStorageManagerError.write(, into: &buf)
+            FfiConverterTypeStorageManagerError.write(v1, into: &buf)
             
         
-        case let .DeleteFailed():
+        case let .DeleteFailed(v1):
             writeInt(&buf, Int32(5))
-            FfiConverterTypeStorageManagerError.write(, into: &buf)
+            FfiConverterTypeStorageManagerError.write(v1, into: &buf)
             
         }
     }
@@ -4280,7 +4340,11 @@ public struct FfiConverterTypeVdcCollectionError: FfiConverterRustBuffer {
 
 extension VdcCollectionError: Equatable, Hashable {}
 
-extension VdcCollectionError: Error { }
+extension VdcCollectionError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 
@@ -5107,7 +5171,7 @@ fileprivate func uniffiRustCallAsync<F, T>(
     completeFunc: (UInt64, UnsafeMutablePointer<RustCallStatus>) -> F,
     freeFunc: (UInt64) -> (),
     liftFunc: (F) throws -> T,
-    errorHandler: ((RustBuffer) throws -> Error)?
+    errorHandler: ((RustBuffer) throws -> Swift.Error)?
 ) async throws -> T {
     // Make sure to call uniffiEnsureInitialized() since future creation doesn't have a
     // RustCallStatus param, so doesn't use makeRustCall()
@@ -5422,9 +5486,9 @@ private enum InitializationResult {
     case contractVersionMismatch
     case apiChecksumMismatch
 }
-// Use a global variables to perform the versioning checks. Swift ensures that
+// Use a global variable to perform the versioning checks. Swift ensures that
 // the code inside is only computed once.
-private var initializationResult: InitializationResult {
+private var initializationResult: InitializationResult = {
     // Get the bindings contract version from our ComponentInterface
     let bindings_contract_version = 26
     // Get the scaffolding contract version by calling the into the dylib
@@ -5602,7 +5666,7 @@ private var initializationResult: InitializationResult {
     uniffiCallbackInitSyncHttpClient()
     uniffiCallbackInitStorageManagerInterface()
     return InitializationResult.ok
-}
+}()
 
 private func uniffiEnsureInitialized() {
     switch initializationResult {
