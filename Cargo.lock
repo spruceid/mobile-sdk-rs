@@ -2935,6 +2935,7 @@ dependencies = [
  "lexical",
  "ryu-js",
  "serde",
+ "serde_json",
  "smallvec",
 ]
 
@@ -2964,6 +2965,7 @@ dependencies = [
  "locspan-derive",
  "ryu-js",
  "serde",
+ "serde_json",
  "smallstr",
  "smallvec",
  "utf8-decode",
@@ -3349,6 +3351,7 @@ dependencies = [
  "futures",
  "hex",
  "isomdl 0.1.0 (git+https://github.com/spruceid/isomdl?rev=1f4f762)",
+ "json-syntax",
  "miniz_oxide 0.7.4",
  "num-bigint",
  "num-traits",
