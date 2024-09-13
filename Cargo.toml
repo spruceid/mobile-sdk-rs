@@ -30,12 +30,26 @@ serde_cbor = "0.11.2"
 serde_json = "1.0.111"
 ssi = { version = "0.8.1", features = ["secp256r1", "secp384r1"] }
 thiserror = "1.0.56"
-time = { version = "0.3.29", features = ["serde"] }
 tracing = "0.1.40"
 uniffi = { version = "0.28.1", features = ["cli"] }
 url = { version = "2.5", features = ["serde"] }
 uuid = { version = "1.6.1", features = ["v4"] }
 w3c-vc-barcodes = { git = "https://github.com/spruceid/w3c-vc-barcodes", rev = "372ff39" }
+x509-cert = { version = "0.2.5" }
+signature = "2.2.0"
+cose-rs = { git = "https://github.com/spruceid/cose-rs", rev = "0018c9b", features = [
+    "time",
+] }
+time = { version = "0.3.36", features = [
+    "macros",
+    "formatting",
+    "parsing",
+    "serde",
+] }
+time-macros = "0.2.18"
+num-bigint = "0.4.4"
+num-traits = "0.2.19"
+miniz_oxide = "0.7.2"
 
 [dev-dependencies]
 base64 = "0.22.0"
