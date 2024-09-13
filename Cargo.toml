@@ -49,7 +49,6 @@ time = { version = "0.3.36", features = [
 time-macros = "0.2.18"
 num-bigint = "0.4.4"
 num-traits = "0.2.19"
-ssi-status = { git = "https://github.com/spruceid/ssi.git", rev = "157fb00" }
 miniz_oxide = "0.7.2"
 
 [dev-dependencies]

@@ -830,7 +830,7 @@ dependencies = [
  "env_logger 0.11.5",
  "hex",
  "iref",
- "json-ld 0.21.1",
+ "json-ld",
  "lazy_static",
  "log",
  "multibase 0.9.1",
@@ -1448,8 +1448,8 @@ dependencies = [
  "hex",
  "iref",
  "serde_json",
- "ssi-caips 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-dids-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-caips",
+ "ssi-dids-core",
  "ssi-jwk 0.2.1",
  "static-iref",
  "thiserror",
@@ -1469,11 +1469,11 @@ dependencies = [
  "serde_jcs",
  "serde_json",
  "sha2 0.10.8",
- "ssi-dids-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-dids-core",
  "ssi-jwk 0.2.1",
- "ssi-jws 0.2.1",
- "ssi-jwt 0.2.1",
- "ssi-verification-methods 0.1.1",
+ "ssi-jws",
+ "ssi-jwt",
+ "ssi-verification-methods",
  "thiserror",
 ]
 
@@ -1488,10 +1488,10 @@ dependencies = [
  "multibase 0.8.0",
  "serde_jcs",
  "serde_json",
- "ssi-crypto 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-dids-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-crypto 0.2.0",
+ "ssi-dids-core",
  "ssi-jwk 0.2.1",
- "ssi-verification-methods 0.1.1",
+ "ssi-verification-methods",
  "static-iref",
  "thiserror",
 ]
@@ -1509,10 +1509,10 @@ dependencies = [
  "p256",
  "serde_json",
  "simple_asn1",
- "ssi-dids-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-json-ld 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-dids-core",
+ "ssi-json-ld",
  "ssi-jwk 0.2.1",
- "ssi-multicodec 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-multicodec",
  "static-iref",
  "thiserror",
 ]
@@ -1530,9 +1530,9 @@ dependencies = [
  "iref",
  "serde",
  "serde_json",
- "ssi-caips 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-crypto 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-dids-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-caips",
+ "ssi-crypto 0.2.0",
+ "ssi-dids-core",
  "ssi-jwk 0.2.1",
  "static-iref",
  "thiserror",
@@ -1552,10 +1552,10 @@ dependencies = [
  "reqwest 0.11.27",
  "serde",
  "serde_json",
- "ssi-core 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-dids-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-core",
+ "ssi-dids-core",
  "ssi-jwk 0.2.1",
- "ssi-jws 0.2.1",
+ "ssi-jws",
  "static-iref",
  "thiserror",
  "url",
@@ -1569,7 +1569,7 @@ checksum = "c6cf0ab6bab0b86cdadda93e2a60d6f231e76199536810be43fd61e22bf0e7e9"
 dependencies = [
  "http 0.2.12",
  "reqwest 0.11.27",
- "ssi-dids-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-dids-core",
  "thiserror",
 ]
 
@@ -2777,27 +2777,6 @@ dependencies = [
 
 [[package]]
 name = "json-ld"
-version = "0.19.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "766f1ea32a9e5cdf4253263bbceae8ce08cf55347574ee44430af4c1e7a8d5f7"
-dependencies = [
- "contextual",
- "futures",
- "iref",
- "json-ld-compaction 0.19.2",
- "json-ld-context-processing 0.19.2",
- "json-ld-core 0.19.2",
- "json-ld-expansion 0.19.2",
- "json-ld-serialization 0.19.2",
- "json-ld-syntax 0.19.2",
- "json-syntax",
- "locspan",
- "rdf-types",
- "thiserror",
-]
-
-[[package]]
-name = "json-ld"
 version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0a5e03a47a0118ce03ca3a843d1cc1d6d89c91c0b035dab53ed57ad07068b4a3"
@@ -2805,36 +2784,14 @@ dependencies = [
  "contextual",
  "futures",
  "iref",
- "json-ld-compaction 0.21.1",
- "json-ld-context-processing 0.21.1",
- "json-ld-core 0.21.1",
- "json-ld-expansion 0.21.1",
- "json-ld-serialization 0.21.1",
- "json-ld-syntax 0.21.1",
+ "json-ld-compaction",
+ "json-ld-context-processing",
+ "json-ld-core",
+ "json-ld-expansion",
+ "json-ld-serialization",
+ "json-ld-syntax",
  "json-syntax",
  "locspan",
- "rdf-types",
- "thiserror",
-]
-
-[[package]]
-name = "json-ld-compaction"
-version = "0.19.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d23410e2552840da1028543edbc2f99714e0e48e290828518f3aa159acc3aa82"
-dependencies = [
- "contextual",
- "educe 0.4.23",
- "futures",
- "indexmap 2.5.0",
- "iref",
- "json-ld-context-processing 0.19.2",
- "json-ld-core 0.19.2",
- "json-ld-expansion 0.19.2",
- "json-ld-syntax 0.19.2",
- "json-syntax",
- "langtag",
- "mown",
  "rdf-types",
  "thiserror",
 ]
@@ -2850,30 +2807,13 @@ dependencies = [
  "futures",
  "indexmap 2.5.0",
  "iref",
- "json-ld-context-processing 0.21.1",
- "json-ld-core 0.21.1",
- "json-ld-expansion 0.21.1",
- "json-ld-syntax 0.21.1",
+ "json-ld-context-processing",
+ "json-ld-core",
+ "json-ld-expansion",
+ "json-ld-syntax",
  "json-syntax",
  "langtag",
  "mown",
- "rdf-types",
- "thiserror",
-]
-
-[[package]]
-name = "json-ld-context-processing"
-version = "0.19.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c09344f0096b7852c330cae06283e1aaf77da19a95238cae4efe4855d0a563ed"
-dependencies = [
- "contextual",
- "futures",
- "iref",
- "json-ld-core 0.19.2",
- "json-ld-syntax 0.19.2",
- "mown",
- "owning_ref",
  "rdf-types",
  "thiserror",
 ]
@@ -2887,40 +2827,11 @@ dependencies = [
  "contextual",
  "futures",
  "iref",
- "json-ld-core 0.21.1",
- "json-ld-syntax 0.21.1",
+ "json-ld-core",
+ "json-ld-syntax",
  "mown",
  "owning_ref",
  "rdf-types",
- "thiserror",
-]
-
-[[package]]
-name = "json-ld-core"
-version = "0.19.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eac93039c0cbaca8be42906ce2b502af5565c56fce0e42be1d9a4a4c8be380a6"
-dependencies = [
- "contextual",
- "educe 0.4.23",
- "futures",
- "hashbrown 0.13.2",
- "indexmap 2.5.0",
- "iref",
- "json-ld-syntax 0.19.2",
- "json-syntax",
- "langtag",
- "linked-data",
- "log",
- "mime",
- "once_cell",
- "permutohedron",
- "pretty_dtoa",
- "rdf-types",
- "ryu-js",
- "serde",
- "smallvec",
- "static-iref",
  "thiserror",
 ]
 
@@ -2937,7 +2848,7 @@ dependencies = [
  "hashbrown 0.13.2",
  "indexmap 2.5.0",
  "iref",
- "json-ld-syntax 0.21.1",
+ "json-ld-syntax",
  "json-syntax",
  "langtag",
  "linked-data",
@@ -2959,27 +2870,6 @@ dependencies = [
 
 [[package]]
 name = "json-ld-expansion"
-version = "0.19.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f8653bee486b828e8d7ecad0f98839833226e4846589958bb6bfd8e8d0f6252"
-dependencies = [
- "contextual",
- "educe 0.4.23",
- "futures",
- "indexmap 2.5.0",
- "iref",
- "json-ld-context-processing 0.19.2",
- "json-ld-core 0.19.2",
- "json-ld-syntax 0.19.2",
- "json-syntax",
- "langtag",
- "mown",
- "rdf-types",
- "thiserror",
-]
-
-[[package]]
-name = "json-ld-expansion"
 version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f05cf1f43e51f7360a889f83b2ccb075d21b8229d325f3c80764fb0bce49f1ce"
@@ -2989,30 +2879,14 @@ dependencies = [
  "futures",
  "indexmap 2.5.0",
  "iref",
- "json-ld-context-processing 0.21.1",
- "json-ld-core 0.21.1",
- "json-ld-syntax 0.21.1",
+ "json-ld-context-processing",
+ "json-ld-core",
+ "json-ld-syntax",
  "json-syntax",
  "langtag",
  "mown",
  "rdf-types",
  "thiserror",
-]
-
-[[package]]
-name = "json-ld-serialization"
-version = "0.19.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f98afb9d8c99960f2200c19856e1a520b27c2ef7f6c3a7a01a9c6b4d8d074cf"
-dependencies = [
- "indexmap 2.5.0",
- "iref",
- "json-ld-core 0.19.2",
- "json-syntax",
- "linked-data",
- "rdf-types",
- "thiserror",
- "xsd-types",
 ]
 
 [[package]]
@@ -3023,33 +2897,12 @@ checksum = "9fe6e8a89c6aff8c955a6b9128be4da54f1d64b9564bcd647995610c657e2a4e"
 dependencies = [
  "indexmap 2.5.0",
  "iref",
- "json-ld-core 0.21.1",
+ "json-ld-core",
  "json-syntax",
  "linked-data",
  "rdf-types",
  "thiserror",
  "xsd-types",
-]
-
-[[package]]
-name = "json-ld-syntax"
-version = "0.19.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "918ed89f82b9a79757ca52640ca0618fa80fa29f559270424c2124cfeb230bae"
-dependencies = [
- "contextual",
- "decoded-char",
- "educe 0.4.23",
- "hashbrown 0.13.2",
- "indexmap 2.5.0",
- "iref",
- "json-syntax",
- "langtag",
- "locspan",
- "rdf-types",
- "serde",
- "smallvec",
- "thiserror",
 ]
 
 [[package]]
@@ -3509,7 +3362,6 @@ dependencies = [
  "serde_json",
  "signature",
  "ssi",
- "ssi-status 0.1.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
  "thiserror",
  "time",
  "time-macros",
@@ -3741,7 +3593,7 @@ dependencies = [
  "serde_urlencoded",
  "serde_with 3.9.0",
  "ssi-claims",
- "ssi-dids-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-dids-core",
  "ssi-jwk 0.2.1",
  "thiserror",
  "time",
@@ -5248,22 +5100,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8889299d60ee48b92907821a37eb93254aa41f704144403670f2f9c4344ec42e"
 dependencies = [
  "document-features",
- "ssi-caips 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-caips",
  "ssi-claims",
- "ssi-core 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-crypto 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-core",
+ "ssi-crypto 0.2.0",
  "ssi-dids",
- "ssi-eip712 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-json-ld 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-eip712",
+ "ssi-json-ld",
  "ssi-jwk 0.2.1",
- "ssi-jws 0.2.1",
- "ssi-multicodec 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-rdf 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-security 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-jws",
+ "ssi-multicodec",
+ "ssi-rdf",
+ "ssi-security",
  "ssi-ssh",
- "ssi-status 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-status",
  "ssi-ucan",
- "ssi-verification-methods 0.1.1",
+ "ssi-verification-methods",
  "ssi-zcap-ld",
  "xsd-types",
 ]
@@ -5275,8 +5127,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8e2bbca03cf1d1cb0253f58cd47e843bdf2ad3626dc2a4a1a831684945507c1a"
 dependencies = [
  "rand",
- "ssi-claims-core 0.1.1",
- "ssi-crypto 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-claims-core",
+ "ssi-crypto 0.2.0",
  "zkryptium",
 ]
 
@@ -5290,19 +5142,6 @@ dependencies = [
  "linked-data",
  "serde",
  "ssi-jwk 0.2.1",
- "thiserror",
- "xsd-types",
-]
-
-[[package]]
-name = "ssi-caips"
-version = "0.2.0"
-source = "git+https://github.com/spruceid/ssi.git?rev=157fb00#157fb00cadf031c4dacd21868c284db633aae939"
-dependencies = [
- "bs58",
- "linked-data",
- "serde",
- "ssi-jwk 0.2.0",
  "thiserror",
  "xsd-types",
 ]
@@ -5322,35 +5161,21 @@ dependencies = [
  "rdf-types",
  "serde",
  "serde_json",
- "ssi-claims-core 0.1.1",
- "ssi-core 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-crypto 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-data-integrity 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-dids-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-eip712 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-json-ld 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-claims-core",
+ "ssi-core",
+ "ssi-crypto 0.2.0",
+ "ssi-data-integrity",
+ "ssi-dids-core",
+ "ssi-eip712",
+ "ssi-json-ld",
  "ssi-jwk 0.2.1",
- "ssi-jws 0.2.1",
- "ssi-jwt 0.2.1",
+ "ssi-jws",
+ "ssi-jwt",
  "ssi-sd-jwt",
- "ssi-security 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-vc 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-security",
+ "ssi-vc",
  "ssi-vc-jose-cose",
- "ssi-verification-methods 0.1.1",
- "thiserror",
-]
-
-[[package]]
-name = "ssi-claims-core"
-version = "0.1.0"
-source = "git+https://github.com/spruceid/ssi.git?rev=157fb00#157fb00cadf031c4dacd21868c284db633aae939"
-dependencies = [
- "chrono",
- "educe 0.4.23",
- "serde",
- "ssi-core 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-eip712 0.1.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-json-ld 0.3.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
+ "ssi-verification-methods",
  "thiserror",
 ]
 
@@ -5363,17 +5188,12 @@ dependencies = [
  "chrono",
  "educe 0.4.23",
  "serde",
- "ssi-core 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-crypto 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-eip712 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-json-ld 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-core",
+ "ssi-crypto 0.2.0",
+ "ssi-eip712",
+ "ssi-json-ld",
  "thiserror",
 ]
-
-[[package]]
-name = "ssi-contexts"
-version = "0.1.5"
-source = "git+https://github.com/spruceid/ssi.git?rev=157fb00#157fb00cadf031c4dacd21868c284db633aae939"
 
 [[package]]
 name = "ssi-contexts"
@@ -5386,17 +5206,6 @@ name = "ssi-core"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "09a9bcf4043b59fdb6990c9fb34e6e613f457d0c1341f8c017a9feb3082365e8"
-dependencies = [
- "async-trait",
- "pin-project",
- "serde",
- "thiserror",
-]
-
-[[package]]
-name = "ssi-core"
-version = "0.2.0"
-source = "git+https://github.com/spruceid/ssi.git?rev=157fb00#157fb00cadf031c4dacd21868c284db633aae939"
 dependencies = [
  "async-trait",
  "pin-project",
@@ -5444,23 +5253,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ssi-crypto"
-version = "0.2.0"
-source = "git+https://github.com/spruceid/ssi.git?rev=157fb00#157fb00cadf031c4dacd21868c284db633aae939"
-dependencies = [
- "async-trait",
- "bs58",
- "digest 0.9.0",
- "hex",
- "iref",
- "pin-project",
- "sha2 0.10.8",
- "static-iref",
- "thiserror",
- "zeroize",
-]
-
-[[package]]
 name = "ssi-data-integrity"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5473,82 +5265,20 @@ dependencies = [
  "rdf-types",
  "serde",
  "serde_json",
- "ssi-claims-core 0.1.1",
- "ssi-core 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-crypto 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-data-integrity-core 0.1.1",
- "ssi-data-integrity-suites 0.1.1",
+ "ssi-claims-core",
+ "ssi-core",
+ "ssi-crypto 0.2.0",
+ "ssi-data-integrity-core",
+ "ssi-data-integrity-suites",
  "ssi-di-sd-primitives",
- "ssi-eip712 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-json-ld 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-eip712",
+ "ssi-json-ld",
  "ssi-jwk 0.2.1",
- "ssi-jws 0.2.1",
- "ssi-rdf 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-security 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-verification-methods 0.1.1",
+ "ssi-jws",
+ "ssi-rdf",
+ "ssi-security",
+ "ssi-verification-methods",
  "thiserror",
-]
-
-[[package]]
-name = "ssi-data-integrity"
-version = "0.1.0"
-source = "git+https://github.com/spruceid/ssi.git?rev=157fb00#157fb00cadf031c4dacd21868c284db633aae939"
-dependencies = [
- "chrono",
- "iref",
- "json-syntax",
- "linked-data",
- "rdf-types",
- "serde",
- "serde_json",
- "ssi-claims-core 0.1.0",
- "ssi-core 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-crypto 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-data-integrity-core 0.1.0",
- "ssi-data-integrity-suites 0.1.0",
- "ssi-eip712 0.1.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-json-ld 0.3.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-jwk 0.2.0",
- "ssi-jws 0.2.0",
- "ssi-rdf 0.1.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-security 0.1.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-verification-methods 0.1.0",
- "thiserror",
-]
-
-[[package]]
-name = "ssi-data-integrity-core"
-version = "0.1.0"
-source = "git+https://github.com/spruceid/ssi.git?rev=157fb00#157fb00cadf031c4dacd21868c284db633aae939"
-dependencies = [
- "chrono",
- "contextual",
- "derivative",
- "digest 0.10.7",
- "educe 0.4.23",
- "futures",
- "hex",
- "iref",
- "json-syntax",
- "linked-data",
- "locspan",
- "multibase 0.9.1",
- "rdf-types",
- "self_cell",
- "serde",
- "serde_json",
- "ssi-claims-core 0.1.0",
- "ssi-core 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-crypto 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-json-ld 0.3.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-jwk 0.2.0",
- "ssi-jws 0.2.0",
- "ssi-rdf 0.1.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-security 0.1.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-verification-methods-core 0.1.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "static-iref",
- "thiserror",
- "xsd-types",
 ]
 
 [[package]]
@@ -5573,56 +5303,15 @@ dependencies = [
  "self_cell",
  "serde",
  "serde_json",
- "ssi-claims-core 0.1.1",
- "ssi-core 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-crypto 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-json-ld 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-claims-core",
+ "ssi-core",
+ "ssi-crypto 0.2.0",
+ "ssi-json-ld",
  "ssi-jwk 0.2.1",
- "ssi-jws 0.2.1",
- "ssi-rdf 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-security 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-verification-methods 0.1.1",
- "static-iref",
- "thiserror",
- "xsd-types",
-]
-
-[[package]]
-name = "ssi-data-integrity-suites"
-version = "0.1.0"
-source = "git+https://github.com/spruceid/ssi.git?rev=157fb00#157fb00cadf031c4dacd21868c284db633aae939"
-dependencies = [
- "async-trait",
- "base64 0.12.3",
- "chrono",
- "contextual",
- "derivative",
- "educe 0.4.23",
- "futures",
- "hex",
- "iref",
- "json-syntax",
- "lazy_static",
- "linked-data",
- "locspan",
- "multibase 0.9.1",
- "pin-project",
- "rdf-types",
- "self_cell",
- "serde",
- "ssi-caips 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-claims-core 0.1.0",
- "ssi-contexts 0.1.5",
- "ssi-core 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-crypto 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-data-integrity-core 0.1.0",
- "ssi-eip712 0.1.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-json-ld 0.3.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-jwk 0.2.0",
- "ssi-jws 0.2.0",
- "ssi-rdf 0.1.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-security 0.1.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-verification-methods 0.1.0",
+ "ssi-jws",
+ "ssi-rdf",
+ "ssi-security",
+ "ssi-verification-methods",
  "static-iref",
  "thiserror",
  "xsd-types",
@@ -5660,21 +5349,21 @@ dependencies = [
  "serde_cbor",
  "serde_json",
  "ssi-bbs",
- "ssi-caips 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-claims-core 0.1.1",
- "ssi-contexts 0.1.6",
- "ssi-core 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-crypto 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-data-integrity-core 0.1.1",
+ "ssi-caips",
+ "ssi-claims-core",
+ "ssi-contexts",
+ "ssi-core",
+ "ssi-crypto 0.2.0",
+ "ssi-data-integrity-core",
  "ssi-di-sd-primitives",
- "ssi-eip712 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-json-ld 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-eip712",
+ "ssi-json-ld",
  "ssi-jwk 0.2.1",
- "ssi-jws 0.2.1",
- "ssi-multicodec 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-rdf 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-security 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-verification-methods 0.1.1",
+ "ssi-jws",
+ "ssi-multicodec",
+ "ssi-rdf",
+ "ssi-security",
+ "ssi-verification-methods",
  "static-iref",
  "thiserror",
  "xsd-types",
@@ -5696,8 +5385,8 @@ dependencies = [
  "rdf-types",
  "serde",
  "sha2 0.10.8",
- "ssi-json-ld 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-rdf 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-json-ld",
+ "ssi-rdf",
  "thiserror",
  "uuid",
 ]
@@ -5715,7 +5404,7 @@ dependencies = [
  "did-pkh",
  "did-tz",
  "did-web",
- "ssi-dids-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-dids-core",
  "ssi-jwk 0.2.1",
  "thiserror",
 ]
@@ -5734,36 +5423,13 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
- "ssi-claims-core 0.1.1",
- "ssi-core 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-crypto 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-json-ld 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-claims-core",
+ "ssi-core",
+ "ssi-crypto 0.2.0",
+ "ssi-json-ld",
  "ssi-jwk 0.2.1",
- "ssi-jws 0.2.1",
- "ssi-verification-methods-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "static-iref",
- "thiserror",
-]
-
-[[package]]
-name = "ssi-dids-core"
-version = "0.1.0"
-source = "git+https://github.com/spruceid/ssi.git?rev=157fb00#157fb00cadf031c4dacd21868c284db633aae939"
-dependencies = [
- "async-trait",
- "iref",
- "pin-project",
- "reqwest 0.11.27",
- "serde",
- "serde_json",
- "serde_urlencoded",
- "ssi-claims-core 0.1.0",
- "ssi-core 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-crypto 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-json-ld 0.3.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-jwk 0.2.0",
- "ssi-jws 0.2.0",
- "ssi-verification-methods-core 0.1.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
+ "ssi-jws",
+ "ssi-verification-methods-core",
  "static-iref",
  "thiserror",
 ]
@@ -5788,24 +5454,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ssi-eip712"
-version = "0.1.0"
-source = "git+https://github.com/spruceid/ssi.git?rev=157fb00#157fb00cadf031c4dacd21868c284db633aae939"
-dependencies = [
- "hex",
- "indexmap 2.5.0",
- "iref",
- "json-syntax",
- "keccak-hash",
- "linked-data",
- "rdf-types",
- "serde",
- "serde_jcs",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
 name = "ssi-json-ld"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5815,40 +5463,16 @@ dependencies = [
  "combination",
  "futures",
  "iref",
- "json-ld 0.21.1",
+ "json-ld",
  "json-syntax",
  "lazy_static",
  "linked-data",
  "locspan",
  "rdf-types",
  "serde",
- "ssi-contexts 0.1.6",
- "ssi-crypto 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-rdf 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "static-iref",
- "thiserror",
- "xsd-types",
-]
-
-[[package]]
-name = "ssi-json-ld"
-version = "0.3.0"
-source = "git+https://github.com/spruceid/ssi.git?rev=157fb00#157fb00cadf031c4dacd21868c284db633aae939"
-dependencies = [
- "async-std",
- "combination",
- "futures",
- "iref",
- "json-ld 0.19.2",
- "json-syntax",
- "lazy_static",
- "linked-data",
- "locspan",
- "rdf-types",
- "serde",
- "ssi-contexts 0.1.5",
- "ssi-crypto 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-rdf 0.1.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
+ "ssi-contexts",
+ "ssi-crypto 0.2.0",
+ "ssi-rdf",
  "static-iref",
  "thiserror",
  "xsd-types",
@@ -5882,30 +5506,6 @@ dependencies = [
 
 [[package]]
 name = "ssi-jwk"
-version = "0.2.0"
-source = "git+https://github.com/spruceid/ssi.git?rev=157fb00#157fb00cadf031c4dacd21868c284db633aae939"
-dependencies = [
- "base64 0.12.3",
- "json-syntax",
- "lazy_static",
- "linked-data",
- "multibase 0.9.1",
- "num-bigint",
- "num-derive",
- "num-traits",
- "serde",
- "serde_jcs",
- "serde_json",
- "simple_asn1",
- "ssi-claims-core 0.1.0",
- "ssi-crypto 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-multicodec 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "thiserror",
- "zeroize",
-]
-
-[[package]]
-name = "ssi-jwk"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9548df4ddf50fe2ce3ad91f8505d1babf0e18cfc28b7b3d0e5d096990764d195"
@@ -5931,30 +5531,11 @@ dependencies = [
  "serde_jcs",
  "serde_json",
  "simple_asn1",
- "ssi-claims-core 0.1.1",
- "ssi-crypto 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-multicodec 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-claims-core",
+ "ssi-crypto 0.2.0",
+ "ssi-multicodec",
  "thiserror",
  "zeroize",
-]
-
-[[package]]
-name = "ssi-jws"
-version = "0.2.0"
-source = "git+https://github.com/spruceid/ssi.git?rev=157fb00#157fb00cadf031c4dacd21868c284db633aae939"
-dependencies = [
- "base64 0.12.3",
- "clear_on_drop",
- "hex",
- "iref",
- "linked-data",
- "serde",
- "serde_json",
- "ssi-claims-core 0.1.0",
- "ssi-core 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-crypto 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-jwk 0.2.0",
- "thiserror",
 ]
 
 [[package]]
@@ -5979,33 +5560,10 @@ dependencies = [
  "serde_json",
  "sha2 0.10.8",
  "sha3",
- "ssi-claims-core 0.1.1",
- "ssi-core 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-crypto 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-claims-core",
+ "ssi-core",
+ "ssi-crypto 0.2.0",
  "ssi-jwk 0.2.1",
- "thiserror",
-]
-
-[[package]]
-name = "ssi-jwt"
-version = "0.2.0"
-source = "git+https://github.com/spruceid/ssi.git?rev=157fb00#157fb00cadf031c4dacd21868c284db633aae939"
-dependencies = [
- "async-trait",
- "chrono",
- "hashbrown 0.14.5",
- "iref",
- "json-syntax",
- "ordered-float 4.2.2",
- "serde",
- "serde_json",
- "serde_with 2.3.3",
- "slab",
- "ssi-claims-core 0.1.0",
- "ssi-core 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-crypto 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-jwk 0.2.0",
- "ssi-jws 0.2.0",
  "thiserror",
 ]
 
@@ -6025,11 +5583,11 @@ dependencies = [
  "serde_json",
  "serde_with 2.3.3",
  "slab",
- "ssi-claims-core 0.1.1",
- "ssi-core 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-crypto 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-claims-core",
+ "ssi-core",
+ "ssi-crypto 0.2.0",
  "ssi-jwk 0.2.1",
- "ssi-jws 0.2.1",
+ "ssi-jws",
  "thiserror",
 ]
 
@@ -6049,16 +5607,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ssi-multicodec"
-version = "0.2.0"
-source = "git+https://github.com/spruceid/ssi.git?rev=157fb00#157fb00cadf031c4dacd21868c284db633aae939"
-dependencies = [
- "csv",
- "thiserror",
- "unsigned-varint",
-]
-
-[[package]]
 name = "ssi-rdf"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6070,20 +5618,7 @@ dependencies = [
  "linked-data",
  "rdf-types",
  "serde",
- "ssi-crypto 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "ssi-rdf"
-version = "0.1.0"
-source = "git+https://github.com/spruceid/ssi.git?rev=157fb00#157fb00cadf031c4dacd21868c284db633aae939"
-dependencies = [
- "combination",
- "iref",
- "linked-data",
- "rdf-types",
- "serde",
- "ssi-crypto 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
+ "ssi-crypto 0.2.0",
 ]
 
 [[package]]
@@ -6098,8 +5633,8 @@ dependencies = [
  "serde_json",
  "sha2 0.10.8",
  "ssi-jwk 0.2.1",
- "ssi-jws 0.2.1",
- "ssi-jwt 0.2.1",
+ "ssi-jws",
+ "ssi-jwt",
  "thiserror",
 ]
 
@@ -6108,19 +5643,6 @@ name = "ssi-security"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f870a28eabccd4ae0e807122859bb83e36b87dd096ba01215abce524bddfc247"
-dependencies = [
- "iref",
- "linked-data",
- "multibase 0.9.1",
- "serde",
- "static-iref",
- "xsd-types",
-]
-
-[[package]]
-name = "ssi-security"
-version = "0.1.0"
-source = "git+https://github.com/spruceid/ssi.git?rev=157fb00#157fb00cadf031c4dacd21868c284db633aae939"
 dependencies = [
  "iref",
  "linked-data",
@@ -6157,41 +5679,14 @@ dependencies = [
  "reqwest 0.12.7",
  "serde",
  "serde_json",
- "ssi-claims-core 0.1.1",
- "ssi-data-integrity 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-json-ld 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-claims-core",
+ "ssi-data-integrity",
+ "ssi-json-ld",
  "ssi-jwk 0.2.1",
- "ssi-jws 0.2.1",
- "ssi-jwt 0.2.1",
- "ssi-vc 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-verification-methods 0.1.1",
- "thiserror",
- "xsd-types",
-]
-
-[[package]]
-name = "ssi-status"
-version = "0.1.0"
-source = "git+https://github.com/spruceid/ssi.git?rev=157fb00#157fb00cadf031c4dacd21868c284db633aae939"
-dependencies = [
- "base64 0.12.3",
- "flate2",
- "iref",
- "log",
- "multibase 0.9.1",
- "parking_lot",
- "rdf-types",
- "reqwest 0.12.7",
- "serde",
- "serde_json",
- "ssi-claims-core 0.1.0",
- "ssi-data-integrity 0.1.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-json-ld 0.3.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-jwk 0.2.0",
- "ssi-jws 0.2.0",
- "ssi-jwt 0.2.0",
- "ssi-vc 0.3.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-verification-methods 0.1.0",
+ "ssi-jws",
+ "ssi-jwt",
+ "ssi-vc",
+ "ssi-verification-methods",
  "thiserror",
  "xsd-types",
 ]
@@ -6212,13 +5707,13 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with 1.14.0",
- "ssi-caips 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-core 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-dids-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-caips",
+ "ssi-core",
+ "ssi-dids-core",
  "ssi-jwk 0.2.1",
- "ssi-jws 0.2.1",
- "ssi-jwt 0.2.1",
- "ssi-verification-methods 0.1.1",
+ "ssi-jws",
+ "ssi-jwt",
+ "ssi-verification-methods",
  "thiserror",
 ]
 
@@ -6240,44 +5735,14 @@ dependencies = [
  "reqwest 0.11.27",
  "serde",
  "serde_json",
- "ssi-claims-core 0.1.1",
- "ssi-core 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-data-integrity 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-dids-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-json-ld 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-jwt 0.2.1",
- "ssi-rdf 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-verification-methods 0.1.1",
- "static-iref",
- "thiserror",
- "xsd-types",
-]
-
-[[package]]
-name = "ssi-vc"
-version = "0.3.0"
-source = "git+https://github.com/spruceid/ssi.git?rev=157fb00#157fb00cadf031c4dacd21868c284db633aae939"
-dependencies = [
- "base64 0.12.3",
- "bitvec 0.20.4",
- "chrono",
- "educe 0.4.23",
- "flate2",
- "iref",
- "json-syntax",
- "linked-data",
- "rdf-types",
- "reqwest 0.11.27",
- "serde",
- "serde_json",
- "ssi-claims-core 0.1.0",
- "ssi-core 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-data-integrity 0.1.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-dids-core 0.1.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-json-ld 0.3.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-jwt 0.2.0",
- "ssi-rdf 0.1.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-verification-methods 0.1.0",
+ "ssi-claims-core",
+ "ssi-core",
+ "ssi-data-integrity",
+ "ssi-dids-core",
+ "ssi-json-ld",
+ "ssi-jwt",
+ "ssi-rdf",
+ "ssi-verification-methods",
  "static-iref",
  "thiserror",
  "xsd-types",
@@ -6291,43 +5756,12 @@ checksum = "9e7fdc17c83808bf91c47647a40b9e91af052ee930da77f3336536f3250f35e1"
 dependencies = [
  "serde",
  "serde_json",
- "ssi-claims-core 0.1.1",
- "ssi-json-ld 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-jws 0.2.1",
- "ssi-vc 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-claims-core",
+ "ssi-json-ld",
+ "ssi-jws",
+ "ssi-vc",
  "thiserror",
  "xsd-types",
-]
-
-[[package]]
-name = "ssi-verification-methods"
-version = "0.1.0"
-source = "git+https://github.com/spruceid/ssi.git?rev=157fb00#157fb00cadf031c4dacd21868c284db633aae939"
-dependencies = [
- "async-trait",
- "derivative",
- "educe 0.4.23",
- "futures",
- "hex",
- "iref",
- "json-syntax",
- "linked-data",
- "multibase 0.9.1",
- "pin-project",
- "rdf-types",
- "serde",
- "serde_json",
- "ssi-caips 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-claims-core 0.1.0",
- "ssi-core 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-crypto 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-jwk 0.2.0",
- "ssi-jws 0.2.0",
- "ssi-multicodec 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-security 0.1.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-verification-methods-core 0.1.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "static-iref",
- "thiserror",
 ]
 
 [[package]]
@@ -6356,16 +5790,16 @@ dependencies = [
  "serde_json",
  "sha2 0.10.8",
  "sha3",
- "ssi-caips 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-claims-core 0.1.1",
- "ssi-core 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-crypto 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-eip712 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-caips",
+ "ssi-claims-core",
+ "ssi-core",
+ "ssi-crypto 0.2.0",
+ "ssi-eip712",
  "ssi-jwk 0.2.1",
- "ssi-jws 0.2.1",
- "ssi-multicodec 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-security 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-verification-methods-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-jws",
+ "ssi-multicodec",
+ "ssi-security",
+ "ssi-verification-methods-core",
  "static-iref",
  "thiserror",
 ]
@@ -6385,36 +5819,12 @@ dependencies = [
  "rdf-types",
  "serde",
  "serde_json",
- "ssi-claims-core 0.1.1",
- "ssi-core 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-crypto 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-json-ld 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-claims-core",
+ "ssi-core",
+ "ssi-crypto 0.2.0",
+ "ssi-json-ld",
  "ssi-jwk 0.2.1",
- "ssi-jws 0.2.1",
- "static-iref",
- "thiserror",
-]
-
-[[package]]
-name = "ssi-verification-methods-core"
-version = "0.1.0"
-source = "git+https://github.com/spruceid/ssi.git?rev=157fb00#157fb00cadf031c4dacd21868c284db633aae939"
-dependencies = [
- "bs58",
- "educe 0.4.23",
- "hex",
- "iref",
- "linked-data",
- "multibase 0.9.1",
- "rdf-types",
- "serde",
- "serde_json",
- "ssi-claims-core 0.1.0",
- "ssi-core 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-crypto 0.2.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-json-ld 0.3.0 (git+https://github.com/spruceid/ssi.git?rev=157fb00)",
- "ssi-jwk 0.2.0",
- "ssi-jws 0.2.0",
+ "ssi-jws",
  "static-iref",
  "thiserror",
 ]
@@ -6432,13 +5842,13 @@ dependencies = [
  "serde",
  "serde_json",
  "ssi-claims",
- "ssi-core 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-dids-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-eip712 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-json-ld 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ssi-core",
+ "ssi-dids-core",
+ "ssi-eip712",
+ "ssi-json-ld",
  "ssi-jwk 0.2.1",
- "ssi-rdf 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "ssi-verification-methods 0.1.1",
+ "ssi-rdf",
+ "ssi-verification-methods",
  "static-iref",
  "thiserror",
 ]

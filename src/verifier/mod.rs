@@ -15,7 +15,7 @@ use cose_rs::{
 };
 use num_bigint::BigUint;
 use num_traits::Num as _;
-use ssi_status::token_status_list::{json::JsonStatusList, DecodeError};
+use ssi::status::token_status_list::{json::JsonStatusList, DecodeError};
 use time::OffsetDateTime;
 use uniffi::deps::anyhow::{self, anyhow, bail, Context, Error};
 use x509_cert::{certificate::CertificateInner, der::Encode, Certificate};
