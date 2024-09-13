@@ -98,7 +98,7 @@ impl VdcCollection {
         self.all_entries().map(|list| {
             list.iter()
                 .filter_map(|id| self.get(*id).ok().flatten())
-                .filter(|cred| &cred.r#type == &ctype)
+                .filter(|cred| cred.r#type == ctype)
                 .map(|cred| cred.id)
                 .collect()
         })
