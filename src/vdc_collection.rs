@@ -153,6 +153,8 @@ impl VdcCollection {
 
 #[cfg(test)]
 mod tests {
+    use futures::SinkExt;
+
     use super::*;
     use crate::{credential::CredentialFormat, local_store::*};
 
@@ -160,6 +162,9 @@ mod tests {
     async fn test_vdc() {
         let smi: Arc<dyn StorageManagerInterface> = Arc::new(LocalStore);
         let vdc = VdcCollection::new(smi);
+        for id in vdc.all_entries().await.unwrap() {
+            vdc.delete(id).await.unwrap();
+        }
         let payload_1: Vec<u8> = "Some random collection of bytes. ⚛".into();
         let payload_2: Vec<u8> = "Some other random collection of bytes. 📯".into();
         let payload_3: Vec<u8> = "Some third random collection of bytes. λ".into();
