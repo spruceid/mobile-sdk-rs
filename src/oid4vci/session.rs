@@ -11,7 +11,7 @@ use oid4vci::{
     token,
 };
 
-use crate::vdc_collection::CredentialFormat;
+use crate::credential::CredentialFormat;
 
 use super::Oid4vciError;
 

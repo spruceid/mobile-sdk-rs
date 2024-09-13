@@ -1,6 +1,7 @@
 uniffi::setup_scaffolding!();
 
 pub mod common;
+pub mod credential;
 pub mod local_store;
 pub mod mdl;
 pub mod oid4vci;
