@@ -1,7 +1,4 @@
-use oid4vci::{
-    credential::RequestError,
-    openidconnect::{DiscoveryError, ErrorResponse, RequestTokenError},
-};
+use oid4vci::credential::RequestError;
 
 use super::HttpClientError;
 
@@ -26,6 +23,9 @@ pub enum Oid4vciError {
     #[error("Failed to acquire lock for {0}")]
     LockError(String),
 
+    #[error("{vp_request}")]
+    VpRequestRequired { vp_request: serde_json::Value },
+
     #[error("{0}")]
     Generic(String),
 }
@@ -34,19 +34,6 @@ pub enum Oid4vciError {
 impl From<String> for Oid4vciError {
     fn from(value: String) -> Self {
         Self::Generic(value)
-    }
-}
-
-impl<RE> From<DiscoveryError<RE>> for Oid4vciError
-where
-    RE: std::error::Error + 'static,
-{
-    fn from(value: DiscoveryError<RE>) -> Self {
-        if let DiscoveryError::Parse(e) = &value {
-            Oid4vciError::RequestError(format!("{value}: {e}"))
-        } else {
-            Oid4vciError::RequestError(value.to_string())
-        }
     }
 }
 
@@ -61,21 +48,22 @@ where
     RE: std::error::Error + 'static,
 {
     fn from(value: RequestError<RE>) -> Self {
+        if let RequestError::Response(_, ref body, _) = value {
+            let maybe_json = serde_json::from_slice::<serde_json::Value>(body);
+            if let Ok(serde_json::Value::Object(map)) = maybe_json {
+                if let Some(vp_request) = map.get("authorization_request") {
+                    return Oid4vciError::VpRequestRequired {
+                        vp_request: vp_request.to_owned(),
+                    };
+                }
+            }
+        }
+
         if let RequestError::Parse(e) = &value {
             Oid4vciError::RequestError(format!("{value}: {e}"))
         } else {
             Oid4vciError::RequestError(value.to_string())
         }
-    }
-}
-
-impl<RE, T> From<RequestTokenError<RE, T>> for Oid4vciError
-where
-    RE: std::error::Error + 'static,
-    T: ErrorResponse + 'static,
-{
-    fn from(value: RequestTokenError<RE, T>) -> Self {
-        Oid4vciError::RequestError(value.to_string())
     }
 }
 

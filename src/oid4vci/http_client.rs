@@ -2,7 +2,7 @@ use std::{collections::HashMap, future::Future, pin::Pin, str::FromStr, sync::Ar
 
 use async_trait::async_trait;
 use either::Either;
-use oid4vci::openidconnect::{
+use oid4vci::oauth2::{
     http::{HeaderMap, Method, Request, Response, StatusCode, Uri},
     AsyncHttpClient as ExtAsyncHttpClient, HttpRequest as ExtHttpRequest,
     HttpResponse as ExtHttpResponse, SyncHttpClient as ExtSyncHttpClient,

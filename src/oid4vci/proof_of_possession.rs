@@ -1,10 +1,10 @@
 use std::str::FromStr;
 
 use oid4vci::{
-    openidconnect::Nonce,
     proof_of_possession::{
         ProofOfPossession, ProofOfPossessionController, ProofOfPossessionParams,
     },
+    types::Nonce,
 };
 use ssi::{dids::DIDURLBuf, jwk::JWK};
 use url::Url;
