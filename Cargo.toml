@@ -38,9 +38,10 @@ uuid = { version = "1.6.1", features = ["v4"] }
 w3c-vc-barcodes = { git = "https://github.com/spruceid/w3c-vc-barcodes", rev = "372ff39" }
 
 [dev-dependencies]
-uniffi = { version = "0.28.1", features = ["bindgen-tests"] }
-tokio = "1.39.2"
 base64 = "0.22.0"
+rstest = "0.22.0"
+tokio = "1.39.2"
+uniffi = { version = "0.28.1", features = ["bindgen-tests"] }
 
 [build-dependencies]
 uniffi = { version = "0.28.1", features = ["build"] }
