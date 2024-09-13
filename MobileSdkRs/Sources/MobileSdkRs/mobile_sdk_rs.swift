@@ -50,11 +50,9 @@ fileprivate extension ForeignBytes {
 
 fileprivate extension Data {
     init(rustBuffer: RustBuffer) {
-        self.init(
-            bytesNoCopy: rustBuffer.data!,
-            count: Int(rustBuffer.len),
-            deallocator: .none
-        )
+        // TODO: This copies the buffer. Can we read directly from a
+        // Rust buffer?
+        self.init(bytes: rustBuffer.data!, count: Int(rustBuffer.len))
     }
 }
 
@@ -155,7 +153,7 @@ fileprivate func writeDouble(_ writer: inout [UInt8], _ value: Double) {
 }
 
 // Protocol for types that transfer other types across the FFI. This is
-// analogous to the Rust trait of the same name.
+// analogous go the Rust trait of the same name.
 fileprivate protocol FfiConverter {
     associatedtype FfiType
     associatedtype SwiftType
@@ -255,19 +253,18 @@ fileprivate extension RustCallStatus {
 }
 
 private func rustCall<T>(_ callback: (UnsafeMutablePointer<RustCallStatus>) -> T) throws -> T {
-    let neverThrow: ((RustBuffer) throws -> Never)? = nil
-    return try makeRustCall(callback, errorHandler: neverThrow)
+    try makeRustCall(callback, errorHandler: nil)
 }
 
-private func rustCallWithError<T, E: Swift.Error>(
-    _ errorHandler: @escaping (RustBuffer) throws -> E,
+private func rustCallWithError<T>(
+    _ errorHandler: @escaping (RustBuffer) throws -> Error,
     _ callback: (UnsafeMutablePointer<RustCallStatus>) -> T) throws -> T {
     try makeRustCall(callback, errorHandler: errorHandler)
 }
 
-private func makeRustCall<T, E: Swift.Error>(
+private func makeRustCall<T>(
     _ callback: (UnsafeMutablePointer<RustCallStatus>) -> T,
-    errorHandler: ((RustBuffer) throws -> E)?
+    errorHandler: ((RustBuffer) throws -> Error)?
 ) throws -> T {
     uniffiEnsureInitialized()
     var callStatus = RustCallStatus.init()
@@ -276,9 +273,9 @@ private func makeRustCall<T, E: Swift.Error>(
     return returnedVal
 }
 
-private func uniffiCheckCallStatus<E: Swift.Error>(
+private func uniffiCheckCallStatus(
     callStatus: RustCallStatus,
-    errorHandler: ((RustBuffer) throws -> E)?
+    errorHandler: ((RustBuffer) throws -> Error)?
 ) throws {
     switch callStatus.code {
         case CALL_SUCCESS:
@@ -2284,6 +2281,325 @@ public func FfiConverterTypeTokenResponse_lower(_ value: TokenResponse) -> Unsaf
 }
 
 
+
+
+/**
+ * Verifiable Digital Credential Collection
+ *
+ * This is the main interface to credentials.
+ */
+public protocol VdcCollectionProtocol : AnyObject {
+    
+    /**
+     * Add a credential to the set.
+     */
+    func add(credential: Credential) throws 
+    
+    /**
+     * Get a list of all the credentials.
+     */
+    func allEntries() throws  -> [Uuid]
+    
+    /**
+     * Get a list of all the credentials that match a specified type.
+     */
+    func allEntriesByType(ctype: CredentialType) throws  -> [Uuid]
+    
+    /**
+     * Remove a credential from the store.
+     */
+    func delete(id: Uuid) throws 
+    
+    /**
+     * Dump the contents of the credential set to the logger.
+     */
+    func dump() 
+    
+    /**
+     * Get a credential from the store.
+     */
+    func get(id: Uuid) throws  -> Credential?
+    
+}
+
+/**
+ * Verifiable Digital Credential Collection
+ *
+ * This is the main interface to credentials.
+ */
+open class VdcCollection:
+    VdcCollectionProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_vdccollection(self.pointer, $0) }
+    }
+    /**
+     * Create a new credential set.
+     */
+public convenience init(engine: StorageManagerInterface) {
+    let pointer =
+        try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_constructor_vdccollection_new(
+        FfiConverterCallbackInterfaceStorageManagerInterface.lower(engine),$0
+    )
+}
+    self.init(unsafeFromRawPointer: pointer)
+}
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_vdccollection(pointer, $0) }
+    }
+
+    
+
+    
+    /**
+     * Add a credential to the set.
+     */
+open func add(credential: Credential)throws  {try rustCallWithError(FfiConverterTypeVdcCollectionError.lift) {
+    uniffi_mobile_sdk_rs_fn_method_vdccollection_add(self.uniffiClonePointer(),
+        FfiConverterTypeCredential.lower(credential),$0
+    )
+}
+}
+    
+    /**
+     * Get a list of all the credentials.
+     */
+open func allEntries()throws  -> [Uuid] {
+    return try  FfiConverterSequenceTypeUuid.lift(try rustCallWithError(FfiConverterTypeVdcCollectionError.lift) {
+    uniffi_mobile_sdk_rs_fn_method_vdccollection_all_entries(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * Get a list of all the credentials that match a specified type.
+     */
+open func allEntriesByType(ctype: CredentialType)throws  -> [Uuid] {
+    return try  FfiConverterSequenceTypeUuid.lift(try rustCallWithError(FfiConverterTypeVdcCollectionError.lift) {
+    uniffi_mobile_sdk_rs_fn_method_vdccollection_all_entries_by_type(self.uniffiClonePointer(),
+        FfiConverterTypeCredentialType.lower(ctype),$0
+    )
+})
+}
+    
+    /**
+     * Remove a credential from the store.
+     */
+open func delete(id: Uuid)throws  {try rustCallWithError(FfiConverterTypeVdcCollectionError.lift) {
+    uniffi_mobile_sdk_rs_fn_method_vdccollection_delete(self.uniffiClonePointer(),
+        FfiConverterTypeUuid.lower(id),$0
+    )
+}
+}
+    
+    /**
+     * Dump the contents of the credential set to the logger.
+     */
+open func dump() {try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_vdccollection_dump(self.uniffiClonePointer(),$0
+    )
+}
+}
+    
+    /**
+     * Get a credential from the store.
+     */
+open func get(id: Uuid)throws  -> Credential? {
+    return try  FfiConverterOptionTypeCredential.lift(try rustCallWithError(FfiConverterTypeVdcCollectionError.lift) {
+    uniffi_mobile_sdk_rs_fn_method_vdccollection_get(self.uniffiClonePointer(),
+        FfiConverterTypeUuid.lower(id),$0
+    )
+})
+}
+    
+
+}
+
+public struct FfiConverterTypeVdcCollection: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = VdcCollection
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> VdcCollection {
+        return VdcCollection(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: VdcCollection) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> VdcCollection {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: VdcCollection, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+public func FfiConverterTypeVdcCollection_lift(_ pointer: UnsafeMutableRawPointer) throws -> VdcCollection {
+    return try FfiConverterTypeVdcCollection.lift(pointer)
+}
+
+public func FfiConverterTypeVdcCollection_lower(_ value: VdcCollection) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeVdcCollection.lower(value)
+}
+
+
+/**
+ * An individual credential.
+ */
+public struct Credential {
+    /**
+     * The local ID of this credential.
+     */
+    public var id: Uuid
+    /**
+     * The format of this credential.
+     */
+    public var format: CredentialFormat
+    /**
+     * The type of this credential.
+     */
+    public var type: CredentialType
+    /**
+     * The raw payload of this credential. The encoding depends on the format.
+     */
+    public var payload: Data
+    /**
+     * The alias of the key that is authorized to present this credential.
+     */
+    public var keyAlias: KeyAlias?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The local ID of this credential.
+         */id: Uuid, 
+        /**
+         * The format of this credential.
+         */format: CredentialFormat, 
+        /**
+         * The type of this credential.
+         */type: CredentialType, 
+        /**
+         * The raw payload of this credential. The encoding depends on the format.
+         */payload: Data, 
+        /**
+         * The alias of the key that is authorized to present this credential.
+         */keyAlias: KeyAlias?) {
+        self.id = id
+        self.format = format
+        self.type = type
+        self.payload = payload
+        self.keyAlias = keyAlias
+    }
+}
+
+
+
+extension Credential: Equatable, Hashable {
+    public static func ==(lhs: Credential, rhs: Credential) -> Bool {
+        if lhs.id != rhs.id {
+            return false
+        }
+        if lhs.format != rhs.format {
+            return false
+        }
+        if lhs.type != rhs.type {
+            return false
+        }
+        if lhs.payload != rhs.payload {
+            return false
+        }
+        if lhs.keyAlias != rhs.keyAlias {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(format)
+        hasher.combine(type)
+        hasher.combine(payload)
+        hasher.combine(keyAlias)
+    }
+}
+
+
+public struct FfiConverterTypeCredential: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Credential {
+        return
+            try Credential(
+                id: FfiConverterTypeUuid.read(from: &buf), 
+                format: FfiConverterTypeCredentialFormat.read(from: &buf), 
+                type: FfiConverterTypeCredentialType.read(from: &buf), 
+                payload: FfiConverterData.read(from: &buf), 
+                keyAlias: FfiConverterOptionTypeKeyAlias.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: Credential, into buf: inout [UInt8]) {
+        FfiConverterTypeUuid.write(value.id, into: &buf)
+        FfiConverterTypeCredentialFormat.write(value.format, into: &buf)
+        FfiConverterTypeCredentialType.write(value.type, into: &buf)
+        FfiConverterData.write(value.payload, into: &buf)
+        FfiConverterOptionTypeKeyAlias.write(value.keyAlias, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeCredential_lift(_ buf: RustBuffer) throws -> Credential {
+    return try FfiConverterTypeCredential.lift(buf)
+}
+
+public func FfiConverterTypeCredential_lower(_ value: Credential) -> RustBuffer {
+    return FfiConverterTypeCredential.lower(value)
+}
+
+
 public struct CredentialResponse {
     public var format: CredentialFormat
     public var payload: Data
@@ -2722,7 +3038,7 @@ public func FfiConverterTypeSessionData_lower(_ value: SessionData) -> RustBuffe
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 /**
- * Supported credential formats.
+ * The format of the credential.
  */
 
 public enum CredentialFormat {
@@ -2798,74 +3114,6 @@ public func FfiConverterTypeCredentialFormat_lower(_ value: CredentialFormat) ->
 
 
 extension CredentialFormat: Equatable, Hashable {}
-
-
-
-// Note that we don't yet support `indirect` for enums.
-// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
-/**
- * Supported credential types.
- */
-
-public enum CredentialType {
-    
-    case iso1801351mDl
-    case vehicleTitle
-    case other(String
-    )
-}
-
-
-public struct FfiConverterTypeCredentialType: FfiConverterRustBuffer {
-    typealias SwiftType = CredentialType
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CredentialType {
-        let variant: Int32 = try readInt(&buf)
-        switch variant {
-        
-        case 1: return .iso1801351mDl
-        
-        case 2: return .vehicleTitle
-        
-        case 3: return .other(try FfiConverterString.read(from: &buf)
-        )
-        
-        default: throw UniffiInternalError.unexpectedEnumCase
-        }
-    }
-
-    public static func write(_ value: CredentialType, into buf: inout [UInt8]) {
-        switch value {
-        
-        
-        case .iso1801351mDl:
-            writeInt(&buf, Int32(1))
-        
-        
-        case .vehicleTitle:
-            writeInt(&buf, Int32(2))
-        
-        
-        case let .other(v1):
-            writeInt(&buf, Int32(3))
-            FfiConverterString.write(v1, into: &buf)
-            
-        }
-    }
-}
-
-
-public func FfiConverterTypeCredentialType_lift(_ buf: RustBuffer) throws -> CredentialType {
-    return try FfiConverterTypeCredentialType.lift(buf)
-}
-
-public func FfiConverterTypeCredentialType_lower(_ value: CredentialType) -> RustBuffer {
-    return FfiConverterTypeCredentialType.lower(value)
-}
-
-
-
-extension CredentialType: Equatable, Hashable {}
 
 
 
@@ -2977,24 +3225,20 @@ public struct FfiConverterTypeHttpClientError: FfiConverterRustBuffer {
 
 extension HttpClientError: Equatable, Hashable {}
 
-extension HttpClientError: Foundation.LocalizedError {
-    public var errorDescription: String? {
-        String(reflecting: self)
-    }
-}
+extension HttpClientError: Error { }
 
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
 public enum KeyTransformationError {
-
     
-    
-    case ToPkcs8(value: String
+    case toPkcs8(value: String
     )
-    case FromPkcs8(value: String
+    case fromPkcs8(value: String
     )
-    case FromSec1(value: String
+    case fromSec1(value: String
     )
-    case ToSec1(value: String
+    case toSec1(value: String
     )
 }
 
@@ -3005,50 +3249,43 @@ public struct FfiConverterTypeKeyTransformationError: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> KeyTransformationError {
         let variant: Int32 = try readInt(&buf)
         switch variant {
-
         
-
+        case 1: return .toPkcs8(value: try FfiConverterString.read(from: &buf)
+        )
         
-        case 1: return .ToPkcs8(
-            value: try FfiConverterString.read(from: &buf)
-            )
-        case 2: return .FromPkcs8(
-            value: try FfiConverterString.read(from: &buf)
-            )
-        case 3: return .FromSec1(
-            value: try FfiConverterString.read(from: &buf)
-            )
-        case 4: return .ToSec1(
-            value: try FfiConverterString.read(from: &buf)
-            )
-
-         default: throw UniffiInternalError.unexpectedEnumCase
+        case 2: return .fromPkcs8(value: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 3: return .fromSec1(value: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 4: return .toSec1(value: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
     public static func write(_ value: KeyTransformationError, into buf: inout [UInt8]) {
         switch value {
-
-        
-
         
         
-        case let .ToPkcs8(value):
+        case let .toPkcs8(value):
             writeInt(&buf, Int32(1))
             FfiConverterString.write(value, into: &buf)
             
         
-        case let .FromPkcs8(value):
+        case let .fromPkcs8(value):
             writeInt(&buf, Int32(2))
             FfiConverterString.write(value, into: &buf)
             
         
-        case let .FromSec1(value):
+        case let .fromSec1(value):
             writeInt(&buf, Int32(3))
             FfiConverterString.write(value, into: &buf)
             
         
-        case let .ToSec1(value):
+        case let .toSec1(value):
             writeInt(&buf, Int32(4))
             FfiConverterString.write(value, into: &buf)
             
@@ -3057,13 +3294,19 @@ public struct FfiConverterTypeKeyTransformationError: FfiConverterRustBuffer {
 }
 
 
+public func FfiConverterTypeKeyTransformationError_lift(_ buf: RustBuffer) throws -> KeyTransformationError {
+    return try FfiConverterTypeKeyTransformationError.lift(buf)
+}
+
+public func FfiConverterTypeKeyTransformationError_lower(_ value: KeyTransformationError) -> RustBuffer {
+    return FfiConverterTypeKeyTransformationError.lower(value)
+}
+
+
+
 extension KeyTransformationError: Equatable, Hashable {}
 
-extension KeyTransformationError: Foundation.LocalizedError {
-    public var errorDescription: String? {
-        String(reflecting: self)
-    }
-}
+
 
 
 public enum MdlReaderResponseError {
@@ -3135,11 +3378,7 @@ public struct FfiConverterTypeMDLReaderResponseError: FfiConverterRustBuffer {
 
 extension MdlReaderResponseError: Equatable, Hashable {}
 
-extension MdlReaderResponseError: Foundation.LocalizedError {
-    public var errorDescription: String? {
-        String(reflecting: self)
-    }
-}
+extension MdlReaderResponseError: Error { }
 
 
 public enum MdlReaderSessionError {
@@ -3187,11 +3426,7 @@ public struct FfiConverterTypeMDLReaderSessionError: FfiConverterRustBuffer {
 
 extension MdlReaderSessionError: Equatable, Hashable {}
 
-extension MdlReaderSessionError: Foundation.LocalizedError {
-    public var errorDescription: String? {
-        String(reflecting: self)
-    }
-}
+extension MdlReaderSessionError: Error { }
 
 
 public enum MDocInitError {
@@ -3239,11 +3474,7 @@ public struct FfiConverterTypeMDocInitError: FfiConverterRustBuffer {
 
 extension MDocInitError: Equatable, Hashable {}
 
-extension MDocInitError: Foundation.LocalizedError {
-    public var errorDescription: String? {
-        String(reflecting: self)
-    }
-}
+extension MDocInitError: Error { }
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
@@ -3430,11 +3661,7 @@ public struct FfiConverterTypeOid4vciError: FfiConverterRustBuffer {
 
 extension Oid4vciError: Equatable, Hashable {}
 
-extension Oid4vciError: Foundation.LocalizedError {
-    public var errorDescription: String? {
-        String(reflecting: self)
-    }
-}
+extension Oid4vciError: Error { }
 
 
 public enum RequestError {
@@ -3482,11 +3709,7 @@ public struct FfiConverterTypeRequestError: FfiConverterRustBuffer {
 
 extension RequestError: Equatable, Hashable {}
 
-extension RequestError: Foundation.LocalizedError {
-    public var errorDescription: String? {
-        String(reflecting: self)
-    }
-}
+extension RequestError: Error { }
 
 
 public enum ResponseError {
@@ -3540,11 +3763,7 @@ public struct FfiConverterTypeResponseError: FfiConverterRustBuffer {
 
 extension ResponseError: Equatable, Hashable {}
 
-extension ResponseError: Foundation.LocalizedError {
-    public var errorDescription: String? {
-        String(reflecting: self)
-    }
-}
+extension ResponseError: Error { }
 
 
 public enum SessionError {
@@ -3592,11 +3811,7 @@ public struct FfiConverterTypeSessionError: FfiConverterRustBuffer {
 
 extension SessionError: Equatable, Hashable {}
 
-extension SessionError: Foundation.LocalizedError {
-    public var errorDescription: String? {
-        String(reflecting: self)
-    }
-}
+extension SessionError: Error { }
 
 
 public enum SignatureError {
@@ -3660,11 +3875,7 @@ public struct FfiConverterTypeSignatureError: FfiConverterRustBuffer {
 
 extension SignatureError: Equatable, Hashable {}
 
-extension SignatureError: Foundation.LocalizedError {
-    public var errorDescription: String? {
-        String(reflecting: self)
-    }
-}
+extension SignatureError: Error { }
 
 
 /**
@@ -3754,11 +3965,7 @@ public struct FfiConverterTypeStorageManagerError: FfiConverterRustBuffer {
 
 extension StorageManagerError: Equatable, Hashable {}
 
-extension StorageManagerError: Foundation.LocalizedError {
-    public var errorDescription: String? {
-        String(reflecting: self)
-    }
-}
+extension StorageManagerError: Error { }
 
 
 public enum TerminationError {
@@ -3806,11 +4013,7 @@ public struct FfiConverterTypeTerminationError: FfiConverterRustBuffer {
 
 extension TerminationError: Equatable, Hashable {}
 
-extension TerminationError: Foundation.LocalizedError {
-    public var errorDescription: String? {
-        String(reflecting: self)
-    }
-}
+extension TerminationError: Error { }
 
 
 public enum VcbVerificationError {
@@ -3864,11 +4067,7 @@ public struct FfiConverterTypeVCBVerificationError: FfiConverterRustBuffer {
 
 extension VcbVerificationError: Equatable, Hashable {}
 
-extension VcbVerificationError: Foundation.LocalizedError {
-    public var errorDescription: String? {
-        String(reflecting: self)
-    }
-}
+extension VcbVerificationError: Error { }
 
 
 public enum VcVerificationError {
@@ -3916,11 +4115,7 @@ public struct FfiConverterTypeVCVerificationError: FfiConverterRustBuffer {
 
 extension VcVerificationError: Equatable, Hashable {}
 
-extension VcVerificationError: Foundation.LocalizedError {
-    public var errorDescription: String? {
-        String(reflecting: self)
-    }
-}
+extension VcVerificationError: Error { }
 
 
 public enum VpError {
@@ -3990,11 +4185,7 @@ public struct FfiConverterTypeVPError: FfiConverterRustBuffer {
 
 extension VpError: Equatable, Hashable {}
 
-extension VpError: Foundation.LocalizedError {
-    public var errorDescription: String? {
-        String(reflecting: self)
-    }
-}
+extension VpError: Error { }
 
 
 public enum VdcCollectionError {
@@ -4040,13 +4231,13 @@ public struct FfiConverterTypeVdcCollectionError: FfiConverterRustBuffer {
         case 1: return .SerializeFailed
         case 2: return .DeserializeFailed
         case 3: return .StoreFailed(
-            try FfiConverterTypeStorageManagerError.read(from: &buf)
+            : try FfiConverterTypeStorageManagerError.read(from: &buf)
             )
         case 4: return .LoadFailed(
-            try FfiConverterTypeStorageManagerError.read(from: &buf)
+            : try FfiConverterTypeStorageManagerError.read(from: &buf)
             )
         case 5: return .DeleteFailed(
-            try FfiConverterTypeStorageManagerError.read(from: &buf)
+            : try FfiConverterTypeStorageManagerError.read(from: &buf)
             )
 
          default: throw UniffiInternalError.unexpectedEnumCase
@@ -4068,19 +4259,19 @@ public struct FfiConverterTypeVdcCollectionError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(2))
         
         
-        case let .StoreFailed(v1):
+        case let .StoreFailed():
             writeInt(&buf, Int32(3))
-            FfiConverterTypeStorageManagerError.write(v1, into: &buf)
+            FfiConverterTypeStorageManagerError.write(, into: &buf)
             
         
-        case let .LoadFailed(v1):
+        case let .LoadFailed():
             writeInt(&buf, Int32(4))
-            FfiConverterTypeStorageManagerError.write(v1, into: &buf)
+            FfiConverterTypeStorageManagerError.write(, into: &buf)
             
         
-        case let .DeleteFailed(v1):
+        case let .DeleteFailed():
             writeInt(&buf, Int32(5))
-            FfiConverterTypeStorageManagerError.write(v1, into: &buf)
+            FfiConverterTypeStorageManagerError.write(, into: &buf)
             
         }
     }
@@ -4089,11 +4280,7 @@ public struct FfiConverterTypeVdcCollectionError: FfiConverterRustBuffer {
 
 extension VdcCollectionError: Equatable, Hashable {}
 
-extension VdcCollectionError: Foundation.LocalizedError {
-    public var errorDescription: String? {
-        String(reflecting: self)
-    }
-}
+extension VdcCollectionError: Error { }
 
 
 
@@ -4341,6 +4528,27 @@ fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
     }
 }
 
+fileprivate struct FfiConverterOptionTypeCredential: FfiConverterRustBuffer {
+    typealias SwiftType = Credential?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCredential.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCredential.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
 fileprivate struct FfiConverterOptionSequenceString: FfiConverterRustBuffer {
     typealias SwiftType = [String]?
 
@@ -4357,6 +4565,27 @@ fileprivate struct FfiConverterOptionSequenceString: FfiConverterRustBuffer {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterSequenceString.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+fileprivate struct FfiConverterOptionTypeKeyAlias: FfiConverterRustBuffer {
+    typealias SwiftType = KeyAlias?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeKeyAlias.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeKeyAlias.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -4510,6 +4739,28 @@ fileprivate struct FfiConverterSequenceTypeKey: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeKey.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+fileprivate struct FfiConverterSequenceTypeUuid: FfiConverterRustBuffer {
+    typealias SwiftType = [Uuid]
+
+    public static func write(_ value: [Uuid], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeUuid.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Uuid] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [Uuid]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeUuid.read(from: &buf))
         }
         return seq
     }
@@ -4681,6 +4932,40 @@ fileprivate struct FfiConverterDictionaryStringDictionaryStringSequenceString: F
  * Typealias from the type name used in the UDL file to the builtin type.  This
  * is needed because the UDL type name is used in function/method signatures.
  */
+public typealias CredentialType = String
+public struct FfiConverterTypeCredentialType: FfiConverter {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CredentialType {
+        return try FfiConverterString.read(from: &buf)
+    }
+
+    public static func write(_ value: CredentialType, into buf: inout [UInt8]) {
+        return FfiConverterString.write(value, into: &buf)
+    }
+
+    public static func lift(_ value: RustBuffer) throws -> CredentialType {
+        return try FfiConverterString.lift(value)
+    }
+
+    public static func lower(_ value: CredentialType) -> RustBuffer {
+        return FfiConverterString.lower(value)
+    }
+}
+
+
+public func FfiConverterTypeCredentialType_lift(_ value: RustBuffer) throws -> CredentialType {
+    return try FfiConverterTypeCredentialType.lift(value)
+}
+
+public func FfiConverterTypeCredentialType_lower(_ value: CredentialType) -> RustBuffer {
+    return FfiConverterTypeCredentialType.lower(value)
+}
+
+
+
+/**
+ * Typealias from the type name used in the UDL file to the builtin type.  This
+ * is needed because the UDL type name is used in function/method signatures.
+ */
 public typealias Key = String
 public struct FfiConverterTypeKey: FfiConverter {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Key {
@@ -4707,6 +4992,40 @@ public func FfiConverterTypeKey_lift(_ value: RustBuffer) throws -> Key {
 
 public func FfiConverterTypeKey_lower(_ value: Key) -> RustBuffer {
     return FfiConverterTypeKey.lower(value)
+}
+
+
+
+/**
+ * Typealias from the type name used in the UDL file to the builtin type.  This
+ * is needed because the UDL type name is used in function/method signatures.
+ */
+public typealias KeyAlias = String
+public struct FfiConverterTypeKeyAlias: FfiConverter {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> KeyAlias {
+        return try FfiConverterString.read(from: &buf)
+    }
+
+    public static func write(_ value: KeyAlias, into buf: inout [UInt8]) {
+        return FfiConverterString.write(value, into: &buf)
+    }
+
+    public static func lift(_ value: RustBuffer) throws -> KeyAlias {
+        return try FfiConverterString.lift(value)
+    }
+
+    public static func lower(_ value: KeyAlias) -> RustBuffer {
+        return FfiConverterString.lower(value)
+    }
+}
+
+
+public func FfiConverterTypeKeyAlias_lift(_ value: RustBuffer) throws -> KeyAlias {
+    return try FfiConverterTypeKeyAlias.lift(value)
+}
+
+public func FfiConverterTypeKeyAlias_lower(_ value: KeyAlias) -> RustBuffer {
+    return FfiConverterTypeKeyAlias.lower(value)
 }
 
 
@@ -4788,7 +5107,7 @@ fileprivate func uniffiRustCallAsync<F, T>(
     completeFunc: (UInt64, UnsafeMutablePointer<RustCallStatus>) -> F,
     freeFunc: (UInt64) -> (),
     liftFunc: (F) throws -> T,
-    errorHandler: ((RustBuffer) throws -> Swift.Error)?
+    errorHandler: ((RustBuffer) throws -> Error)?
 ) async throws -> T {
     // Make sure to call uniffiEnsureInitialized() since future creation doesn't have a
     // RustCallStatus param, so doesn't use makeRustCall()
@@ -5103,9 +5422,9 @@ private enum InitializationResult {
     case contractVersionMismatch
     case apiChecksumMismatch
 }
-// Use a global variable to perform the versioning checks. Swift ensures that
+// Use a global variables to perform the versioning checks. Swift ensures that
 // the code inside is only computed once.
-private var initializationResult: InitializationResult = {
+private var initializationResult: InitializationResult {
     // Get the bindings contract version from our ComponentInterface
     let bindings_contract_version = 26
     // Get the scaffolding contract version by calling the into the dylib
@@ -5221,6 +5540,24 @@ private var initializationResult: InitializationResult = {
     if (uniffi_mobile_sdk_rs_checksum_method_synchttpclient_http_client() != 53085) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mobile_sdk_rs_checksum_method_vdccollection_add() != 43160) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_vdccollection_all_entries() != 7546) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_vdccollection_all_entries_by_type() != 7766) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_vdccollection_delete() != 26842) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_vdccollection_dump() != 14663) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_vdccollection_get() != 52546) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mobile_sdk_rs_checksum_constructor_ihttpclient_new_async() != 55307) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -5245,6 +5582,9 @@ private var initializationResult: InitializationResult = {
     if (uniffi_mobile_sdk_rs_checksum_constructor_oid4vci_new_with_sync_client() != 31928) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mobile_sdk_rs_checksum_constructor_vdccollection_new() != 5516) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_add() != 60217) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -5262,7 +5602,7 @@ private var initializationResult: InitializationResult = {
     uniffiCallbackInitSyncHttpClient()
     uniffiCallbackInitStorageManagerInterface()
     return InitializationResult.ok
-}()
+}
 
 private func uniffiEnsureInitialized() {
     switch initializationResult {

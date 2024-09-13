@@ -1,33 +1,16 @@
 use crate::UniffiCustomTypeConverter;
 
-// Re-export Uuid for common use.
-pub use oid4vp::core::credential_format::{ClaimFormatDesignation, CredentialType};
+use serde::{Deserialize, Serialize};
 pub use url::Url;
 pub use uuid::Uuid;
 
-uniffi::custom_type!(CredentialType, String);
-impl UniffiCustomTypeConverter for CredentialType {
-    type Builtin = String;
-    fn into_custom(credential_type: Self::Builtin) -> uniffi::Result<Self> {
-        Ok(CredentialType::from(credential_type.as_str()))
-    }
-    fn from_custom(credential_type: Self) -> Self::Builtin {
-        credential_type.into()
-    }
-}
+uniffi::custom_newtype!(CredentialType, String);
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+pub struct CredentialType(pub String);
 
-uniffi::custom_type!(ClaimFormatDesignation, String);
-impl UniffiCustomTypeConverter for ClaimFormatDesignation {
-    type Builtin = String;
-    fn into_custom(claim_format_designation: Self::Builtin) -> uniffi::Result<Self> {
-        Ok(ClaimFormatDesignation::from(
-            claim_format_designation.as_str(),
-        ))
-    }
-    fn from_custom(claim_format_designation: Self) -> Self::Builtin {
-        claim_format_designation.into()
-    }
-}
+uniffi::custom_newtype!(KeyAlias, String);
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+pub struct KeyAlias(pub String);
 
 uniffi::custom_type!(Uuid, String);
 impl UniffiCustomTypeConverter for Uuid {

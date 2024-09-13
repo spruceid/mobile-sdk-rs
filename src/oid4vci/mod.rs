@@ -44,7 +44,7 @@ use ssi::{
     dids::{AnyDidMethod, DIDResolver},
 };
 
-use crate::vdc_collection::CredentialFormat;
+use crate::credential::CredentialFormat;
 
 #[uniffi::export]
 pub async fn oid4vci_initiate_with_offer(
