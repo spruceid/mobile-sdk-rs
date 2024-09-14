@@ -8,11 +8,13 @@ const DATASTORE_PATH: &str = "sprucekit-datastore";
 /// A version of secure storage for debugging purposes, and as a minimal interface example.  Do not
 /// use in production!  This encrypts nothing, uses a path relative to the current working directory,
 /// and is generally cavalier about errors it encounters along the way.
+#[derive(Debug)]
 pub struct LocalStore;
 
+#[async_trait::async_trait]
 impl StorageManagerInterface for LocalStore {
     /// Add a key/value pair to storage.
-    fn add(&self, key: Key, value: Value) -> Result<(), StorageManagerError> {
+    async fn add(&self, key: Key, value: Value) -> Result<(), StorageManagerError> {
         // Make sure the directory exists.
         match fs::create_dir(DATASTORE_PATH) {
             Ok(_) => {}                                                       // Success.
@@ -27,7 +29,7 @@ impl StorageManagerInterface for LocalStore {
     }
 
     /// Retrieve the value associated with a key.
-    fn get(&self, key: Key) -> Result<Option<Value>, StorageManagerError> {
+    async fn get(&self, key: Key) -> Result<Option<Value>, StorageManagerError> {
         match fs::read(gen_path(key.0)) {
             Ok(x) => Ok(Some(Value(x))),
             Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
@@ -36,7 +38,7 @@ impl StorageManagerInterface for LocalStore {
     }
 
     /// List the available key/value pairs.
-    fn list(&self) -> Result<Vec<Key>, StorageManagerError> {
+    async fn list(&self) -> Result<Vec<Key>, StorageManagerError> {
         let mut keys = Vec::new();
 
         let files = match fs::read_dir(DATASTORE_PATH) {
@@ -58,7 +60,7 @@ impl StorageManagerInterface for LocalStore {
     }
 
     /// Delete a given key/value pair from storage.
-    fn remove(&self, key: Key) -> Result<(), StorageManagerError> {
+    async fn remove(&self, key: Key) -> Result<(), StorageManagerError> {
         match fs::remove_file(gen_path(key.0)) {
             Ok(_) => Ok(()),
             Err(_) => Ok(()), // Removing something that isn't there shouldn't generate an error.
