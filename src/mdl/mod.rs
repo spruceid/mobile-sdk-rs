@@ -1,7 +1,5 @@
-use crate::{common::*, credential::mdoc::Mdoc};
-pub mod reader;
 pub mod holder;
-
+pub mod reader;
 
 use ssi::{
     claims::vc::v1::{data_integrity::any_credential_from_json_str, ToJwtClaims},
@@ -93,7 +91,7 @@ pub async fn verify_jwt_vp(jwt_vp: String) -> Result<(), VPError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn verify_vc() {
         let json_vc = include_str!("../../tests/res/vc");

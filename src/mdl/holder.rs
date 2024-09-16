@@ -50,7 +50,7 @@ use isomdl::{
         helpers::NonEmptyMap,
         session, BleOptions, DeviceRetrievalMethod, SessionEstablishment,
     },
-    presentation::device::{self, Document, SessionManagerInit},
+    presentation::device::{self, SessionManagerInit},
 };
 
 #[uniffi::export]
@@ -70,7 +70,13 @@ pub async fn initialize_mdl_presentation(
             value: "No credential with that ID in the VDC collection.".to_string(),
         })?;
 
-    let mdoc = MDoc::from_cbor(document.payload).map_err(|e| SessionError::Generic {
+    let mdoc = crate::credential::mdoc::Mdoc::from_cbor_encoded_document(
+        document.payload,
+        document.key_alias.ok_or(SessionError::Generic {
+            value: "key_alias missing in vdc collection".to_string(),
+        })?,
+    )
+    .map_err(|e| SessionError::Generic {
         value: format!("Error retrieving MDoc from storage: {e:}"),
     })?;
     let drms = DeviceRetrievalMethods::new(DeviceRetrievalMethod::BLE(BleOptions {
@@ -78,7 +84,7 @@ pub async fn initialize_mdl_presentation(
         central_client_mode: Some(CentralClientMode { uuid }),
     }));
     let session = SessionManagerInit::initialise(
-        NonEmptyMap::new("org.iso.18013.5.1.mDL".into(), mdoc.0.clone()),
+        NonEmptyMap::new("org.iso.18013.5.1.mDL".into(), mdoc.document().clone()),
         Some(drms),
         None,
     )
@@ -301,31 +307,6 @@ pub enum TerminationError {
     Generic { value: String },
 }
 
-#[derive(uniffi::Object)]
-pub struct MDoc(Document);
-
-#[derive(thiserror::Error, uniffi::Error, Debug)]
-pub enum MDocInitError {
-    #[error("Could not initialize mDoc: {value}")]
-    Generic { value: String },
-}
-
-#[uniffi::export]
-impl MDoc {
-    #[uniffi::constructor]
-    fn from_cbor(value: Vec<u8>) -> Result<Arc<Self>, MDocInitError> {
-        Ok(Arc::new(MDoc(serde_cbor::from_slice(&value).map_err(
-            |e| MDocInitError::Generic {
-                value: e.to_string(),
-            },
-        )?)))
-    }
-
-    fn id(&self) -> Uuid {
-        self.0.id
-    }
-}
-
 #[derive(thiserror::Error, uniffi::Error, Debug)]
 pub enum KeyTransformationError {
     #[error("{value}")]
@@ -375,7 +356,7 @@ mod tests {
                 format: crate::credential::CredentialFormat::MsoMdoc,
                 r#type: CredentialType("org.iso.18013.5.1.mDL".into()),
                 payload: mdoc_bytes,
-                key_alias: None,
+                key_alias: Some(KeyAlias("Testing".to_string())),
             })
             .await
             .unwrap();
@@ -454,7 +435,7 @@ mod tests {
                 format: crate::credential::CredentialFormat::MsoMdoc,
                 r#type: CredentialType("org.iso.18013.5.1.mDL".into()),
                 payload: mdoc_bytes,
-                key_alias: None,
+                key_alias: Some(KeyAlias("Testing".to_string())),
             })
             .await
             .unwrap();

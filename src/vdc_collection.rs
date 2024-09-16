@@ -153,8 +153,6 @@ impl VdcCollection {
 
 #[cfg(test)]
 mod tests {
-    use futures::SinkExt;
-
     use super::*;
     use crate::{credential::CredentialFormat, local_store::*};
 
