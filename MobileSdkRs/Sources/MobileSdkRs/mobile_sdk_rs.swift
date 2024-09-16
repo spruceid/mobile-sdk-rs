@@ -1619,29 +1619,14 @@ public func FfiConverterTypeKeyManagerInterface_lower(_ value: KeyManagerInterfa
 
 
 
-public protocol MdocProtocol : AnyObject {
+public protocol MDocProtocol : AnyObject {
     
-    /**
-     * Simple representation of mdoc namespace and data elements for display in the UI.
-     */
-    func details()  -> [Namespace: [Element]]
-    
-    /**
-     * The document type of this mdoc, for example `org.iso.18013.5.1.mDL`.
-     */
-    func doctype()  -> String
-    
-    /**
-     * The local ID of this credential.
-     */
     func id()  -> Uuid
-    
-    func keyAlias()  -> KeyAlias
     
 }
 
-open class Mdoc:
-    MdocProtocol {
+open class MDoc:
+    MDocProtocol {
     fileprivate let pointer: UnsafeMutableRawPointer!
 
     /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
@@ -1687,9 +1672,8 @@ public static func fromCbor(value: Data) -> MDoc {
 })
 }
     
-    /**
-     * The local ID of this credential.
-     */
+
+    
 open func id() -> Uuid {
     return try!  FfiConverterTypeUuid.lift(try! rustCall() {
     uniffi_mobile_sdk_rs_fn_method_mdoc_id(self.uniffiClonePointer(),$0
@@ -3767,7 +3751,7 @@ public struct FfiConverterTypeVdcCollectionError: FfiConverterRustBuffer {
 
     public static func write(_ value: VdcCollectionError, into buf: inout [UInt8]) {
         switch value {
-        
+
         
 
         
