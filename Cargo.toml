@@ -17,6 +17,7 @@ path = "uniffi-bindgen.rs"
 
 [dependencies]
 async-trait = "0.1"
+base64 = "0.22.0"
 either = "1.13"
 futures = "0.3"
 hex = "0.4.3"
@@ -50,9 +51,9 @@ time-macros = "0.2.18"
 num-bigint = "0.4.4"
 num-traits = "0.2.19"
 miniz_oxide = "0.7.2"
+json-syntax = { version = "0.12.5", features = ["serde_json"] }
 
 [dev-dependencies]
-base64 = "0.22.0"
 rstest = "0.22.0"
 tokio = "1.39.2"
 uniffi = { version = "0.28.1", features = ["bindgen-tests"] }

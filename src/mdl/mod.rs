@@ -1,4 +1,4 @@
-use crate::common::*;
+use crate::{common::*, credential::mdoc::Mdoc};
 pub mod reader;
 
 use std::{
@@ -12,7 +12,7 @@ use isomdl::{
         helpers::NonEmptyMap,
         session, BleOptions, DeviceRetrievalMethod, SessionEstablishment,
     },
-    presentation::device::{self, Document, SessionManagerInit},
+    presentation::device::{self, SessionManagerInit},
 };
 use ssi::{
     claims::vc::v1::{data_integrity::any_credential_from_json_str, ToJwtClaims},
@@ -118,13 +118,13 @@ pub async fn verify_jwt_vp(jwt_vp: String) -> Result<(), VPError> {
 }
 
 #[uniffi::export]
-fn initialise_session(document: Arc<MDoc>, uuid: Uuid) -> Result<SessionData, SessionError> {
+fn initialise_session(document: Arc<Mdoc>, uuid: Uuid) -> Result<SessionData, SessionError> {
     let drms = DeviceRetrievalMethods::new(DeviceRetrievalMethod::BLE(BleOptions {
         peripheral_server_mode: None,
         central_client_mode: Some(CentralClientMode { uuid }),
     }));
     let session = SessionManagerInit::initialise(
-        NonEmptyMap::new("org.iso.18013.5.1.mDL".into(), document.0.clone()),
+        NonEmptyMap::new("org.iso.18013.5.1.mDL".into(), document.document().clone()),
         Some(drms),
         None,
     )
@@ -291,31 +291,6 @@ fn terminate_session() -> Result<Vec<u8>, TerminationError> {
     Ok(msg_bytes)
 }
 
-#[derive(uniffi::Object)]
-pub struct MDoc(Document);
-
-#[derive(thiserror::Error, uniffi::Error, Debug)]
-pub enum MDocInitError {
-    #[error("Could not initialize mDoc: {value}")]
-    Generic { value: String },
-}
-
-#[uniffi::export]
-impl MDoc {
-    #[uniffi::constructor]
-    fn from_cbor(value: Vec<u8>) -> Result<Arc<Self>, MDocInitError> {
-        Ok(Arc::new(MDoc(serde_cbor::from_slice(&value).map_err(
-            |e| MDocInitError::Generic {
-                value: e.to_string(),
-            },
-        )?)))
-    }
-
-    fn id(&self) -> Uuid {
-        self.0.id
-    }
-}
-
 #[derive(thiserror::Error, uniffi::Error, Debug)]
 pub enum KeyTransformationError {
     #[error("{value}")]
@@ -364,7 +339,7 @@ mod tests {
     fn end_to_end_ble_presentment_holder() {
         let mdoc_b64 = include_str!("../../tests/res/mdoc.b64");
         let mdoc_bytes = BASE64_STANDARD.decode(mdoc_b64).unwrap();
-        let mdoc = MDoc::from_cbor(mdoc_bytes).unwrap();
+        let mdoc = Mdoc::from_cbor_encoded_document(mdoc_bytes, KeyAlias("unused".into())).unwrap();
         let key: p256::ecdsa::SigningKey =
             p256::SecretKey::from_sec1_pem(include_str!("../../tests/res/sec1.pem"))
                 .unwrap()
@@ -423,7 +398,7 @@ mod tests {
     fn end_to_end_ble_presentment_holder_reader() {
         let mdoc_b64 = include_str!("../../tests/res/mdoc.b64");
         let mdoc_bytes = BASE64_STANDARD.decode(mdoc_b64).unwrap();
-        let mdoc = MDoc::from_cbor(mdoc_bytes).unwrap();
+        let mdoc = Mdoc::from_cbor_encoded_document(mdoc_bytes, KeyAlias("unused".into())).unwrap();
         let key: p256::ecdsa::SigningKey =
             p256::SecretKey::from_sec1_pem(include_str!("../../tests/res/sec1.pem"))
                 .unwrap()
