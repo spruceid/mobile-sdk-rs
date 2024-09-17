@@ -4,21 +4,9 @@
 //! the QR code and BLE parameters, as well as managing the types of information requested
 //! by the reader.
 //!
-//! The presentation process is begun by calling [`initialize_mdl_presentation`] on the
-//! [`Wallet`] and passing the id of the mdoc to be used as well as a UUID that the client
+//! The presentation process is begun by calling [`initialize_mdl_presentation`] and
+//! passing the id of the mdoc to be used as well as a UUID that the client
 //! will use for the BLE central client:
-//!
-//! ```rust
-//! let ble_uuid = Uuid::new_v4();
-//! let presentation_session = wallet.initialize_mdl_presentation("test_mdoc", ble_uuid);
-//! // Presenting software then creates a QR code with presentation_session.qr_code_uri
-//! // and sets up a BLE session using presentation_session.ble_ident. It will then
-//! // receive a list of requested fields from the reader.
-//! let requested_items = presentation_session.handle_request(request_bytes)?;
-//! // Presenting software should then confirm with the user that they wish to present
-//! // the requested information. If so...
-//! let signed_response_bytes = presentation_session.submit_response(user_permitted_items, key_id)?;
-//! // Presenting software then sends response_bytes over BLE to the reader, completing the exchange.
 //!
 
 /// Begin the mDL presentation process for the holder.
