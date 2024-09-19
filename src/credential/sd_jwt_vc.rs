@@ -89,6 +89,7 @@ impl SdJwtVc {
         self.sd_jwt.as_bytes().to_vec()
     }
 
+    // Exposes decode_reveal_any() from ssi
     fn decode_reveal_sd_jwt(input: String) -> serde_json::Value {
         let jwt: SdJwtBuf = SdJwtBuf::new(input).unwrap();
         let revealed_jwt: RevealedSdJwt<AnyClaims> = jwt.decode_reveal_any().unwrap();
