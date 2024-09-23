@@ -16,6 +16,7 @@ const KEY_PREFIX: &str = "Credential.";
 /// Verifiable Digital Credential Collection
 ///
 /// This is the main interface to credentials.
+#[derive(Debug)]
 pub struct VdcCollection {
     storage: Arc<dyn StorageManagerInterface>,
 }
@@ -69,7 +70,7 @@ impl VdcCollection {
     }
 
     /// Get a credential from the store.
-    pub async fn get(&self, id: Uuid) -> Result<Option<Credential>, VdcCollectionError> {
+    pub async fn get(&self, id: Uuid) -> Result<Option<Arc<Credential>>, VdcCollectionError> {
         let raw = match self.storage.get(Self::id_to_key(id)).await {
             Ok(Some(x)) => x,
             Ok(None) => return Ok(None),
@@ -77,8 +78,8 @@ impl VdcCollection {
         };
 
         match serde_cbor::de::from_slice(&raw.0) {
-            Ok(x) => Ok(x),
-            Err(_) => Err(VdcCollectionError::DeserializeFailed),
+            Ok(Some(x)) => Ok(Some(Arc::new(x))),
+            _ => Err(VdcCollectionError::DeserializeFailed),
         }
     }
 
@@ -107,7 +108,7 @@ impl VdcCollection {
         let all_entries = self.all_entries().await?;
         Ok(stream::iter(all_entries)
             .filter_map(|id| async move { self.get(id).await.ok().flatten() })
-            .collect::<Vec<Credential>>()
+            .collect::<Vec<Arc<Credential>>>()
             .await
             .iter()
             .filter(|cred| &cred.r#type == ctype)
