@@ -94,7 +94,9 @@ impl SdJwtVc {
 #[uniffi::export]
 pub fn decode_reveal_sd_jwt(input: String) -> Result<String, SdJwtVcInitError> {
     let jwt: SdJwtBuf = SdJwtBuf::new(input).map_err(|_| SdJwtVcInitError::InvalidSdJwt)?;
-    let revealed_jwt: RevealedSdJwt<AnyClaims> = jwt.decode_reveal_any().map_err(|_| SdJwtVcInitError::JwtDecoding)?;
+    let revealed_jwt: RevealedSdJwt<AnyClaims> = jwt
+        .decode_reveal_any()
+        .map_err(|_| SdJwtVcInitError::JwtDecoding)?;
     let claims: &JWTClaims = revealed_jwt.claims();
     serde_json::to_string(claims).map_err(|_| SdJwtVcInitError::Serialization)
 }
