@@ -38,7 +38,7 @@ use oid4vci::{
 };
 use ssi::{
     claims::{
-        jwt::ToDecodedJWT, vc::v1::data_integrity::any_credential_from_json_str,
+        jwt::ToDecodedJwt, vc::v1::data_integrity::any_credential_from_json_str,
         VerificationParameters,
     },
     dids::{AnyDidMethod, DIDResolver},

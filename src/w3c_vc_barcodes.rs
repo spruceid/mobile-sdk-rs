@@ -125,7 +125,6 @@ impl TypedStatusMapProvider<Uri, BitstringStatusListCredential> for StatusLists 
     async fn get_typed(&self, _: &Uri) -> Result<MaybeCached<StatusList>, ProviderError> {
         // @TODO: replace with a valid status list verification when a valid test is available
         Ok(MaybeCached::NotCached(StatusList::from_bytes(
-            1.try_into().unwrap(),
             vec![0u8; 125],
             TimeToLive::DEFAULT,
         )))
