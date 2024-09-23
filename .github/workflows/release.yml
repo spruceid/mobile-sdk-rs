@@ -117,7 +117,7 @@ jobs:
     - name: Publish package to GHCR
       uses: gradle/gradle-build-action@v2
       with:
-        arguments: publish
+        arguments: publishReleasePublicationToGitHubPackagesRepository
         build-root-directory: ./kotlin
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
