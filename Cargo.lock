@@ -6418,7 +6418,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "w3c-vc-barcodes"
 version = "0.1.0"
-source = "git+https://github.com/spruceid/w3c-vc-barcodes?branch=use-ssi-0.9#c1c99daad35fc7317388bb2db33e1fca0f5040f4"
+source = "git+https://github.com/spruceid/w3c-vc-barcodes?rev=c1c99da#c1c99daad35fc7317388bb2db33e1fca0f5040f4"
 dependencies = [
  "cbor-ld",
  "csv",
