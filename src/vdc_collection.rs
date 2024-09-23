@@ -14,6 +14,7 @@ const KEY_PREFIX: &str = "Credential.";
 /// Verifiable Digital Credential Collection
 ///
 /// This is the main interface to credentials.
+#[derive(Debug)]
 pub struct VdcCollection {
     storage: Arc<dyn StorageManagerInterface>,
 }
@@ -71,8 +72,8 @@ impl VdcCollection {
         };
 
         match serde_cbor::de::from_slice(&raw.0) {
-            Ok(x) => Ok(x),
-            Err(_) => Err(VdcCollectionError::DeserializeFailed),
+            Ok(Some(x)) => Ok(Some(x)),
+            _ => Err(VdcCollectionError::DeserializeFailed),
         }
     }
 
