@@ -135,3 +135,35 @@ pub enum SdJwtVcInitError {
     #[error("serialization error")]
     Serialization,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_decode_reveal_sd_jwt() {
+        // Example SD-JWT input (you should replace this with a real SD-JWT string for a proper test)
+        let sd_jwt_input = "eyJhbGciOiJFZERTQSIsImtpZCI6IjEifQ.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+
+        // Call the function with the SD-JWT input
+        let result = decode_reveal_sd_jwt(sd_jwt_input.to_string());
+
+        println!("TESTING {:?}", result);
+
+        // Check if the function returns Ok with a valid JSON string
+        assert!(result.is_ok());
+
+        // Check the output JSON string structure
+        match result {
+            Ok(output) => {
+                println!("Output: {}", output);
+                // Check the output JSON string structure
+                assert!(output.contains("\"sub\":\"1234567890\""));
+                assert!(output.contains("\"name\":\"John Doe\""));
+            }
+            Err(e) => {
+                panic!("Test failed with error: {:?}", e);
+            }
+        }
+    }
+}
