@@ -20,6 +20,12 @@ impl LocalStore {
     }
 }
 
+impl Default for LocalStore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[async_trait::async_trait]
 impl StorageManagerInterface for LocalStore {
     /// Add a key/value pair to storage.
