@@ -21,21 +21,6 @@
 //! // Presenting software then sends response_bytes over BLE to the reader, completing the exchange.
 //!
 
-/// Begin the mDL presentation process for the holder.
-///
-/// Initializes the presentation session for an ISO 18013-5 mDL and stores
-/// the session state object in the device storage_manager.
-///
-/// Arguments:
-/// mdoc_id: unique identifier for the credential to present, to be looked up
-///          in the VDC collection
-/// uuid:    the Bluetooth Low Energy Client Central Mode UUID to be used
-///
-/// Returns:
-/// A Result, with the `Ok` containing a tuple consisting of an enum representing
-/// the state of the presentation, a String containing the QR code URI, and a
-/// String containing the BLE ident.
-///
 use crate::common::*;
 use crate::{storage_manager::StorageManagerInterface, vdc_collection::VdcCollection};
 use std::ops::DerefMut;
@@ -53,15 +38,32 @@ use isomdl::{
     presentation::device::{self, SessionManagerInit},
 };
 
+/// Begin the mDL presentation process for the holder when the desired
+/// Mdoc is already stored in a [VdcCollection].
+///
+/// Initializes the presentation session for an ISO 18013-5 mDL and stores
+/// the session state object in the device storage_manager.
+///
+/// Arguments:
+/// mdoc_id: unique identifier for the credential to present, to be looked up
+///          in the VDC collection
+/// uuid:    the Bluetooth Low Energy Client Central Mode UUID to be used
+///
+/// Returns:
+/// A Result, with the `Ok` containing a tuple consisting of an enum representing
+/// the state of the presentation, a String containing the QR code URI, and a
+/// String containing the BLE ident.
+///
 #[uniffi::export]
 pub async fn initialize_mdl_presentation(
+    mdoc_id: Uuid,
     uuid: Uuid,
     storage_manager: Arc<dyn StorageManagerInterface>,
 ) -> Result<MdlPresentationSession, SessionError> {
     let vdc_collection = VdcCollection::new(storage_manager);
 
     let document = vdc_collection
-        .get(uuid)
+        .get(mdoc_id)
         .await
         .map_err(|_| SessionError::Generic {
             value: "Error in VDC Collection".to_string(),
@@ -79,6 +81,61 @@ pub async fn initialize_mdl_presentation(
     .map_err(|e| SessionError::Generic {
         value: format!("Error retrieving MDoc from storage: {e:}"),
     })?;
+    let drms = DeviceRetrievalMethods::new(DeviceRetrievalMethod::BLE(BleOptions {
+        peripheral_server_mode: None,
+        central_client_mode: Some(CentralClientMode { uuid }),
+    }));
+    let session = SessionManagerInit::initialise(
+        NonEmptyMap::new("org.iso.18013.5.1.mDL".into(), mdoc.document().clone()),
+        Some(drms),
+        None,
+    )
+    .map_err(|e| SessionError::Generic {
+        value: format!("Could not initialize session: {e:?}"),
+    })?;
+    let ble_ident = session
+        .ble_ident()
+        .map_err(|e| SessionError::Generic {
+            value: format!("Couldn't get BLE identification: {e:?}").to_string(),
+        })?
+        .to_vec();
+    let (engaged_state, qr_code_uri) =
+        session.qr_engagement().map_err(|e| SessionError::Generic {
+            value: format!("Could not generate qr engagement: {e:?}"),
+        })?;
+    Ok(MdlPresentationSession {
+        engaged: Mutex::new(Some(engaged_state)),
+        in_process: Mutex::new(None),
+        qr_code_uri,
+        ble_ident,
+    })
+}
+
+/// Begin the mDL presentation process for the holder by passing in the raw
+/// bytes of an Mdoc as a CBOR encoded Vec<u8>.
+///
+/// Initializes the presentation session for an ISO 18013-5 mDL and stores
+/// the session state object in the device storage_manager.
+///
+/// Arguments:
+/// mdoc_bytes: bytes of the Mdoc in CBOR encoded Vec<u8>
+/// uuid:       the Bluetooth Low Energy Client Central Mode UUID to be used
+///
+/// Returns:
+/// A Result, with the `Ok` containing a tuple consisting of an enum representing
+/// the state of the presentation, a String containing the QR code URI, and a
+/// String containing the BLE ident.
+///
+#[uniffi::export]
+pub async fn initialize_mdl_presentation_from_bytes(
+    mdoc_bytes: Vec<u8>,
+    key_alias: KeyAlias,
+    uuid: Uuid,
+) -> Result<MdlPresentationSession, SessionError> {
+    let mdoc = crate::credential::mdoc::Mdoc::from_cbor_encoded_document(mdoc_bytes, key_alias)
+        .map_err(|e| SessionError::Generic {
+            value: format!("Error retrieving MDoc from storage: {e:}"),
+        })?;
     let drms = DeviceRetrievalMethods::new(DeviceRetrievalMethod::BLE(BleOptions {
         peripheral_server_mode: None,
         central_client_mode: Some(CentralClientMode { uuid }),
@@ -361,7 +418,7 @@ mod tests {
             .await
             .unwrap();
 
-        let presentation_session = initialize_mdl_presentation(mdoc, smi.clone())
+        let presentation_session = initialize_mdl_presentation(mdoc, Uuid::new_v4(), smi.clone())
             .await
             .unwrap();
         let namespaces: device_request::Namespaces = [(
@@ -440,7 +497,7 @@ mod tests {
             .await
             .unwrap();
 
-        let presentation_session = initialize_mdl_presentation(mdoc, smi.clone())
+        let presentation_session = initialize_mdl_presentation(mdoc, Uuid::new_v4(), smi.clone())
             .await
             .unwrap();
         let namespaces = [(
