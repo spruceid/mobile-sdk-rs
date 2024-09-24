@@ -7402,11 +7402,60 @@ public func handleResponse(state: MdlSessionManager, response: Data)throws  -> M
     )
 })
 }
-public func initializeMdlPresentation(uuid: Uuid, storageManager: StorageManagerInterface)async throws  -> MdlPresentationSession {
+/**
+ * Begin the mDL presentation process for the holder when the desired
+ * Mdoc is already stored in a [VdcCollection].
+ *
+ * Initializes the presentation session for an ISO 18013-5 mDL and stores
+ * the session state object in the device storage_manager.
+ *
+ * Arguments:
+ * mdoc_id: unique identifier for the credential to present, to be looked up
+ * in the VDC collection
+ * uuid:    the Bluetooth Low Energy Client Central Mode UUID to be used
+ *
+ * Returns:
+ * A Result, with the `Ok` containing a tuple consisting of an enum representing
+ * the state of the presentation, a String containing the QR code URI, and a
+ * String containing the BLE ident.
+
+ */
+public func initializeMdlPresentation(mdocId: Uuid, uuid: Uuid, storageManager: StorageManagerInterface)async throws  -> MdlPresentationSession {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_mobile_sdk_rs_fn_func_initialize_mdl_presentation(FfiConverterTypeUuid.lower(uuid),FfiConverterTypeStorageManagerInterface.lower(storageManager)
+                uniffi_mobile_sdk_rs_fn_func_initialize_mdl_presentation(FfiConverterTypeUuid.lower(mdocId),FfiConverterTypeUuid.lower(uuid),FfiConverterTypeStorageManagerInterface.lower(storageManager)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_pointer,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_pointer,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_pointer,
+            liftFunc: FfiConverterTypeMdlPresentationSession.lift,
+            errorHandler: FfiConverterTypeSessionError.lift
+        )
+}
+/**
+ * Begin the mDL presentation process for the holder by passing in the raw
+ * bytes of an Mdoc as a CBOR encoded Vec<u8>.
+ *
+ * Initializes the presentation session for an ISO 18013-5 mDL and stores
+ * the session state object in the device storage_manager.
+ *
+ * Arguments:
+ * mdoc_bytes: bytes of the Mdoc in CBOR encoded Vec<u8>
+ * uuid:       the Bluetooth Low Energy Client Central Mode UUID to be used
+ *
+ * Returns:
+ * A Result, with the `Ok` containing a tuple consisting of an enum representing
+ * the state of the presentation, a String containing the QR code URI, and a
+ * String containing the BLE ident.
+
+ */
+public func initializeMdlPresentationFromBytes(mdocBytes: Data, keyAlias: KeyAlias, uuid: Uuid)async throws  -> MdlPresentationSession {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_func_initialize_mdl_presentation_from_bytes(FfiConverterData.lower(mdocBytes),FfiConverterTypeKeyAlias.lower(keyAlias),FfiConverterTypeUuid.lower(uuid)
                 )
             },
             pollFunc: ffi_mobile_sdk_rs_rust_future_poll_pointer,
@@ -7577,7 +7626,10 @@ private var initializationResult: InitializationResult = {
     if (uniffi_mobile_sdk_rs_checksum_func_handle_response() != 43961) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_func_initialize_mdl_presentation() != 27609) {
+    if (uniffi_mobile_sdk_rs_checksum_func_initialize_mdl_presentation() != 29387) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_func_initialize_mdl_presentation_from_bytes() != 35281) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_exchange_credential() != 13827) {
