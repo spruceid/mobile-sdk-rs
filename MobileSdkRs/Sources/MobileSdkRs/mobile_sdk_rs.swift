@@ -384,15 +384,41 @@ fileprivate class UniffiHandleMap<T> {
 // Public interface members begin here.
 
 
-fileprivate struct FfiConverterUInt8: FfiConverterPrimitive {
-    typealias FfiType = UInt8
-    typealias SwiftType = UInt8
+fileprivate struct FfiConverterUInt16: FfiConverterPrimitive {
+    typealias FfiType = UInt16
+    typealias SwiftType = UInt16
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt8 {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt16 {
         return try lift(readInt(&buf))
     }
 
-    public static func write(_ value: UInt8, into buf: inout [UInt8]) {
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+fileprivate struct FfiConverterUInt64: FfiConverterPrimitive {
+    typealias FfiType = UInt64
+    typealias SwiftType = UInt64
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> UInt64 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+fileprivate struct FfiConverterInt64: FfiConverterPrimitive {
+    typealias FfiType = Int64
+    typealias SwiftType = Int64
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Int64 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: Int64, into buf: inout [UInt8]) {
         writeInt(&buf, lower(value))
     }
 }
@@ -474,48 +500,14 @@ fileprivate struct FfiConverterData: FfiConverterRustBuffer {
 
 
 
-/**
- * An individual credential.
- */
-public protocol CredentialProtocol : AnyObject {
+public protocol AsyncHttpClient : AnyObject {
     
-    /**
-     * Return the credential as a key suitable for storage.
-     */
-    func asStorageKey()  -> Key
-    
-    /**
-     * Return the credential storage key prefix with credential type index as a string.
-     */
-    func asStorageKeyPrefix()  -> String
-    
-    /**
-     * Get the type of the credential.
-     */
-    func ctype()  -> CredentialType
-    
-    /**
-     * Get the format of the credential.
-     */
-    func format()  -> ClaimFormatDesignation
-    
-    /**
-     * Get the ID of the credential.
-     */
-    func id()  -> Uuid
-    
-    /**
-     * Get the payload of the credential.
-     */
-    func payload()  -> Data
+    func httpClient(request: HttpRequest) async throws  -> HttpResponse
     
 }
 
-/**
- * An individual credential.
- */
-open class Credential:
-    CredentialProtocol {
+open class AsyncHttpClientImpl:
+    AsyncHttpClient {
     fileprivate let pointer: UnsafeMutableRawPointer!
 
     /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
@@ -540,222 +532,7 @@ open class Credential:
     }
 
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_credential(self.pointer, $0) }
-    }
-    /**
-     * Create a new credential.
-     */
-public convenience init(id: Uuid, format: ClaimFormatDesignation, ctype: CredentialType, payload: Data) {
-    let pointer =
-        try! rustCall() {
-    uniffi_mobile_sdk_rs_fn_constructor_credential_new(
-        FfiConverterTypeUuid.lower(id),
-        FfiConverterTypeClaimFormatDesignation.lower(format),
-        FfiConverterTypeCredentialType.lower(ctype),
-        FfiConverterData.lower(payload),$0
-    )
-}
-    self.init(unsafeFromRawPointer: pointer)
-}
-
-    deinit {
-        guard let pointer = pointer else {
-            return
-        }
-
-        try! rustCall { uniffi_mobile_sdk_rs_fn_free_credential(pointer, $0) }
-    }
-
-    
-public static func newAsArc(id: Uuid, format: ClaimFormatDesignation, ctype: CredentialType, payload: Data) -> Credential {
-    return try!  FfiConverterTypeCredential.lift(try! rustCall() {
-    uniffi_mobile_sdk_rs_fn_constructor_credential_new_as_arc(
-        FfiConverterTypeUuid.lower(id),
-        FfiConverterTypeClaimFormatDesignation.lower(format),
-        FfiConverterTypeCredentialType.lower(ctype),
-        FfiConverterData.lower(payload),$0
-    )
-})
-}
-    
-
-    
-    /**
-     * Return the credential as a key suitable for storage.
-     */
-open func asStorageKey() -> Key {
-    return try!  FfiConverterTypeKey.lift(try! rustCall() {
-    uniffi_mobile_sdk_rs_fn_method_credential_as_storage_key(self.uniffiClonePointer(),$0
-    )
-})
-}
-    
-    /**
-     * Return the credential storage key prefix with credential type index as a string.
-     */
-open func asStorageKeyPrefix() -> String {
-    return try!  FfiConverterString.lift(try! rustCall() {
-    uniffi_mobile_sdk_rs_fn_method_credential_as_storage_key_prefix(self.uniffiClonePointer(),$0
-    )
-})
-}
-    
-    /**
-     * Get the type of the credential.
-     */
-open func ctype() -> CredentialType {
-    return try!  FfiConverterTypeCredentialType.lift(try! rustCall() {
-    uniffi_mobile_sdk_rs_fn_method_credential_ctype(self.uniffiClonePointer(),$0
-    )
-})
-}
-    
-    /**
-     * Get the format of the credential.
-     */
-open func format() -> ClaimFormatDesignation {
-    return try!  FfiConverterTypeClaimFormatDesignation.lift(try! rustCall() {
-    uniffi_mobile_sdk_rs_fn_method_credential_format(self.uniffiClonePointer(),$0
-    )
-})
-}
-    
-    /**
-     * Get the ID of the credential.
-     */
-open func id() -> Uuid {
-    return try!  FfiConverterTypeUuid.lift(try! rustCall() {
-    uniffi_mobile_sdk_rs_fn_method_credential_id(self.uniffiClonePointer(),$0
-    )
-})
-}
-    
-    /**
-     * Get the payload of the credential.
-     */
-open func payload() -> Data {
-    return try!  FfiConverterData.lift(try! rustCall() {
-    uniffi_mobile_sdk_rs_fn_method_credential_payload(self.uniffiClonePointer(),$0
-    )
-})
-}
-    
-
-}
-
-public struct FfiConverterTypeCredential: FfiConverter {
-
-    typealias FfiType = UnsafeMutableRawPointer
-    typealias SwiftType = Credential
-
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> Credential {
-        return Credential(unsafeFromRawPointer: pointer)
-    }
-
-    public static func lower(_ value: Credential) -> UnsafeMutableRawPointer {
-        return value.uniffiClonePointer()
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Credential {
-        let v: UInt64 = try readInt(&buf)
-        // The Rust code won't compile if a pointer won't fit in a UInt64.
-        // We have to go via `UInt` because that's the thing that's the size of a pointer.
-        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
-        if (ptr == nil) {
-            throw UniffiInternalError.unexpectedNullPointer
-        }
-        return try lift(ptr!)
-    }
-
-    public static func write(_ value: Credential, into buf: inout [UInt8]) {
-        // This fiddling is because `Int` is the thing that's the same size as a pointer.
-        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
-        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
-    }
-}
-
-
-
-
-public func FfiConverterTypeCredential_lift(_ pointer: UnsafeMutableRawPointer) throws -> Credential {
-    return try FfiConverterTypeCredential.lift(pointer)
-}
-
-public func FfiConverterTypeCredential_lower(_ value: Credential) -> UnsafeMutableRawPointer {
-    return FfiConverterTypeCredential.lower(value)
-}
-
-
-
-
-/**
- * This is a callback interface for credential operations, defined by the native code.
- *
- * For example, this is used to provide methods for the client to select a credential to present,
- * retrieved from the wallet.
- */
-public protocol CredentialCallbackInterface : AnyObject {
-    
-    /**
-     * Permit the verifier to request the information defined in the presentation definition.
-     *
-     * This method is called during the presentation request, passing the required fields
-     * from the presentation definition. The verifier should return a boolean indicating whether
-     * the verifier can present the requested information.
-     *
-     * The native client should implement this method, returning a vector of booleans indicating
-     * whether the requested information can be presented.
-     *
-     * the format of the requested_information is a vector of strings, each string is a field name
-     * that the verifier is requesting, e.g. ["Name", "Date Of Birth", "Address"]
-     *
-     * If the user denies the a field request, the verifier should return a [CredentialCallbackError::PermissionDenied]
-     */
-    func permitPresentation(requestedFields: [String]) throws 
-    
-    /**
-     * Select which credentials to present provided a list of matching credentials.
-     *
-     * This is called by the client to select which credentials to present to the verifier. Multiple credentials
-     * may satisfy the request, and the client should select the most appropriate credentials to present.
-     */
-    func selectCredentials(credentials: [Credential])  -> [Credential]
-    
-}
-
-/**
- * This is a callback interface for credential operations, defined by the native code.
- *
- * For example, this is used to provide methods for the client to select a credential to present,
- * retrieved from the wallet.
- */
-open class CredentialCallbackInterfaceImpl:
-    CredentialCallbackInterface {
-    fileprivate let pointer: UnsafeMutableRawPointer!
-
-    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
-    public struct NoPointer {
-        public init() {}
-    }
-
-    // TODO: We'd like this to be `private` but for Swifty reasons,
-    // we can't implement `FfiConverter` without making this `required` and we can't
-    // make it `required` without making it `public`.
-    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
-        self.pointer = pointer
-    }
-
-    /// This constructor can be used to instantiate a fake object.
-    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
-    ///
-    /// - Warning:
-    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
-    public init(noPointer: NoPointer) {
-        self.pointer = nil
-    }
-
-    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_credentialcallbackinterface(self.pointer, $0) }
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_asynchttpclient(self.pointer, $0) }
     }
     // No primary constructor declared for this class.
 
@@ -764,46 +541,27 @@ open class CredentialCallbackInterfaceImpl:
             return
         }
 
-        try! rustCall { uniffi_mobile_sdk_rs_fn_free_credentialcallbackinterface(pointer, $0) }
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_asynchttpclient(pointer, $0) }
     }
 
     
 
     
-    /**
-     * Permit the verifier to request the information defined in the presentation definition.
-     *
-     * This method is called during the presentation request, passing the required fields
-     * from the presentation definition. The verifier should return a boolean indicating whether
-     * the verifier can present the requested information.
-     *
-     * The native client should implement this method, returning a vector of booleans indicating
-     * whether the requested information can be presented.
-     *
-     * the format of the requested_information is a vector of strings, each string is a field name
-     * that the verifier is requesting, e.g. ["Name", "Date Of Birth", "Address"]
-     *
-     * If the user denies the a field request, the verifier should return a [CredentialCallbackError::PermissionDenied]
-     */
-open func permitPresentation(requestedFields: [String])throws  {try rustCallWithError(FfiConverterTypeCredentialCallbackError.lift) {
-    uniffi_mobile_sdk_rs_fn_method_credentialcallbackinterface_permit_presentation(self.uniffiClonePointer(),
-        FfiConverterSequenceString.lower(requestedFields),$0
-    )
-}
-}
-    
-    /**
-     * Select which credentials to present provided a list of matching credentials.
-     *
-     * This is called by the client to select which credentials to present to the verifier. Multiple credentials
-     * may satisfy the request, and the client should select the most appropriate credentials to present.
-     */
-open func selectCredentials(credentials: [Credential]) -> [Credential] {
-    return try!  FfiConverterSequenceTypeCredential.lift(try! rustCall() {
-    uniffi_mobile_sdk_rs_fn_method_credentialcallbackinterface_select_credentials(self.uniffiClonePointer(),
-        FfiConverterSequenceTypeCredential.lower(credentials),$0
-    )
-})
+open func httpClient(request: HttpRequest)async throws  -> HttpResponse {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_method_asynchttpclient_http_client(
+                    self.uniffiClonePointer(),
+                    FfiConverterTypeHttpRequest.lower(request)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterTypeHttpResponse.lift,
+            errorHandler: FfiConverterTypeHttpClientError.lift
+        )
 }
     
 
@@ -817,91 +575,85 @@ private let UNIFFI_CALLBACK_ERROR: Int32 = 1
 private let UNIFFI_CALLBACK_UNEXPECTED_ERROR: Int32 = 2
 
 // Put the implementation in a struct so we don't pollute the top-level namespace
-fileprivate struct UniffiCallbackInterfaceCredentialCallbackInterface {
+fileprivate struct UniffiCallbackInterfaceAsyncHttpClient {
 
     // Create the VTable using a series of closures.
     // Swift automatically converts these into C callback functions.
-    static var vtable: UniffiVTableCallbackInterfaceCredentialCallbackInterface = UniffiVTableCallbackInterfaceCredentialCallbackInterface(
-        permitPresentation: { (
+    static var vtable: UniffiVTableCallbackInterfaceAsyncHttpClient = UniffiVTableCallbackInterfaceAsyncHttpClient(
+        httpClient: { (
             uniffiHandle: UInt64,
-            requestedFields: RustBuffer,
-            uniffiOutReturn: UnsafeMutableRawPointer,
-            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+            request: RustBuffer,
+            uniffiFutureCallback: @escaping UniffiForeignFutureCompleteRustBuffer,
+            uniffiCallbackData: UInt64,
+            uniffiOutReturn: UnsafeMutablePointer<UniffiForeignFuture>
         ) in
             let makeCall = {
-                () throws -> () in
-                guard let uniffiObj = try? FfiConverterTypeCredentialCallbackInterface.handleMap.get(handle: uniffiHandle) else {
+                () async throws -> HttpResponse in
+                guard let uniffiObj = try? FfiConverterTypeAsyncHttpClient.handleMap.get(handle: uniffiHandle) else {
                     throw UniffiInternalError.unexpectedStaleHandle
                 }
-                return try uniffiObj.permitPresentation(
-                     requestedFields: try FfiConverterSequenceString.lift(requestedFields)
+                return try await uniffiObj.httpClient(
+                     request: try FfiConverterTypeHttpRequest.lift(request)
                 )
             }
 
-            
-            let writeReturn = { () }
-            uniffiTraitInterfaceCallWithError(
-                callStatus: uniffiCallStatus,
-                makeCall: makeCall,
-                writeReturn: writeReturn,
-                lowerError: FfiConverterTypeCredentialCallbackError.lower
-            )
-        },
-        selectCredentials: { (
-            uniffiHandle: UInt64,
-            credentials: RustBuffer,
-            uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
-            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
-        ) in
-            let makeCall = {
-                () throws -> [Credential] in
-                guard let uniffiObj = try? FfiConverterTypeCredentialCallbackInterface.handleMap.get(handle: uniffiHandle) else {
-                    throw UniffiInternalError.unexpectedStaleHandle
-                }
-                return uniffiObj.selectCredentials(
-                     credentials: try FfiConverterSequenceTypeCredential.lift(credentials)
+            let uniffiHandleSuccess = { (returnValue: HttpResponse) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureStructRustBuffer(
+                        returnValue: FfiConverterTypeHttpResponse.lower(returnValue),
+                        callStatus: RustCallStatus()
+                    )
                 )
             }
-
-            
-            let writeReturn = { uniffiOutReturn.pointee = FfiConverterSequenceTypeCredential.lower($0) }
-            uniffiTraitInterfaceCall(
-                callStatus: uniffiCallStatus,
+            let uniffiHandleError = { (statusCode, errorBuf) in
+                uniffiFutureCallback(
+                    uniffiCallbackData,
+                    UniffiForeignFutureStructRustBuffer(
+                        returnValue: RustBuffer.empty(),
+                        callStatus: RustCallStatus(code: statusCode, errorBuf: errorBuf)
+                    )
+                )
+            }
+            let uniffiForeignFuture = uniffiTraitInterfaceCallAsyncWithError(
                 makeCall: makeCall,
-                writeReturn: writeReturn
+                handleSuccess: uniffiHandleSuccess,
+                handleError: uniffiHandleError,
+                lowerError: FfiConverterTypeHttpClientError.lower
             )
+            uniffiOutReturn.pointee = uniffiForeignFuture
         },
         uniffiFree: { (uniffiHandle: UInt64) -> () in
-            let result = try? FfiConverterTypeCredentialCallbackInterface.handleMap.remove(handle: uniffiHandle)
+            let result = try? FfiConverterTypeAsyncHttpClient.handleMap.remove(handle: uniffiHandle)
             if result == nil {
-                print("Uniffi callback interface CredentialCallbackInterface: handle missing in uniffiFree")
+                print("Uniffi callback interface AsyncHttpClient: handle missing in uniffiFree")
             }
         }
     )
 }
 
-private func uniffiCallbackInitCredentialCallbackInterface() {
-    uniffi_mobile_sdk_rs_fn_init_callback_vtable_credentialcallbackinterface(&UniffiCallbackInterfaceCredentialCallbackInterface.vtable)
+private func uniffiCallbackInitAsyncHttpClient() {
+    uniffi_mobile_sdk_rs_fn_init_callback_vtable_asynchttpclient(&UniffiCallbackInterfaceAsyncHttpClient.vtable)
 }
 
-public struct FfiConverterTypeCredentialCallbackInterface: FfiConverter {
-    fileprivate static var handleMap = UniffiHandleMap<CredentialCallbackInterface>()
+public struct FfiConverterTypeAsyncHttpClient: FfiConverter {
+    fileprivate static var handleMap = UniffiHandleMap<AsyncHttpClient>()
 
     typealias FfiType = UnsafeMutableRawPointer
-    typealias SwiftType = CredentialCallbackInterface
+    typealias SwiftType = AsyncHttpClient
 
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> CredentialCallbackInterface {
-        return CredentialCallbackInterfaceImpl(unsafeFromRawPointer: pointer)
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> AsyncHttpClient {
+        return AsyncHttpClientImpl(unsafeFromRawPointer: pointer)
     }
 
-    public static func lower(_ value: CredentialCallbackInterface) -> UnsafeMutableRawPointer {
+    public static func lower(_ value: AsyncHttpClient) -> UnsafeMutableRawPointer {
         guard let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: handleMap.insert(obj: value))) else {
             fatalError("Cast to UnsafeMutableRawPointer failed")
         }
         return ptr
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CredentialCallbackInterface {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> AsyncHttpClient {
         let v: UInt64 = try readInt(&buf)
         // The Rust code won't compile if a pointer won't fit in a UInt64.
         // We have to go via `UInt` because that's the thing that's the size of a pointer.
@@ -912,7 +664,7 @@ public struct FfiConverterTypeCredentialCallbackInterface: FfiConverter {
         return try lift(ptr!)
     }
 
-    public static func write(_ value: CredentialCallbackInterface, into buf: inout [UInt8]) {
+    public static func write(_ value: AsyncHttpClient, into buf: inout [UInt8]) {
         // This fiddling is because `Int` is the thing that's the same size as a pointer.
         // The Rust code won't compile if a pointer won't fit in a `UInt64`.
         writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
@@ -922,41 +674,23 @@ public struct FfiConverterTypeCredentialCallbackInterface: FfiConverter {
 
 
 
-public func FfiConverterTypeCredentialCallbackInterface_lift(_ pointer: UnsafeMutableRawPointer) throws -> CredentialCallbackInterface {
-    return try FfiConverterTypeCredentialCallbackInterface.lift(pointer)
+public func FfiConverterTypeAsyncHttpClient_lift(_ pointer: UnsafeMutableRawPointer) throws -> AsyncHttpClient {
+    return try FfiConverterTypeAsyncHttpClient.lift(pointer)
 }
 
-public func FfiConverterTypeCredentialCallbackInterface_lower(_ value: CredentialCallbackInterface) -> UnsafeMutableRawPointer {
-    return FfiConverterTypeCredentialCallbackInterface.lower(value)
+public func FfiConverterTypeAsyncHttpClient_lower(_ value: AsyncHttpClient) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeAsyncHttpClient.lower(value)
 }
 
 
 
 
-/**
- * EncryptedPayload is a struct that holds the IV and ciphertext
- * of an encrypted payload.
- */
-public protocol EncryptedPayloadProtocol : AnyObject {
-    
-    /**
-     * Get the ciphertext for the encrypted payload.
-     */
-    func ciphertext()  -> Data
-    
-    /**
-     * Get the initialization vector (IV) for the encrypted payload.
-     */
-    func iv()  -> Data
+public protocol ClientProtocol : AnyObject {
     
 }
 
-/**
- * EncryptedPayload is a struct that holds the IV and ciphertext
- * of an encrypted payload.
- */
-open class EncryptedPayload:
-    EncryptedPayloadProtocol {
+open class Client:
+    ClientProtocol {
     fileprivate let pointer: UnsafeMutableRawPointer!
 
     /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
@@ -981,67 +715,38 @@ open class EncryptedPayload:
     }
 
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_encryptedpayload(self.pointer, $0) }
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_client(self.pointer, $0) }
     }
-public convenience init(iv: Data, ciphertext: Data) {
-    let pointer =
-        try! rustCall() {
-    uniffi_mobile_sdk_rs_fn_constructor_encryptedpayload_new(
-        FfiConverterData.lower(iv),
-        FfiConverterData.lower(ciphertext),$0
-    )
-}
-    self.init(unsafeFromRawPointer: pointer)
-}
+    // No primary constructor declared for this class.
 
     deinit {
         guard let pointer = pointer else {
             return
         }
 
-        try! rustCall { uniffi_mobile_sdk_rs_fn_free_encryptedpayload(pointer, $0) }
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_client(pointer, $0) }
     }
 
     
 
     
-    /**
-     * Get the ciphertext for the encrypted payload.
-     */
-open func ciphertext() -> Data {
-    return try!  FfiConverterData.lift(try! rustCall() {
-    uniffi_mobile_sdk_rs_fn_method_encryptedpayload_ciphertext(self.uniffiClonePointer(),$0
-    )
-})
-}
-    
-    /**
-     * Get the initialization vector (IV) for the encrypted payload.
-     */
-open func iv() -> Data {
-    return try!  FfiConverterData.lift(try! rustCall() {
-    uniffi_mobile_sdk_rs_fn_method_encryptedpayload_iv(self.uniffiClonePointer(),$0
-    )
-})
-}
-    
 
 }
 
-public struct FfiConverterTypeEncryptedPayload: FfiConverter {
+public struct FfiConverterTypeClient: FfiConverter {
 
     typealias FfiType = UnsafeMutableRawPointer
-    typealias SwiftType = EncryptedPayload
+    typealias SwiftType = Client
 
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> EncryptedPayload {
-        return EncryptedPayload(unsafeFromRawPointer: pointer)
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> Client {
+        return Client(unsafeFromRawPointer: pointer)
     }
 
-    public static func lower(_ value: EncryptedPayload) -> UnsafeMutableRawPointer {
+    public static func lower(_ value: Client) -> UnsafeMutableRawPointer {
         return value.uniffiClonePointer()
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> EncryptedPayload {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Client {
         let v: UInt64 = try readInt(&buf)
         // The Rust code won't compile if a pointer won't fit in a UInt64.
         // We have to go via `UInt` because that's the thing that's the size of a pointer.
@@ -1052,7 +757,7 @@ public struct FfiConverterTypeEncryptedPayload: FfiConverter {
         return try lift(ptr!)
     }
 
-    public static func write(_ value: EncryptedPayload, into buf: inout [UInt8]) {
+    public static func write(_ value: Client, into buf: inout [UInt8]) {
         // This fiddling is because `Int` is the thing that's the same size as a pointer.
         // The Rust code won't compile if a pointer won't fit in a `UInt64`.
         writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
@@ -1062,12 +767,416 @@ public struct FfiConverterTypeEncryptedPayload: FfiConverter {
 
 
 
-public func FfiConverterTypeEncryptedPayload_lift(_ pointer: UnsafeMutableRawPointer) throws -> EncryptedPayload {
-    return try FfiConverterTypeEncryptedPayload.lift(pointer)
+public func FfiConverterTypeClient_lift(_ pointer: UnsafeMutableRawPointer) throws -> Client {
+    return try FfiConverterTypeClient.lift(pointer)
 }
 
-public func FfiConverterTypeEncryptedPayload_lower(_ value: EncryptedPayload) -> UnsafeMutableRawPointer {
-    return FfiConverterTypeEncryptedPayload.lower(value)
+public func FfiConverterTypeClient_lower(_ value: Client) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeClient.lower(value)
+}
+
+
+
+
+public protocol CredentialIssuerMetadataProtocol : AnyObject {
+    
+}
+
+open class CredentialIssuerMetadata:
+    CredentialIssuerMetadataProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_credentialissuermetadata(self.pointer, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_credentialissuermetadata(pointer, $0) }
+    }
+
+    
+
+    
+
+}
+
+public struct FfiConverterTypeCredentialIssuerMetadata: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = CredentialIssuerMetadata
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> CredentialIssuerMetadata {
+        return CredentialIssuerMetadata(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: CredentialIssuerMetadata) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CredentialIssuerMetadata {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: CredentialIssuerMetadata, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+public func FfiConverterTypeCredentialIssuerMetadata_lift(_ pointer: UnsafeMutableRawPointer) throws -> CredentialIssuerMetadata {
+    return try FfiConverterTypeCredentialIssuerMetadata.lift(pointer)
+}
+
+public func FfiConverterTypeCredentialIssuerMetadata_lower(_ value: CredentialIssuerMetadata) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeCredentialIssuerMetadata.lower(value)
+}
+
+
+
+
+public protocol CredentialRequestProtocol : AnyObject {
+    
+}
+
+open class CredentialRequest:
+    CredentialRequestProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_credentialrequest(self.pointer, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_credentialrequest(pointer, $0) }
+    }
+
+    
+
+    
+
+}
+
+public struct FfiConverterTypeCredentialRequest: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = CredentialRequest
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> CredentialRequest {
+        return CredentialRequest(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: CredentialRequest) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CredentialRequest {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: CredentialRequest, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+public func FfiConverterTypeCredentialRequest_lift(_ pointer: UnsafeMutableRawPointer) throws -> CredentialRequest {
+    return try FfiConverterTypeCredentialRequest.lift(pointer)
+}
+
+public func FfiConverterTypeCredentialRequest_lower(_ value: CredentialRequest) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeCredentialRequest.lower(value)
+}
+
+
+
+
+public protocol GrantsProtocol : AnyObject {
+    
+}
+
+open class Grants:
+    GrantsProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_grants(self.pointer, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_grants(pointer, $0) }
+    }
+
+    
+
+    
+
+}
+
+public struct FfiConverterTypeGrants: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = Grants
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> Grants {
+        return Grants(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: Grants) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Grants {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: Grants, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+public func FfiConverterTypeGrants_lift(_ pointer: UnsafeMutableRawPointer) throws -> Grants {
+    return try FfiConverterTypeGrants.lift(pointer)
+}
+
+public func FfiConverterTypeGrants_lower(_ value: Grants) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeGrants.lower(value)
+}
+
+
+
+
+/**
+ * Http client wrapper type that could either be a synchronous or asynchronous
+ * external (Kotlin, Swift, etc) client implementation, receveid as a dynamic
+ * trait implementation reference (`Arc<dyn (As|S)yncHttpClient`).
+ *
+ * `Arc` is wrapped with `IArc` to facilitate trait implementation from
+ * `openidconnect` library used by request builders and client on `oid4vci-rs`.
+ */
+public protocol IHttpClientProtocol : AnyObject {
+    
+}
+
+/**
+ * Http client wrapper type that could either be a synchronous or asynchronous
+ * external (Kotlin, Swift, etc) client implementation, receveid as a dynamic
+ * trait implementation reference (`Arc<dyn (As|S)yncHttpClient`).
+ *
+ * `Arc` is wrapped with `IArc` to facilitate trait implementation from
+ * `openidconnect` library used by request builders and client on `oid4vci-rs`.
+ */
+open class IHttpClient:
+    IHttpClientProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_ihttpclient(self.pointer, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_ihttpclient(pointer, $0) }
+    }
+
+    
+public static func newAsync(clientImpl: AsyncHttpClient) -> IHttpClient {
+    return try!  FfiConverterTypeIHttpClient.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_constructor_ihttpclient_new_async(
+        FfiConverterTypeAsyncHttpClient.lower(clientImpl),$0
+    )
+})
+}
+    
+public static func newSync(clientImpl: SyncHttpClient) -> IHttpClient {
+    return try!  FfiConverterTypeIHttpClient.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_constructor_ihttpclient_new_sync(
+        FfiConverterTypeSyncHttpClient.lower(clientImpl),$0
+    )
+})
+}
+    
+
+    
+
+}
+
+public struct FfiConverterTypeIHttpClient: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = IHttpClient
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> IHttpClient {
+        return IHttpClient(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: IHttpClient) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> IHttpClient {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: IHttpClient, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+public func FfiConverterTypeIHttpClient_lift(_ pointer: UnsafeMutableRawPointer) throws -> IHttpClient {
+    return try FfiConverterTypeIHttpClient.lift(pointer)
+}
+
+public func FfiConverterTypeIHttpClient_lower(_ value: IHttpClient) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeIHttpClient.lower(value)
 }
 
 
@@ -1167,59 +1276,48 @@ public func FfiConverterTypeInProcessRecord_lower(_ value: InProcessRecord) -> U
 
 
 /**
- * KeyManager for interacting with the device's
- * cryptographic device APIs for signing and encrypting
- * messages.
+ * A verifiable credential secured as JSON.
  */
-public protocol KeyManagerInterface : AnyObject {
+public protocol JsonVcProtocol : AnyObject {
     
     /**
-     * Reset the key manager, removing all keys.
+     * Access the W3C VCDM credential as a JSON encoded UTF-8 string.
      */
-    func reset()  -> Bool
+    func credentialAsJsonEncodedUtf8String()  -> String
     
     /**
-     * Check if a key exists in the key manager.
+     * The local ID of this credential.
      */
-    func keyExists(id: Key)  -> Bool
+    func id()  -> Uuid
     
     /**
-     * Generate a signing key in the key manager.
+     * The keypair identified in the credential for use in a verifiable presentation.
      */
-    func generateSigningKey(id: Key)  -> Bool
+    func keyAlias()  -> KeyAlias?
     
     /**
-     * Return a JWK for a given key ID as a JSON-encoded string.
+     * The type of this credential. Note that if there is more than one type (i.e. `types()`
+     * returns more than one value), then the types will be concatenated with a "+".
      */
-    func getJwk(id: Key) throws  -> String
+    func type()  -> CredentialType
     
     /**
-     * Sign a payload with a key in the key manager.
+     * The types of the credential from the VCDM, excluding the base `VerifiableCredential` type.
      */
-    func signPayload(id: Key, payload: Data) throws  -> Data
+    func types()  -> [String]
     
     /**
-     * Generate an encryption key in the key manager.
+     * The version of the Verifiable Credential Data Model that this credential conforms to.
      */
-    func generateEncryptionKey(id: Key)  -> Bool
-    
-    func encryptPayload(id: Key, payload: Data) throws  -> EncryptedPayload
-    
-    /**
-     * Decrypt a ciphertext with a key in the key manager. Returns a
-     * plaintext payload, if the ID exists and the decryption is successful.
-     */
-    func decryptPayload(id: Key, encryptedPayload: EncryptedPayload) throws  -> Data
+    func vcdmVersion()  -> VcdmVersion
     
 }
 
 /**
- * KeyManager for interacting with the device's
- * cryptographic device APIs for signing and encrypting
- * messages.
+ * A verifiable credential secured as JSON.
  */
-open class KeyManagerInterfaceImpl:
-    KeyManagerInterface {
+open class JsonVc:
+    JsonVcProtocol {
     fileprivate let pointer: UnsafeMutableRawPointer!
 
     /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
@@ -1244,7 +1342,7 @@ open class KeyManagerInterfaceImpl:
     }
 
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_keymanagerinterface(self.pointer, $0) }
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_jsonvc(self.pointer, $0) }
     }
     // No primary constructor declared for this class.
 
@@ -1253,430 +1351,92 @@ open class KeyManagerInterfaceImpl:
             return
         }
 
-        try! rustCall { uniffi_mobile_sdk_rs_fn_free_keymanagerinterface(pointer, $0) }
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_jsonvc(pointer, $0) }
     }
 
     
-
-    
     /**
-     * Reset the key manager, removing all keys.
+     * Construct a new credential from UTF-8 encoded JSON.
      */
-open func reset() -> Bool {
-    return try!  FfiConverterBool.lift(try! rustCall() {
-    uniffi_mobile_sdk_rs_fn_method_keymanagerinterface_reset(self.uniffiClonePointer(),$0
-    )
-})
-}
-    
-    /**
-     * Check if a key exists in the key manager.
-     */
-open func keyExists(id: Key) -> Bool {
-    return try!  FfiConverterBool.lift(try! rustCall() {
-    uniffi_mobile_sdk_rs_fn_method_keymanagerinterface_key_exists(self.uniffiClonePointer(),
-        FfiConverterTypeKey.lower(id),$0
+public static func newFromCompactJws(utf8JsonString: String)throws  -> JsonVc {
+    return try  FfiConverterTypeJsonVc.lift(try rustCallWithError(FfiConverterTypeJsonVcInitError.lift) {
+    uniffi_mobile_sdk_rs_fn_constructor_jsonvc_new_from_compact_jws(
+        FfiConverterString.lower(utf8JsonString),$0
     )
 })
 }
     
     /**
-     * Generate a signing key in the key manager.
+     * Construct a new credential from UTF-8 encoded JSON.
      */
-open func generateSigningKey(id: Key) -> Bool {
-    return try!  FfiConverterBool.lift(try! rustCall() {
-    uniffi_mobile_sdk_rs_fn_method_keymanagerinterface_generate_signing_key(self.uniffiClonePointer(),
-        FfiConverterTypeKey.lower(id),$0
+public static func newFromCompactJwsWithKey(utf8JsonString: String, keyAlias: KeyAlias)throws  -> JsonVc {
+    return try  FfiConverterTypeJsonVc.lift(try rustCallWithError(FfiConverterTypeJsonVcInitError.lift) {
+    uniffi_mobile_sdk_rs_fn_constructor_jsonvc_new_from_compact_jws_with_key(
+        FfiConverterString.lower(utf8JsonString),
+        FfiConverterTypeKeyAlias.lower(keyAlias),$0
+    )
+})
+}
+    
+
+    
+    /**
+     * Access the W3C VCDM credential as a JSON encoded UTF-8 string.
+     */
+open func credentialAsJsonEncodedUtf8String() -> String {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_jsonvc_credential_as_json_encoded_utf8_string(self.uniffiClonePointer(),$0
     )
 })
 }
     
     /**
-     * Return a JWK for a given key ID as a JSON-encoded string.
+     * The local ID of this credential.
      */
-open func getJwk(id: Key)throws  -> String {
-    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeKeyManagerError.lift) {
-    uniffi_mobile_sdk_rs_fn_method_keymanagerinterface_get_jwk(self.uniffiClonePointer(),
-        FfiConverterTypeKey.lower(id),$0
-    )
-})
-}
-    
-    /**
-     * Sign a payload with a key in the key manager.
-     */
-open func signPayload(id: Key, payload: Data)throws  -> Data {
-    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeKeyManagerError.lift) {
-    uniffi_mobile_sdk_rs_fn_method_keymanagerinterface_sign_payload(self.uniffiClonePointer(),
-        FfiConverterTypeKey.lower(id),
-        FfiConverterData.lower(payload),$0
-    )
-})
-}
-    
-    /**
-     * Generate an encryption key in the key manager.
-     */
-open func generateEncryptionKey(id: Key) -> Bool {
-    return try!  FfiConverterBool.lift(try! rustCall() {
-    uniffi_mobile_sdk_rs_fn_method_keymanagerinterface_generate_encryption_key(self.uniffiClonePointer(),
-        FfiConverterTypeKey.lower(id),$0
-    )
-})
-}
-    
-open func encryptPayload(id: Key, payload: Data)throws  -> EncryptedPayload {
-    return try  FfiConverterTypeEncryptedPayload.lift(try rustCallWithError(FfiConverterTypeKeyManagerError.lift) {
-    uniffi_mobile_sdk_rs_fn_method_keymanagerinterface_encrypt_payload(self.uniffiClonePointer(),
-        FfiConverterTypeKey.lower(id),
-        FfiConverterData.lower(payload),$0
-    )
-})
-}
-    
-    /**
-     * Decrypt a ciphertext with a key in the key manager. Returns a
-     * plaintext payload, if the ID exists and the decryption is successful.
-     */
-open func decryptPayload(id: Key, encryptedPayload: EncryptedPayload)throws  -> Data {
-    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeKeyManagerError.lift) {
-    uniffi_mobile_sdk_rs_fn_method_keymanagerinterface_decrypt_payload(self.uniffiClonePointer(),
-        FfiConverterTypeKey.lower(id),
-        FfiConverterTypeEncryptedPayload.lower(encryptedPayload),$0
-    )
-})
-}
-    
-
-}
-
-
-// Put the implementation in a struct so we don't pollute the top-level namespace
-fileprivate struct UniffiCallbackInterfaceKeyManagerInterface {
-
-    // Create the VTable using a series of closures.
-    // Swift automatically converts these into C callback functions.
-    static var vtable: UniffiVTableCallbackInterfaceKeyManagerInterface = UniffiVTableCallbackInterfaceKeyManagerInterface(
-        reset: { (
-            uniffiHandle: UInt64,
-            uniffiOutReturn: UnsafeMutablePointer<Int8>,
-            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
-        ) in
-            let makeCall = {
-                () throws -> Bool in
-                guard let uniffiObj = try? FfiConverterTypeKeyManagerInterface.handleMap.get(handle: uniffiHandle) else {
-                    throw UniffiInternalError.unexpectedStaleHandle
-                }
-                return uniffiObj.reset(
-                )
-            }
-
-            
-            let writeReturn = { uniffiOutReturn.pointee = FfiConverterBool.lower($0) }
-            uniffiTraitInterfaceCall(
-                callStatus: uniffiCallStatus,
-                makeCall: makeCall,
-                writeReturn: writeReturn
-            )
-        },
-        keyExists: { (
-            uniffiHandle: UInt64,
-            id: RustBuffer,
-            uniffiOutReturn: UnsafeMutablePointer<Int8>,
-            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
-        ) in
-            let makeCall = {
-                () throws -> Bool in
-                guard let uniffiObj = try? FfiConverterTypeKeyManagerInterface.handleMap.get(handle: uniffiHandle) else {
-                    throw UniffiInternalError.unexpectedStaleHandle
-                }
-                return uniffiObj.keyExists(
-                     id: try FfiConverterTypeKey.lift(id)
-                )
-            }
-
-            
-            let writeReturn = { uniffiOutReturn.pointee = FfiConverterBool.lower($0) }
-            uniffiTraitInterfaceCall(
-                callStatus: uniffiCallStatus,
-                makeCall: makeCall,
-                writeReturn: writeReturn
-            )
-        },
-        generateSigningKey: { (
-            uniffiHandle: UInt64,
-            id: RustBuffer,
-            uniffiOutReturn: UnsafeMutablePointer<Int8>,
-            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
-        ) in
-            let makeCall = {
-                () throws -> Bool in
-                guard let uniffiObj = try? FfiConverterTypeKeyManagerInterface.handleMap.get(handle: uniffiHandle) else {
-                    throw UniffiInternalError.unexpectedStaleHandle
-                }
-                return uniffiObj.generateSigningKey(
-                     id: try FfiConverterTypeKey.lift(id)
-                )
-            }
-
-            
-            let writeReturn = { uniffiOutReturn.pointee = FfiConverterBool.lower($0) }
-            uniffiTraitInterfaceCall(
-                callStatus: uniffiCallStatus,
-                makeCall: makeCall,
-                writeReturn: writeReturn
-            )
-        },
-        getJwk: { (
-            uniffiHandle: UInt64,
-            id: RustBuffer,
-            uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
-            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
-        ) in
-            let makeCall = {
-                () throws -> String in
-                guard let uniffiObj = try? FfiConverterTypeKeyManagerInterface.handleMap.get(handle: uniffiHandle) else {
-                    throw UniffiInternalError.unexpectedStaleHandle
-                }
-                return try uniffiObj.getJwk(
-                     id: try FfiConverterTypeKey.lift(id)
-                )
-            }
-
-            
-            let writeReturn = { uniffiOutReturn.pointee = FfiConverterString.lower($0) }
-            uniffiTraitInterfaceCallWithError(
-                callStatus: uniffiCallStatus,
-                makeCall: makeCall,
-                writeReturn: writeReturn,
-                lowerError: FfiConverterTypeKeyManagerError.lower
-            )
-        },
-        signPayload: { (
-            uniffiHandle: UInt64,
-            id: RustBuffer,
-            payload: RustBuffer,
-            uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
-            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
-        ) in
-            let makeCall = {
-                () throws -> Data in
-                guard let uniffiObj = try? FfiConverterTypeKeyManagerInterface.handleMap.get(handle: uniffiHandle) else {
-                    throw UniffiInternalError.unexpectedStaleHandle
-                }
-                return try uniffiObj.signPayload(
-                     id: try FfiConverterTypeKey.lift(id),
-                     payload: try FfiConverterData.lift(payload)
-                )
-            }
-
-            
-            let writeReturn = { uniffiOutReturn.pointee = FfiConverterData.lower($0) }
-            uniffiTraitInterfaceCallWithError(
-                callStatus: uniffiCallStatus,
-                makeCall: makeCall,
-                writeReturn: writeReturn,
-                lowerError: FfiConverterTypeKeyManagerError.lower
-            )
-        },
-        generateEncryptionKey: { (
-            uniffiHandle: UInt64,
-            id: RustBuffer,
-            uniffiOutReturn: UnsafeMutablePointer<Int8>,
-            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
-        ) in
-            let makeCall = {
-                () throws -> Bool in
-                guard let uniffiObj = try? FfiConverterTypeKeyManagerInterface.handleMap.get(handle: uniffiHandle) else {
-                    throw UniffiInternalError.unexpectedStaleHandle
-                }
-                return uniffiObj.generateEncryptionKey(
-                     id: try FfiConverterTypeKey.lift(id)
-                )
-            }
-
-            
-            let writeReturn = { uniffiOutReturn.pointee = FfiConverterBool.lower($0) }
-            uniffiTraitInterfaceCall(
-                callStatus: uniffiCallStatus,
-                makeCall: makeCall,
-                writeReturn: writeReturn
-            )
-        },
-        encryptPayload: { (
-            uniffiHandle: UInt64,
-            id: RustBuffer,
-            payload: RustBuffer,
-            uniffiOutReturn: UnsafeMutablePointer<UnsafeMutableRawPointer>,
-            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
-        ) in
-            let makeCall = {
-                () throws -> EncryptedPayload in
-                guard let uniffiObj = try? FfiConverterTypeKeyManagerInterface.handleMap.get(handle: uniffiHandle) else {
-                    throw UniffiInternalError.unexpectedStaleHandle
-                }
-                return try uniffiObj.encryptPayload(
-                     id: try FfiConverterTypeKey.lift(id),
-                     payload: try FfiConverterData.lift(payload)
-                )
-            }
-
-            
-            let writeReturn = { uniffiOutReturn.pointee = FfiConverterTypeEncryptedPayload.lower($0) }
-            uniffiTraitInterfaceCallWithError(
-                callStatus: uniffiCallStatus,
-                makeCall: makeCall,
-                writeReturn: writeReturn,
-                lowerError: FfiConverterTypeKeyManagerError.lower
-            )
-        },
-        decryptPayload: { (
-            uniffiHandle: UInt64,
-            id: RustBuffer,
-            encryptedPayload: UnsafeMutableRawPointer,
-            uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
-            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
-        ) in
-            let makeCall = {
-                () throws -> Data in
-                guard let uniffiObj = try? FfiConverterTypeKeyManagerInterface.handleMap.get(handle: uniffiHandle) else {
-                    throw UniffiInternalError.unexpectedStaleHandle
-                }
-                return try uniffiObj.decryptPayload(
-                     id: try FfiConverterTypeKey.lift(id),
-                     encryptedPayload: try FfiConverterTypeEncryptedPayload.lift(encryptedPayload)
-                )
-            }
-
-            
-            let writeReturn = { uniffiOutReturn.pointee = FfiConverterData.lower($0) }
-            uniffiTraitInterfaceCallWithError(
-                callStatus: uniffiCallStatus,
-                makeCall: makeCall,
-                writeReturn: writeReturn,
-                lowerError: FfiConverterTypeKeyManagerError.lower
-            )
-        },
-        uniffiFree: { (uniffiHandle: UInt64) -> () in
-            let result = try? FfiConverterTypeKeyManagerInterface.handleMap.remove(handle: uniffiHandle)
-            if result == nil {
-                print("Uniffi callback interface KeyManagerInterface: handle missing in uniffiFree")
-            }
-        }
-    )
-}
-
-private func uniffiCallbackInitKeyManagerInterface() {
-    uniffi_mobile_sdk_rs_fn_init_callback_vtable_keymanagerinterface(&UniffiCallbackInterfaceKeyManagerInterface.vtable)
-}
-
-public struct FfiConverterTypeKeyManagerInterface: FfiConverter {
-    fileprivate static var handleMap = UniffiHandleMap<KeyManagerInterface>()
-
-    typealias FfiType = UnsafeMutableRawPointer
-    typealias SwiftType = KeyManagerInterface
-
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> KeyManagerInterface {
-        return KeyManagerInterfaceImpl(unsafeFromRawPointer: pointer)
-    }
-
-    public static func lower(_ value: KeyManagerInterface) -> UnsafeMutableRawPointer {
-        guard let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: handleMap.insert(obj: value))) else {
-            fatalError("Cast to UnsafeMutableRawPointer failed")
-        }
-        return ptr
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> KeyManagerInterface {
-        let v: UInt64 = try readInt(&buf)
-        // The Rust code won't compile if a pointer won't fit in a UInt64.
-        // We have to go via `UInt` because that's the thing that's the size of a pointer.
-        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
-        if (ptr == nil) {
-            throw UniffiInternalError.unexpectedNullPointer
-        }
-        return try lift(ptr!)
-    }
-
-    public static func write(_ value: KeyManagerInterface, into buf: inout [UInt8]) {
-        // This fiddling is because `Int` is the thing that's the same size as a pointer.
-        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
-        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
-    }
-}
-
-
-
-
-public func FfiConverterTypeKeyManagerInterface_lift(_ pointer: UnsafeMutableRawPointer) throws -> KeyManagerInterface {
-    return try FfiConverterTypeKeyManagerInterface.lift(pointer)
-}
-
-public func FfiConverterTypeKeyManagerInterface_lower(_ value: KeyManagerInterface) -> UnsafeMutableRawPointer {
-    return FfiConverterTypeKeyManagerInterface.lower(value)
-}
-
-
-
-
-public protocol MDocProtocol : AnyObject {
-    
-    func id()  -> Uuid
-    
-}
-
-open class MDoc:
-    MDocProtocol {
-    fileprivate let pointer: UnsafeMutableRawPointer!
-
-    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
-    public struct NoPointer {
-        public init() {}
-    }
-
-    // TODO: We'd like this to be `private` but for Swifty reasons,
-    // we can't implement `FfiConverter` without making this `required` and we can't
-    // make it `required` without making it `public`.
-    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
-        self.pointer = pointer
-    }
-
-    /// This constructor can be used to instantiate a fake object.
-    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
-    ///
-    /// - Warning:
-    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
-    public init(noPointer: NoPointer) {
-        self.pointer = nil
-    }
-
-    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_mdoc(self.pointer, $0) }
-    }
-    // No primary constructor declared for this class.
-
-    deinit {
-        guard let pointer = pointer else {
-            return
-        }
-
-        try! rustCall { uniffi_mobile_sdk_rs_fn_free_mdoc(pointer, $0) }
-    }
-
-    
-public static func fromCbor(value: Data) -> MDoc {
-    return try!  FfiConverterTypeMDoc.lift(try! rustCall() {
-    uniffi_mobile_sdk_rs_fn_constructor_mdoc_from_cbor(
-        FfiConverterData.lower(value),$0
-    )
-})
-}
-    
-
-    
 open func id() -> Uuid {
     return try!  FfiConverterTypeUuid.lift(try! rustCall() {
-    uniffi_mobile_sdk_rs_fn_method_mdoc_id(self.uniffiClonePointer(),$0
+    uniffi_mobile_sdk_rs_fn_method_jsonvc_id(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * The keypair identified in the credential for use in a verifiable presentation.
+     */
+open func keyAlias() -> KeyAlias? {
+    return try!  FfiConverterOptionTypeKeyAlias.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_jsonvc_key_alias(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * The type of this credential. Note that if there is more than one type (i.e. `types()`
+     * returns more than one value), then the types will be concatenated with a "+".
+     */
+open func type() -> CredentialType {
+    return try!  FfiConverterTypeCredentialType.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_jsonvc_type(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * The types of the credential from the VCDM, excluding the base `VerifiableCredential` type.
+     */
+open func types() -> [String] {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_jsonvc_types(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * The version of the Verifiable Credential Data Model that this credential conforms to.
+     */
+open func vcdmVersion() -> VcdmVersion {
+    return try!  FfiConverterTypeVcdmVersion.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_jsonvc_vcdm_version(self.uniffiClonePointer(),$0
     )
 })
 }
@@ -1684,20 +1444,20 @@ open func id() -> Uuid {
 
 }
 
-public struct FfiConverterTypeMDoc: FfiConverter {
+public struct FfiConverterTypeJsonVc: FfiConverter {
 
     typealias FfiType = UnsafeMutableRawPointer
-    typealias SwiftType = MDoc
+    typealias SwiftType = JsonVc
 
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> MDoc {
-        return MDoc(unsafeFromRawPointer: pointer)
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> JsonVc {
+        return JsonVc(unsafeFromRawPointer: pointer)
     }
 
-    public static func lower(_ value: MDoc) -> UnsafeMutableRawPointer {
+    public static func lower(_ value: JsonVc) -> UnsafeMutableRawPointer {
         return value.uniffiClonePointer()
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MDoc {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> JsonVc {
         let v: UInt64 = try readInt(&buf)
         // The Rust code won't compile if a pointer won't fit in a UInt64.
         // We have to go via `UInt` because that's the thing that's the size of a pointer.
@@ -1708,7 +1468,7 @@ public struct FfiConverterTypeMDoc: FfiConverter {
         return try lift(ptr!)
     }
 
-    public static func write(_ value: MDoc, into buf: inout [UInt8]) {
+    public static func write(_ value: JsonVc, into buf: inout [UInt8]) {
         // This fiddling is because `Int` is the thing that's the same size as a pointer.
         // The Rust code won't compile if a pointer won't fit in a `UInt64`.
         writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
@@ -1718,18 +1478,370 @@ public struct FfiConverterTypeMDoc: FfiConverter {
 
 
 
-public func FfiConverterTypeMDoc_lift(_ pointer: UnsafeMutableRawPointer) throws -> MDoc {
-    return try FfiConverterTypeMDoc.lift(pointer)
+public func FfiConverterTypeJsonVc_lift(_ pointer: UnsafeMutableRawPointer) throws -> JsonVc {
+    return try FfiConverterTypeJsonVc.lift(pointer)
 }
 
-public func FfiConverterTypeMDoc_lower(_ value: MDoc) -> UnsafeMutableRawPointer {
-    return FfiConverterTypeMDoc.lower(value)
+public func FfiConverterTypeJsonVc_lower(_ value: JsonVc) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeJsonVc.lower(value)
+}
+
+
+
+
+/**
+ * A verifiable credential secured as a JWT.
+ */
+public protocol JwtVcProtocol : AnyObject {
+    
+    /**
+     * Access the W3C VCDM credential as a JSON encoded UTF-8 string.
+     */
+    func credentialAsJsonEncodedUtf8String()  -> String
+    
+    /**
+     * The VdcCollection ID for this credential.
+     */
+    func id()  -> Uuid
+    
+    /**
+     * Access the JWS header as a JSON encoded UTF-8 string.
+     */
+    func jwsHeaderAsJsonEncodedUtf8String()  -> String
+    
+    /**
+     * Access the JWS payload as a JSON encoded UTF-8 string.
+     */
+    func jwsPayloadAsJsonEncodedUtf8String()  -> String
+    
+    /**
+     * The keypair identified in the credential for use in a verifiable presentation.
+     */
+    func keyAlias()  -> KeyAlias?
+    
+    /**
+     * The type of this credential. Note that if there is more than one type (i.e. `types()`
+     * returns more than one value), then the types will be concatenated with a "+".
+     */
+    func type()  -> CredentialType
+    
+    /**
+     * The types of the credential from the VCDM, excluding the base `VerifiableCredential` type.
+     */
+    func types()  -> [String]
+    
+    /**
+     * The version of the Verifiable Credential Data Model that this credential conforms to.
+     */
+    func vcdmVersion()  -> VcdmVersion
+    
+}
+
+/**
+ * A verifiable credential secured as a JWT.
+ */
+open class JwtVc:
+    JwtVcProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_jwtvc(self.pointer, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_jwtvc(pointer, $0) }
+    }
+
+    
+    /**
+     * Construct a new credential from a compact JWS (of the form
+     * `<base64-encoded-header>.<base64-encoded-payload>.<base64-encoded-signature>`),
+     * without an associated keypair.
+     */
+public static func newFromCompactJws(jws: String)throws  -> JwtVc {
+    return try  FfiConverterTypeJwtVc.lift(try rustCallWithError(FfiConverterTypeJwtVcInitError.lift) {
+    uniffi_mobile_sdk_rs_fn_constructor_jwtvc_new_from_compact_jws(
+        FfiConverterString.lower(jws),$0
+    )
+})
+}
+    
+    /**
+     * Construct a new credential from a compact JWS (of the form
+     * `<base64-encoded-header>.<base64-encoded-payload>.<base64-encoded-signature>`),
+     * with an associated keypair.
+     */
+public static func newFromCompactJwsWithKey(jws: String, keyAlias: KeyAlias)throws  -> JwtVc {
+    return try  FfiConverterTypeJwtVc.lift(try rustCallWithError(FfiConverterTypeJwtVcInitError.lift) {
+    uniffi_mobile_sdk_rs_fn_constructor_jwtvc_new_from_compact_jws_with_key(
+        FfiConverterString.lower(jws),
+        FfiConverterTypeKeyAlias.lower(keyAlias),$0
+    )
+})
+}
+    
+
+    
+    /**
+     * Access the W3C VCDM credential as a JSON encoded UTF-8 string.
+     */
+open func credentialAsJsonEncodedUtf8String() -> String {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_jwtvc_credential_as_json_encoded_utf8_string(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * The VdcCollection ID for this credential.
+     */
+open func id() -> Uuid {
+    return try!  FfiConverterTypeUuid.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_jwtvc_id(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * Access the JWS header as a JSON encoded UTF-8 string.
+     */
+open func jwsHeaderAsJsonEncodedUtf8String() -> String {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_jwtvc_jws_header_as_json_encoded_utf8_string(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * Access the JWS payload as a JSON encoded UTF-8 string.
+     */
+open func jwsPayloadAsJsonEncodedUtf8String() -> String {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_jwtvc_jws_payload_as_json_encoded_utf8_string(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * The keypair identified in the credential for use in a verifiable presentation.
+     */
+open func keyAlias() -> KeyAlias? {
+    return try!  FfiConverterOptionTypeKeyAlias.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_jwtvc_key_alias(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * The type of this credential. Note that if there is more than one type (i.e. `types()`
+     * returns more than one value), then the types will be concatenated with a "+".
+     */
+open func type() -> CredentialType {
+    return try!  FfiConverterTypeCredentialType.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_jwtvc_type(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * The types of the credential from the VCDM, excluding the base `VerifiableCredential` type.
+     */
+open func types() -> [String] {
+    return try!  FfiConverterSequenceString.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_jwtvc_types(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * The version of the Verifiable Credential Data Model that this credential conforms to.
+     */
+open func vcdmVersion() -> VcdmVersion {
+    return try!  FfiConverterTypeVcdmVersion.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_jwtvc_vcdm_version(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+
+}
+
+public struct FfiConverterTypeJwtVc: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = JwtVc
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> JwtVc {
+        return JwtVc(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: JwtVc) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> JwtVc {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: JwtVc, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+public func FfiConverterTypeJwtVc_lift(_ pointer: UnsafeMutableRawPointer) throws -> JwtVc {
+    return try FfiConverterTypeJwtVc.lift(pointer)
+}
+
+public func FfiConverterTypeJwtVc_lower(_ value: JwtVc) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeJwtVc.lower(value)
+}
+
+
+
+
+public protocol MdlSessionManagerProtocol : AnyObject {
+    
+}
+
+open class MdlSessionManager:
+    MdlSessionManagerProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_mdlsessionmanager(self.pointer, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_mdlsessionmanager(pointer, $0) }
+    }
+
+    
+
+    
+
+}
+
+public struct FfiConverterTypeMDLSessionManager: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = MdlSessionManager
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> MdlSessionManager {
+        return MdlSessionManager(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: MdlSessionManager) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdlSessionManager {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: MdlSessionManager, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+public func FfiConverterTypeMDLSessionManager_lift(_ pointer: UnsafeMutableRawPointer) throws -> MdlSessionManager {
+    return try FfiConverterTypeMDLSessionManager.lift(pointer)
+}
+
+public func FfiConverterTypeMDLSessionManager_lower(_ value: MdlSessionManager) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeMDLSessionManager.lower(value)
 }
 
 
 
 
 public protocol MdlPresentationSessionProtocol : AnyObject {
+    
+    /**
+     * Constructs the response to be sent from the holder to the reader containing
+     * the items of information the user has consented to share.
+     *
+     * Takes a HashMap of items the user has authorized the app to share, as well
+     * as the id of a key stored in the key manager to be used to sign the response.
+     * Returns a byte array containing the signed response to be returned to the
+     * reader.
+     */
+    func generateResponse(permittedItems: [String: [String: [String]]]) throws  -> Data
     
     /**
      * Returns the BLE identification
@@ -1750,16 +1862,7 @@ public protocol MdlPresentationSessionProtocol : AnyObject {
      */
     func handleRequest(request: Data) throws  -> [ItemsRequest]
     
-    /**
-     * Constructs the response to be sent from the holder to the reader containing
-     * the items of information the user has consented to share.
-     *
-     * Takes a HashMap of items the user has authorized the app to share, as well
-     * as the id of a key stored in the key manager to be used to sign the response.
-     * Returns a byte array containing the signed response to be returned to the
-     * reader.
-     */
-    func submitResponse(permittedItems: [String: [String: [String]]], keyId: Key) throws  -> Data
+    func submitResponse(derSignature: Data) throws  -> Data
     
     /**
      * Terminates the mDL exchange session.
@@ -1812,6 +1915,23 @@ open class MdlPresentationSession:
 
     
     /**
+     * Constructs the response to be sent from the holder to the reader containing
+     * the items of information the user has consented to share.
+     *
+     * Takes a HashMap of items the user has authorized the app to share, as well
+     * as the id of a key stored in the key manager to be used to sign the response.
+     * Returns a byte array containing the signed response to be returned to the
+     * reader.
+     */
+open func generateResponse(permittedItems: [String: [String: [String]]])throws  -> Data {
+    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeSignatureError.lift) {
+    uniffi_mobile_sdk_rs_fn_method_mdlpresentationsession_generate_response(self.uniffiClonePointer(),
+        FfiConverterDictionaryStringDictionaryStringSequenceString.lower(permittedItems),$0
+    )
+})
+}
+    
+    /**
      * Returns the BLE identification
      */
 open func getBleIdent() -> Data {
@@ -1846,20 +1966,10 @@ open func handleRequest(request: Data)throws  -> [ItemsRequest] {
 })
 }
     
-    /**
-     * Constructs the response to be sent from the holder to the reader containing
-     * the items of information the user has consented to share.
-     *
-     * Takes a HashMap of items the user has authorized the app to share, as well
-     * as the id of a key stored in the key manager to be used to sign the response.
-     * Returns a byte array containing the signed response to be returned to the
-     * reader.
-     */
-open func submitResponse(permittedItems: [String: [String: [String]]], keyId: Key)throws  -> Data {
+open func submitResponse(derSignature: Data)throws  -> Data {
     return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeSignatureError.lift) {
     uniffi_mobile_sdk_rs_fn_method_mdlpresentationsession_submit_response(self.uniffiClonePointer(),
-        FfiConverterDictionaryStringDictionaryStringSequenceString.lower(permittedItems),
-        FfiConverterTypeKey.lower(keyId),$0
+        FfiConverterData.lower(derSignature),$0
     )
 })
 }
@@ -1924,12 +2034,29 @@ public func FfiConverterTypeMdlPresentationSession_lower(_ value: MdlPresentatio
 
 
 
-public protocol SecretKeyInterface : AnyObject {
+public protocol MdocProtocol : AnyObject {
+    
+    /**
+     * Simple representation of mdoc namespace and data elements for display in the UI.
+     */
+    func details()  -> [Namespace: [Element]]
+    
+    /**
+     * The document type of this mdoc, for example `org.iso.18013.5.1.mDL`.
+     */
+    func doctype()  -> String
+    
+    /**
+     * The local ID of this credential.
+     */
+    func id()  -> Uuid
+    
+    func keyAlias()  -> KeyAlias
     
 }
 
-open class SecretKeyInterfaceImpl:
-    SecretKeyInterface {
+open class Mdoc:
+    MdocProtocol {
     fileprivate let pointer: UnsafeMutableRawPointer!
 
     /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
@@ -1954,7 +2081,7 @@ open class SecretKeyInterfaceImpl:
     }
 
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_secretkeyinterface(self.pointer, $0) }
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_mdoc(self.pointer, $0) }
     }
     // No primary constructor declared for this class.
 
@@ -1963,53 +2090,104 @@ open class SecretKeyInterfaceImpl:
             return
         }
 
-        try! rustCall { uniffi_mobile_sdk_rs_fn_free_secretkeyinterface(pointer, $0) }
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_mdoc(pointer, $0) }
     }
 
     
+    /**
+     * Construct a SpruceKit MDoc from a cbor-encoded
+     * [spruceid/isomdl `Document`](https://github.com/spruceid/isomdl/blob/main/src/presentation/device.rs#L145-L152)
+     */
+public static func fromCborEncodedDocument(cborEncodedDocument: Data, keyAlias: KeyAlias)throws  -> Mdoc {
+    return try  FfiConverterTypeMdoc.lift(try rustCallWithError(FfiConverterTypeMdocInitError.lift) {
+    uniffi_mobile_sdk_rs_fn_constructor_mdoc_from_cbor_encoded_document(
+        FfiConverterData.lower(cborEncodedDocument),
+        FfiConverterTypeKeyAlias.lower(keyAlias),$0
+    )
+})
+}
+    
+    /**
+     * Compatibility feature: construct an MDoc from a
+     * [stringified spruceid/isomdl `Document`](https://github.com/spruceid/isomdl/blob/main/src/presentation/mod.rs#L100)
+     */
+public static func fromStringifiedDocument(stringifiedDocument: String, keyAlias: KeyAlias)throws  -> Mdoc {
+    return try  FfiConverterTypeMdoc.lift(try rustCallWithError(FfiConverterTypeMdocInitError.lift) {
+    uniffi_mobile_sdk_rs_fn_constructor_mdoc_from_stringified_document(
+        FfiConverterString.lower(stringifiedDocument),
+        FfiConverterTypeKeyAlias.lower(keyAlias),$0
+    )
+})
+}
+    
+    /**
+     * Construct a new MDoc from base64url-encoded IssuerSigned.
+     */
+public static func newFromBase64urlEncodedIssuerSigned(base64urlEncodedIssuerSigned: String, keyAlias: KeyAlias)throws  -> Mdoc {
+    return try  FfiConverterTypeMdoc.lift(try rustCallWithError(FfiConverterTypeMdocInitError.lift) {
+    uniffi_mobile_sdk_rs_fn_constructor_mdoc_new_from_base64url_encoded_issuer_signed(
+        FfiConverterString.lower(base64urlEncodedIssuerSigned),
+        FfiConverterTypeKeyAlias.lower(keyAlias),$0
+    )
+})
+}
+    
 
+    
+    /**
+     * Simple representation of mdoc namespace and data elements for display in the UI.
+     */
+open func details() -> [Namespace: [Element]] {
+    return try!  FfiConverterDictionaryTypeNamespaceSequenceTypeElement.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_mdoc_details(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * The document type of this mdoc, for example `org.iso.18013.5.1.mDL`.
+     */
+open func doctype() -> String {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_mdoc_doctype(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * The local ID of this credential.
+     */
+open func id() -> Uuid {
+    return try!  FfiConverterTypeUuid.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_mdoc_id(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func keyAlias() -> KeyAlias {
+    return try!  FfiConverterTypeKeyAlias.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_mdoc_key_alias(self.uniffiClonePointer(),$0
+    )
+})
+}
     
 
 }
 
-
-// Put the implementation in a struct so we don't pollute the top-level namespace
-fileprivate struct UniffiCallbackInterfaceSecretKeyInterface {
-
-    // Create the VTable using a series of closures.
-    // Swift automatically converts these into C callback functions.
-    static var vtable: UniffiVTableCallbackInterfaceSecretKeyInterface = UniffiVTableCallbackInterfaceSecretKeyInterface(
-        uniffiFree: { (uniffiHandle: UInt64) -> () in
-            let result = try? FfiConverterTypeSecretKeyInterface.handleMap.remove(handle: uniffiHandle)
-            if result == nil {
-                print("Uniffi callback interface SecretKeyInterface: handle missing in uniffiFree")
-            }
-        }
-    )
-}
-
-private func uniffiCallbackInitSecretKeyInterface() {
-    uniffi_mobile_sdk_rs_fn_init_callback_vtable_secretkeyinterface(&UniffiCallbackInterfaceSecretKeyInterface.vtable)
-}
-
-public struct FfiConverterTypeSecretKeyInterface: FfiConverter {
-    fileprivate static var handleMap = UniffiHandleMap<SecretKeyInterface>()
+public struct FfiConverterTypeMdoc: FfiConverter {
 
     typealias FfiType = UnsafeMutableRawPointer
-    typealias SwiftType = SecretKeyInterface
+    typealias SwiftType = Mdoc
 
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> SecretKeyInterface {
-        return SecretKeyInterfaceImpl(unsafeFromRawPointer: pointer)
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> Mdoc {
+        return Mdoc(unsafeFromRawPointer: pointer)
     }
 
-    public static func lower(_ value: SecretKeyInterface) -> UnsafeMutableRawPointer {
-        guard let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: handleMap.insert(obj: value))) else {
-            fatalError("Cast to UnsafeMutableRawPointer failed")
-        }
-        return ptr
+    public static func lower(_ value: Mdoc) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SecretKeyInterface {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Mdoc {
         let v: UInt64 = try readInt(&buf)
         // The Rust code won't compile if a pointer won't fit in a UInt64.
         // We have to go via `UInt` because that's the thing that's the size of a pointer.
@@ -2020,7 +2198,7 @@ public struct FfiConverterTypeSecretKeyInterface: FfiConverter {
         return try lift(ptr!)
     }
 
-    public static func write(_ value: SecretKeyInterface, into buf: inout [UInt8]) {
+    public static func write(_ value: Mdoc, into buf: inout [UInt8]) {
         // This fiddling is because `Int` is the thing that's the same size as a pointer.
         // The Rust code won't compile if a pointer won't fit in a `UInt64`.
         writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
@@ -2030,12 +2208,664 @@ public struct FfiConverterTypeSecretKeyInterface: FfiConverter {
 
 
 
-public func FfiConverterTypeSecretKeyInterface_lift(_ pointer: UnsafeMutableRawPointer) throws -> SecretKeyInterface {
-    return try FfiConverterTypeSecretKeyInterface.lift(pointer)
+public func FfiConverterTypeMdoc_lift(_ pointer: UnsafeMutableRawPointer) throws -> Mdoc {
+    return try FfiConverterTypeMdoc.lift(pointer)
 }
 
-public func FfiConverterTypeSecretKeyInterface_lower(_ value: SecretKeyInterface) -> UnsafeMutableRawPointer {
-    return FfiConverterTypeSecretKeyInterface.lower(value)
+public func FfiConverterTypeMdoc_lower(_ value: Mdoc) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeMdoc.lower(value)
+}
+
+
+
+
+public protocol Oid4vciProtocol : AnyObject {
+    
+    func exchangeCredential(proofsOfPossession: [String]) async throws  -> [CredentialResponse]
+    
+    func exchangeToken() async throws  -> String?
+    
+    func getMetadata() throws  -> Oid4vciMetadata
+    
+    func initiate(baseUrl: String, clientId: String, redirectUrl: String) async throws 
+    
+    func initiateWithOffer(credentialOffer: String, clientId: String, redirectUrl: String) async throws 
+    
+}
+
+open class Oid4vci:
+    Oid4vciProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_oid4vci(self.pointer, $0) }
+    }
+public convenience init() {
+    let pointer =
+        try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_constructor_oid4vci_new($0
+    )
+}
+    self.init(unsafeFromRawPointer: pointer)
+}
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_oid4vci(pointer, $0) }
+    }
+
+    
+public static func newWithAsyncClient(client: AsyncHttpClient) -> Oid4vci {
+    return try!  FfiConverterTypeOid4vci.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_constructor_oid4vci_new_with_async_client(
+        FfiConverterTypeAsyncHttpClient.lower(client),$0
+    )
+})
+}
+    
+public static func newWithDefaultAsyncClient() -> Oid4vci {
+    return try!  FfiConverterTypeOid4vci.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_constructor_oid4vci_new_with_default_async_client($0
+    )
+})
+}
+    
+public static func newWithDefaultSyncClient() -> Oid4vci {
+    return try!  FfiConverterTypeOid4vci.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_constructor_oid4vci_new_with_default_sync_client($0
+    )
+})
+}
+    
+public static func newWithSyncClient(client: SyncHttpClient) -> Oid4vci {
+    return try!  FfiConverterTypeOid4vci.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_constructor_oid4vci_new_with_sync_client(
+        FfiConverterTypeSyncHttpClient.lower(client),$0
+    )
+})
+}
+    
+
+    
+open func exchangeCredential(proofsOfPossession: [String])async throws  -> [CredentialResponse] {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_method_oid4vci_exchange_credential(
+                    self.uniffiClonePointer(),
+                    FfiConverterSequenceString.lower(proofsOfPossession)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceTypeCredentialResponse.lift,
+            errorHandler: FfiConverterTypeOid4vciError.lift
+        )
+}
+    
+open func exchangeToken()async throws  -> String? {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_method_oid4vci_exchange_token(
+                    self.uniffiClonePointer()
+                    
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterOptionString.lift,
+            errorHandler: FfiConverterTypeOid4vciError.lift
+        )
+}
+    
+open func getMetadata()throws  -> Oid4vciMetadata {
+    return try  FfiConverterTypeOid4vciMetadata.lift(try rustCallWithError(FfiConverterTypeOid4vciError.lift) {
+    uniffi_mobile_sdk_rs_fn_method_oid4vci_get_metadata(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func initiate(baseUrl: String, clientId: String, redirectUrl: String)async throws  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_method_oid4vci_initiate(
+                    self.uniffiClonePointer(),
+                    FfiConverterString.lower(baseUrl),FfiConverterString.lower(clientId),FfiConverterString.lower(redirectUrl)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_void,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_void,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeOid4vciError.lift
+        )
+}
+    
+open func initiateWithOffer(credentialOffer: String, clientId: String, redirectUrl: String)async throws  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_method_oid4vci_initiate_with_offer(
+                    self.uniffiClonePointer(),
+                    FfiConverterString.lower(credentialOffer),FfiConverterString.lower(clientId),FfiConverterString.lower(redirectUrl)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_void,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_void,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeOid4vciError.lift
+        )
+}
+    
+
+}
+
+public struct FfiConverterTypeOid4vci: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = Oid4vci
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> Oid4vci {
+        return Oid4vci(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: Oid4vci) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Oid4vci {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: Oid4vci, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+public func FfiConverterTypeOid4vci_lift(_ pointer: UnsafeMutableRawPointer) throws -> Oid4vci {
+    return try FfiConverterTypeOid4vci.lift(pointer)
+}
+
+public func FfiConverterTypeOid4vci_lower(_ value: Oid4vci) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeOid4vci.lower(value)
+}
+
+
+
+
+public protocol Oid4vciMetadataProtocol : AnyObject {
+    
+    func authorizationServers()  -> [String]?
+    
+    func batchCredentialEndpoint()  -> String?
+    
+    func credentialEndpoint()  -> String
+    
+    func deferredCredentialEndpoint()  -> String?
+    
+    func issuer()  -> String
+    
+    func notificationEndpoint()  -> String?
+    
+    func toJson() throws  -> String
+    
+}
+
+open class Oid4vciMetadata:
+    Oid4vciMetadataProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_oid4vcimetadata(self.pointer, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_oid4vcimetadata(pointer, $0) }
+    }
+
+    
+
+    
+open func authorizationServers() -> [String]? {
+    return try!  FfiConverterOptionSequenceString.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_oid4vcimetadata_authorization_servers(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func batchCredentialEndpoint() -> String? {
+    return try!  FfiConverterOptionString.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_oid4vcimetadata_batch_credential_endpoint(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func credentialEndpoint() -> String {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_oid4vcimetadata_credential_endpoint(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func deferredCredentialEndpoint() -> String? {
+    return try!  FfiConverterOptionString.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_oid4vcimetadata_deferred_credential_endpoint(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func issuer() -> String {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_oid4vcimetadata_issuer(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func notificationEndpoint() -> String? {
+    return try!  FfiConverterOptionString.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_oid4vcimetadata_notification_endpoint(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func toJson()throws  -> String {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeOid4vciError.lift) {
+    uniffi_mobile_sdk_rs_fn_method_oid4vcimetadata_to_json(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+
+}
+
+public struct FfiConverterTypeOid4vciMetadata: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = Oid4vciMetadata
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> Oid4vciMetadata {
+        return Oid4vciMetadata(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: Oid4vciMetadata) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Oid4vciMetadata {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: Oid4vciMetadata, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+public func FfiConverterTypeOid4vciMetadata_lift(_ pointer: UnsafeMutableRawPointer) throws -> Oid4vciMetadata {
+    return try FfiConverterTypeOid4vciMetadata.lift(pointer)
+}
+
+public func FfiConverterTypeOid4vciMetadata_lower(_ value: Oid4vciMetadata) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeOid4vciMetadata.lower(value)
+}
+
+
+
+
+public protocol Oid4vciSessionProtocol : AnyObject {
+    
+    func getAllCredentialRequests() throws  -> [CredentialRequest]
+    
+    func getCredentialRequestByIndex(index: UInt16) throws  -> CredentialRequest
+    
+}
+
+open class Oid4vciSession:
+    Oid4vciSessionProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_oid4vcisession(self.pointer, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_oid4vcisession(pointer, $0) }
+    }
+
+    
+
+    
+open func getAllCredentialRequests()throws  -> [CredentialRequest] {
+    return try  FfiConverterSequenceTypeCredentialRequest.lift(try rustCallWithError(FfiConverterTypeOid4vciError.lift) {
+    uniffi_mobile_sdk_rs_fn_method_oid4vcisession_get_all_credential_requests(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func getCredentialRequestByIndex(index: UInt16)throws  -> CredentialRequest {
+    return try  FfiConverterTypeCredentialRequest.lift(try rustCallWithError(FfiConverterTypeOid4vciError.lift) {
+    uniffi_mobile_sdk_rs_fn_method_oid4vcisession_get_credential_request_by_index(self.uniffiClonePointer(),
+        FfiConverterUInt16.lower(index),$0
+    )
+})
+}
+    
+
+}
+
+public struct FfiConverterTypeOid4vciSession: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = Oid4vciSession
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> Oid4vciSession {
+        return Oid4vciSession(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: Oid4vciSession) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Oid4vciSession {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: Oid4vciSession, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+public func FfiConverterTypeOid4vciSession_lift(_ pointer: UnsafeMutableRawPointer) throws -> Oid4vciSession {
+    return try FfiConverterTypeOid4vciSession.lift(pointer)
+}
+
+public func FfiConverterTypeOid4vciSession_lower(_ value: Oid4vciSession) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeOid4vciSession.lower(value)
+}
+
+
+
+
+/**
+ * A credential that has been parsed as a known variant.
+ */
+public protocol ParsedCredentialProtocol : AnyObject {
+    
+    /**
+     * Convert a parsed credential into the generic form for storage.
+     */
+    func intoGenericForm() throws  -> Credential
+    
+}
+
+/**
+ * A credential that has been parsed as a known variant.
+ */
+open class ParsedCredential:
+    ParsedCredentialProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_parsedcredential(self.pointer, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_parsedcredential(pointer, $0) }
+    }
+
+    
+    /**
+     * Construct a new `jwt_vc_json` credential.
+     */
+public static func newJwtVcJson(jwtVc: JwtVc) -> ParsedCredential {
+    return try!  FfiConverterTypeParsedCredential.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_constructor_parsedcredential_new_jwt_vc_json(
+        FfiConverterTypeJwtVc.lower(jwtVc),$0
+    )
+})
+}
+    
+    /**
+     * Construct a new `jwt_vc_json-ld` credential.
+     */
+public static func newJwtVcJsonLd(jwtVc: JwtVc) -> ParsedCredential {
+    return try!  FfiConverterTypeParsedCredential.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_constructor_parsedcredential_new_jwt_vc_json_ld(
+        FfiConverterTypeJwtVc.lower(jwtVc),$0
+    )
+})
+}
+    
+    /**
+     * Construct a new `ldp_vc` credential.
+     */
+public static func newLdpVc(jsonVc: JsonVc) -> ParsedCredential {
+    return try!  FfiConverterTypeParsedCredential.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_constructor_parsedcredential_new_ldp_vc(
+        FfiConverterTypeJsonVc.lower(jsonVc),$0
+    )
+})
+}
+    
+    /**
+     * Construct a new `mso_mdoc` credential.
+     */
+public static func newMsoMdoc(mdoc: Mdoc) -> ParsedCredential {
+    return try!  FfiConverterTypeParsedCredential.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_constructor_parsedcredential_new_mso_mdoc(
+        FfiConverterTypeMdoc.lower(mdoc),$0
+    )
+})
+}
+    
+    /**
+     * Parse a credential from the generic form retrieved from storage.
+     */
+public static func parseFromCredential(credential: Credential)throws  -> ParsedCredential {
+    return try  FfiConverterTypeParsedCredential.lift(try rustCallWithError(FfiConverterTypeCredentialDecodingError.lift) {
+    uniffi_mobile_sdk_rs_fn_constructor_parsedcredential_parse_from_credential(
+        FfiConverterTypeCredential.lower(credential),$0
+    )
+})
+}
+    
+
+    
+    /**
+     * Convert a parsed credential into the generic form for storage.
+     */
+open func intoGenericForm()throws  -> Credential {
+    return try  FfiConverterTypeCredential.lift(try rustCallWithError(FfiConverterTypeCredentialEncodingError.lift) {
+    uniffi_mobile_sdk_rs_fn_method_parsedcredential_into_generic_form(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+
+}
+
+public struct FfiConverterTypeParsedCredential: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = ParsedCredential
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> ParsedCredential {
+        return ParsedCredential(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: ParsedCredential) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ParsedCredential {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: ParsedCredential, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+public func FfiConverterTypeParsedCredential_lift(_ pointer: UnsafeMutableRawPointer) throws -> ParsedCredential {
+    return try FfiConverterTypeParsedCredential.lift(pointer)
+}
+
+public func FfiConverterTypeParsedCredential_lower(_ value: ParsedCredential) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeParsedCredential.lower(value)
 }
 
 
@@ -2484,96 +3314,14 @@ public func FfiConverterTypeStorageManagerInterface_lower(_ value: StorageManage
 
 
 
-/**
- * The [Wallet](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#section-2-3.32) is used by the
- * Holder to receive, store, present, and manage
- * [Verifiable Credentials](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#section-2-3.4) and key material.
- * There is no single deployment model of a Wallet:
- * [Verifiable Credentials](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#section-2-3.4) and keys can
- * both be stored/managed locally, or by using a remote self-hosted service, or a remote third-party service.
- *
- * In the context of the [OID4VP](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html) specification,
- * the Wallet acts as an OAuth 2.0 Authorization Server
- * (see [RFC6749](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#RFC6749))
- * towards the Credential Verifier which acts as the OAuth 2.0 Client.
-
- */
-public protocol WalletProtocol : AnyObject {
+public protocol SyncHttpClient : AnyObject {
     
-    /**
-     * Add a credential to the wallet.
-     *
-     * This method will add a verifiable credential to the wallet.
-     */
-    func addCredential(credential: Credential) async throws  -> Key
-    
-    /**
-     * Get a list of existing credentials in the wallet.
-     */
-    func getCredentialList() async throws  -> [Key]
-    
-    /**
-     * Handle an OID4VP authorization request provided as a URL.
-     *
-     * This method will validate and process the request, returning a
-     * redirect URL with the encoded verifiable presentation token,
-     * if the presentation exchange was successful.
-     *
-     * If the request is invalid or cannot be processed, an error will be returned.
-     *
-     * # Arguments
-     *
-     * * `url` - The URL containing the OID4VP authorization request.
-     *
-     * # Returns
-     *
-     * An optional URL containing the OID4VP response.
-     *
-     * # Errors
-     *
-     * * If the request is invalid;
-     * * If the response mode is not supported;
-     * * If the response submission fails.
-
-     */
-    func handleOid4vpRequest(url: Url, callback: CredentialCallbackInterface) async throws  -> Url?
-    
-    /**
-     * Begin the mDL presentation process for the holder.
-     *
-     * Initializes the presentation session for an ISO 18013-5 mDL and stores
-     * the session state object in the device storage_manager.
-     *
-     * Arguments:
-     * mdoc_id: unique identifier for the credential to present, to be looked up
-     * in the VDC collection
-     * uuid:    the Bluetooth Low Energy Client Central Mode UUID to be used
-     *
-     * Returns:
-     * A Result, with the `Ok` containing a tuple consisting of an enum representing
-     * the state of the presentation, a String containing the QR code URI, and a
-     * String containing the BLE ident.
-     */
-    func initializeMdlPresentation(mdocId: String, uuid: Uuid) async throws  -> MdlPresentationSession
+    func httpClient(request: HttpRequest) throws  -> HttpResponse
     
 }
 
-/**
- * The [Wallet](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#section-2-3.32) is used by the
- * Holder to receive, store, present, and manage
- * [Verifiable Credentials](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#section-2-3.4) and key material.
- * There is no single deployment model of a Wallet:
- * [Verifiable Credentials](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#section-2-3.4) and keys can
- * both be stored/managed locally, or by using a remote self-hosted service, or a remote third-party service.
- *
- * In the context of the [OID4VP](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html) specification,
- * the Wallet acts as an OAuth 2.0 Authorization Server
- * (see [RFC6749](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#RFC6749))
- * towards the Credential Verifier which acts as the OAuth 2.0 Client.
-
- */
-open class Wallet:
-    WalletProtocol {
+open class SyncHttpClientImpl:
+    SyncHttpClient {
     fileprivate let pointer: UnsafeMutableRawPointer!
 
     /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
@@ -2598,184 +3346,95 @@ open class Wallet:
     }
 
     public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_wallet(self.pointer, $0) }
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_synchttpclient(self.pointer, $0) }
     }
-    /**
-     * Initialize a new [Wallet] instance provides a storage manager and key manager.
-     *
-     * The storage and key managers are foreign callback interfaces that are implemented
-     * in the native language of the foreign environment, e.g. Kotlin, Swift, etc.
-     *
-     * # Arguments
-     *
-     * * `storage_manager` - A foreign callback interface that implements the [StorageManagerInterface].
-     *
-     * * `key_manager` - A foreign callback interface that implements the [KeyManagerInterface].
-     *
-     * # Returns
-     *
-     * A new [Wallet] instance.
-     *
-     * # Errors
-     *
-     * * If the HTTP client fails to initialize;
-     * * If there is a storage error when initializing the metadata manager.
-     */
-public convenience init(storageManager: StorageManagerInterface, keyManager: KeyManagerInterface)throws  {
-    let pointer =
-        try rustCallWithError(FfiConverterTypeWalletError.lift) {
-    uniffi_mobile_sdk_rs_fn_constructor_wallet_new(
-        FfiConverterTypeStorageManagerInterface.lower(storageManager),
-        FfiConverterTypeKeyManagerInterface.lower(keyManager),$0
-    )
-}
-    self.init(unsafeFromRawPointer: pointer)
-}
+    // No primary constructor declared for this class.
 
     deinit {
         guard let pointer = pointer else {
             return
         }
 
-        try! rustCall { uniffi_mobile_sdk_rs_fn_free_wallet(pointer, $0) }
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_synchttpclient(pointer, $0) }
     }
 
     
 
     
-    /**
-     * Add a credential to the wallet.
-     *
-     * This method will add a verifiable credential to the wallet.
-     */
-open func addCredential(credential: Credential)async throws  -> Key {
-    return
-        try  await uniffiRustCallAsync(
-            rustFutureFunc: {
-                uniffi_mobile_sdk_rs_fn_method_wallet_add_credential(
-                    self.uniffiClonePointer(),
-                    FfiConverterTypeCredential.lower(credential)
-                )
-            },
-            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_rust_buffer,
-            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_rust_buffer,
-            freeFunc: ffi_mobile_sdk_rs_rust_future_free_rust_buffer,
-            liftFunc: FfiConverterTypeKey.lift,
-            errorHandler: FfiConverterTypeWalletError.lift
-        )
-}
-    
-    /**
-     * Get a list of existing credentials in the wallet.
-     */
-open func getCredentialList()async throws  -> [Key] {
-    return
-        try  await uniffiRustCallAsync(
-            rustFutureFunc: {
-                uniffi_mobile_sdk_rs_fn_method_wallet_get_credential_list(
-                    self.uniffiClonePointer()
-                    
-                )
-            },
-            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_rust_buffer,
-            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_rust_buffer,
-            freeFunc: ffi_mobile_sdk_rs_rust_future_free_rust_buffer,
-            liftFunc: FfiConverterSequenceTypeKey.lift,
-            errorHandler: FfiConverterTypeWalletError.lift
-        )
-}
-    
-    /**
-     * Handle an OID4VP authorization request provided as a URL.
-     *
-     * This method will validate and process the request, returning a
-     * redirect URL with the encoded verifiable presentation token,
-     * if the presentation exchange was successful.
-     *
-     * If the request is invalid or cannot be processed, an error will be returned.
-     *
-     * # Arguments
-     *
-     * * `url` - The URL containing the OID4VP authorization request.
-     *
-     * # Returns
-     *
-     * An optional URL containing the OID4VP response.
-     *
-     * # Errors
-     *
-     * * If the request is invalid;
-     * * If the response mode is not supported;
-     * * If the response submission fails.
-
-     */
-open func handleOid4vpRequest(url: Url, callback: CredentialCallbackInterface)async throws  -> Url? {
-    return
-        try  await uniffiRustCallAsync(
-            rustFutureFunc: {
-                uniffi_mobile_sdk_rs_fn_method_wallet_handle_oid4vp_request(
-                    self.uniffiClonePointer(),
-                    FfiConverterTypeUrl.lower(url),FfiConverterTypeCredentialCallbackInterface.lower(callback)
-                )
-            },
-            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_rust_buffer,
-            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_rust_buffer,
-            freeFunc: ffi_mobile_sdk_rs_rust_future_free_rust_buffer,
-            liftFunc: FfiConverterOptionTypeUrl.lift,
-            errorHandler: FfiConverterTypeWalletError.lift
-        )
-}
-    
-    /**
-     * Begin the mDL presentation process for the holder.
-     *
-     * Initializes the presentation session for an ISO 18013-5 mDL and stores
-     * the session state object in the device storage_manager.
-     *
-     * Arguments:
-     * mdoc_id: unique identifier for the credential to present, to be looked up
-     * in the VDC collection
-     * uuid:    the Bluetooth Low Energy Client Central Mode UUID to be used
-     *
-     * Returns:
-     * A Result, with the `Ok` containing a tuple consisting of an enum representing
-     * the state of the presentation, a String containing the QR code URI, and a
-     * String containing the BLE ident.
-     */
-open func initializeMdlPresentation(mdocId: String, uuid: Uuid)async throws  -> MdlPresentationSession {
-    return
-        try  await uniffiRustCallAsync(
-            rustFutureFunc: {
-                uniffi_mobile_sdk_rs_fn_method_wallet_initialize_mdl_presentation(
-                    self.uniffiClonePointer(),
-                    FfiConverterString.lower(mdocId),FfiConverterTypeUuid.lower(uuid)
-                )
-            },
-            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_pointer,
-            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_pointer,
-            freeFunc: ffi_mobile_sdk_rs_rust_future_free_pointer,
-            liftFunc: FfiConverterTypeMdlPresentationSession.lift,
-            errorHandler: FfiConverterTypeSessionError.lift
-        )
+open func httpClient(request: HttpRequest)throws  -> HttpResponse {
+    return try  FfiConverterTypeHttpResponse.lift(try rustCallWithError(FfiConverterTypeHttpClientError.lift) {
+    uniffi_mobile_sdk_rs_fn_method_synchttpclient_http_client(self.uniffiClonePointer(),
+        FfiConverterTypeHttpRequest.lower(request),$0
+    )
+})
 }
     
 
 }
 
-public struct FfiConverterTypeWallet: FfiConverter {
+
+// Put the implementation in a struct so we don't pollute the top-level namespace
+fileprivate struct UniffiCallbackInterfaceSyncHttpClient {
+
+    // Create the VTable using a series of closures.
+    // Swift automatically converts these into C callback functions.
+    static var vtable: UniffiVTableCallbackInterfaceSyncHttpClient = UniffiVTableCallbackInterfaceSyncHttpClient(
+        httpClient: { (
+            uniffiHandle: UInt64,
+            request: RustBuffer,
+            uniffiOutReturn: UnsafeMutablePointer<RustBuffer>,
+            uniffiCallStatus: UnsafeMutablePointer<RustCallStatus>
+        ) in
+            let makeCall = {
+                () throws -> HttpResponse in
+                guard let uniffiObj = try? FfiConverterTypeSyncHttpClient.handleMap.get(handle: uniffiHandle) else {
+                    throw UniffiInternalError.unexpectedStaleHandle
+                }
+                return try uniffiObj.httpClient(
+                     request: try FfiConverterTypeHttpRequest.lift(request)
+                )
+            }
+
+            
+            let writeReturn = { uniffiOutReturn.pointee = FfiConverterTypeHttpResponse.lower($0) }
+            uniffiTraitInterfaceCallWithError(
+                callStatus: uniffiCallStatus,
+                makeCall: makeCall,
+                writeReturn: writeReturn,
+                lowerError: FfiConverterTypeHttpClientError.lower
+            )
+        },
+        uniffiFree: { (uniffiHandle: UInt64) -> () in
+            let result = try? FfiConverterTypeSyncHttpClient.handleMap.remove(handle: uniffiHandle)
+            if result == nil {
+                print("Uniffi callback interface SyncHttpClient: handle missing in uniffiFree")
+            }
+        }
+    )
+}
+
+private func uniffiCallbackInitSyncHttpClient() {
+    uniffi_mobile_sdk_rs_fn_init_callback_vtable_synchttpclient(&UniffiCallbackInterfaceSyncHttpClient.vtable)
+}
+
+public struct FfiConverterTypeSyncHttpClient: FfiConverter {
+    fileprivate static var handleMap = UniffiHandleMap<SyncHttpClient>()
 
     typealias FfiType = UnsafeMutableRawPointer
-    typealias SwiftType = Wallet
+    typealias SwiftType = SyncHttpClient
 
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> Wallet {
-        return Wallet(unsafeFromRawPointer: pointer)
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> SyncHttpClient {
+        return SyncHttpClientImpl(unsafeFromRawPointer: pointer)
     }
 
-    public static func lower(_ value: Wallet) -> UnsafeMutableRawPointer {
-        return value.uniffiClonePointer()
+    public static func lower(_ value: SyncHttpClient) -> UnsafeMutableRawPointer {
+        guard let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: handleMap.insert(obj: value))) else {
+            fatalError("Cast to UnsafeMutableRawPointer failed")
+        }
+        return ptr
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Wallet {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SyncHttpClient {
         let v: UInt64 = try readInt(&buf)
         // The Rust code won't compile if a pointer won't fit in a UInt64.
         // We have to go via `UInt` because that's the thing that's the size of a pointer.
@@ -2786,7 +3445,7 @@ public struct FfiConverterTypeWallet: FfiConverter {
         return try lift(ptr!)
     }
 
-    public static func write(_ value: Wallet, into buf: inout [UInt8]) {
+    public static func write(_ value: SyncHttpClient, into buf: inout [UInt8]) {
         // This fiddling is because `Int` is the thing that's the same size as a pointer.
         // The Rust code won't compile if a pointer won't fit in a `UInt64`.
         writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
@@ -2796,12 +3455,915 @@ public struct FfiConverterTypeWallet: FfiConverter {
 
 
 
-public func FfiConverterTypeWallet_lift(_ pointer: UnsafeMutableRawPointer) throws -> Wallet {
-    return try FfiConverterTypeWallet.lift(pointer)
+public func FfiConverterTypeSyncHttpClient_lift(_ pointer: UnsafeMutableRawPointer) throws -> SyncHttpClient {
+    return try FfiConverterTypeSyncHttpClient.lift(pointer)
 }
 
-public func FfiConverterTypeWallet_lower(_ value: Wallet) -> UnsafeMutableRawPointer {
-    return FfiConverterTypeWallet.lower(value)
+public func FfiConverterTypeSyncHttpClient_lower(_ value: SyncHttpClient) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeSyncHttpClient.lower(value)
+}
+
+
+
+
+public protocol TokenResponseProtocol : AnyObject {
+    
+}
+
+open class TokenResponse:
+    TokenResponseProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_tokenresponse(self.pointer, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_tokenresponse(pointer, $0) }
+    }
+
+    
+
+    
+
+}
+
+public struct FfiConverterTypeTokenResponse: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = TokenResponse
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> TokenResponse {
+        return TokenResponse(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: TokenResponse) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TokenResponse {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: TokenResponse, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+public func FfiConverterTypeTokenResponse_lift(_ pointer: UnsafeMutableRawPointer) throws -> TokenResponse {
+    return try FfiConverterTypeTokenResponse.lift(pointer)
+}
+
+public func FfiConverterTypeTokenResponse_lower(_ value: TokenResponse) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeTokenResponse.lower(value)
+}
+
+
+
+
+/**
+ * Verifiable Digital Credential Collection
+ *
+ * This is the main interface to credentials.
+ */
+public protocol VdcCollectionProtocol : AnyObject {
+    
+    /**
+     * Add a credential to the set.
+     */
+    func add(credential: Credential) async throws 
+    
+    /**
+     * Get a list of all the credentials.
+     */
+    func allEntries() async throws  -> [Uuid]
+    
+    /**
+     * Get a list of all the credentials that match a specified type.
+     */
+    func allEntriesByType(ctype: CredentialType) async throws  -> [Uuid]
+    
+    /**
+     * Remove a credential from the store.
+     */
+    func delete(id: Uuid) async throws 
+    
+    /**
+     * Dump the contents of the credential set to the logger.
+     */
+    func dump() async 
+    
+    /**
+     * Get a credential from the store.
+     */
+    func get(id: Uuid) async throws  -> Credential?
+    
+}
+
+/**
+ * Verifiable Digital Credential Collection
+ *
+ * This is the main interface to credentials.
+ */
+open class VdcCollection:
+    VdcCollectionProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_vdccollection(self.pointer, $0) }
+    }
+    /**
+     * Create a new credential set.
+     */
+public convenience init(engine: StorageManagerInterface) {
+    let pointer =
+        try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_constructor_vdccollection_new(
+        FfiConverterTypeStorageManagerInterface.lower(engine),$0
+    )
+}
+    self.init(unsafeFromRawPointer: pointer)
+}
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_vdccollection(pointer, $0) }
+    }
+
+    
+
+    
+    /**
+     * Add a credential to the set.
+     */
+open func add(credential: Credential)async throws  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_method_vdccollection_add(
+                    self.uniffiClonePointer(),
+                    FfiConverterTypeCredential.lower(credential)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_void,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_void,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeVdcCollectionError.lift
+        )
+}
+    
+    /**
+     * Get a list of all the credentials.
+     */
+open func allEntries()async throws  -> [Uuid] {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_method_vdccollection_all_entries(
+                    self.uniffiClonePointer()
+                    
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceTypeUuid.lift,
+            errorHandler: FfiConverterTypeVdcCollectionError.lift
+        )
+}
+    
+    /**
+     * Get a list of all the credentials that match a specified type.
+     */
+open func allEntriesByType(ctype: CredentialType)async throws  -> [Uuid] {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_method_vdccollection_all_entries_by_type(
+                    self.uniffiClonePointer(),
+                    FfiConverterTypeCredentialType.lower(ctype)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceTypeUuid.lift,
+            errorHandler: FfiConverterTypeVdcCollectionError.lift
+        )
+}
+    
+    /**
+     * Remove a credential from the store.
+     */
+open func delete(id: Uuid)async throws  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_method_vdccollection_delete(
+                    self.uniffiClonePointer(),
+                    FfiConverterTypeUuid.lower(id)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_void,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_void,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeVdcCollectionError.lift
+        )
+}
+    
+    /**
+     * Dump the contents of the credential set to the logger.
+     */
+open func dump()async  {
+    return
+        try!  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_method_vdccollection_dump(
+                    self.uniffiClonePointer()
+                    
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_void,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_void,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: nil
+            
+        )
+}
+    
+    /**
+     * Get a credential from the store.
+     */
+open func get(id: Uuid)async throws  -> Credential? {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_method_vdccollection_get(
+                    self.uniffiClonePointer(),
+                    FfiConverterTypeUuid.lower(id)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterOptionTypeCredential.lift,
+            errorHandler: FfiConverterTypeVdcCollectionError.lift
+        )
+}
+    
+
+}
+
+public struct FfiConverterTypeVdcCollection: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = VdcCollection
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> VdcCollection {
+        return VdcCollection(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: VdcCollection) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> VdcCollection {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: VdcCollection, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+public func FfiConverterTypeVdcCollection_lift(_ pointer: UnsafeMutableRawPointer) throws -> VdcCollection {
+    return try FfiConverterTypeVdcCollection.lift(pointer)
+}
+
+public func FfiConverterTypeVdcCollection_lower(_ value: VdcCollection) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeVdcCollection.lower(value)
+}
+
+
+/**
+ * An unparsed credential, retrieved from storage.
+ */
+public struct Credential {
+    /**
+     * The local ID of this credential.
+     */
+    public var id: Uuid
+    /**
+     * The format of this credential.
+     */
+    public var format: CredentialFormat
+    /**
+     * The type of this credential.
+     */
+    public var type: CredentialType
+    /**
+     * The raw payload of this credential. The encoding depends on the format.
+     */
+    public var payload: Data
+    /**
+     * The alias of the key that is authorized to present this credential.
+     */
+    public var keyAlias: KeyAlias?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The local ID of this credential.
+         */id: Uuid, 
+        /**
+         * The format of this credential.
+         */format: CredentialFormat, 
+        /**
+         * The type of this credential.
+         */type: CredentialType, 
+        /**
+         * The raw payload of this credential. The encoding depends on the format.
+         */payload: Data, 
+        /**
+         * The alias of the key that is authorized to present this credential.
+         */keyAlias: KeyAlias?) {
+        self.id = id
+        self.format = format
+        self.type = type
+        self.payload = payload
+        self.keyAlias = keyAlias
+    }
+}
+
+
+
+extension Credential: Equatable, Hashable {
+    public static func ==(lhs: Credential, rhs: Credential) -> Bool {
+        if lhs.id != rhs.id {
+            return false
+        }
+        if lhs.format != rhs.format {
+            return false
+        }
+        if lhs.type != rhs.type {
+            return false
+        }
+        if lhs.payload != rhs.payload {
+            return false
+        }
+        if lhs.keyAlias != rhs.keyAlias {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(format)
+        hasher.combine(type)
+        hasher.combine(payload)
+        hasher.combine(keyAlias)
+    }
+}
+
+
+public struct FfiConverterTypeCredential: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Credential {
+        return
+            try Credential(
+                id: FfiConverterTypeUuid.read(from: &buf), 
+                format: FfiConverterTypeCredentialFormat.read(from: &buf), 
+                type: FfiConverterTypeCredentialType.read(from: &buf), 
+                payload: FfiConverterData.read(from: &buf), 
+                keyAlias: FfiConverterOptionTypeKeyAlias.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: Credential, into buf: inout [UInt8]) {
+        FfiConverterTypeUuid.write(value.id, into: &buf)
+        FfiConverterTypeCredentialFormat.write(value.format, into: &buf)
+        FfiConverterTypeCredentialType.write(value.type, into: &buf)
+        FfiConverterData.write(value.payload, into: &buf)
+        FfiConverterOptionTypeKeyAlias.write(value.keyAlias, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeCredential_lift(_ buf: RustBuffer) throws -> Credential {
+    return try FfiConverterTypeCredential.lift(buf)
+}
+
+public func FfiConverterTypeCredential_lower(_ value: Credential) -> RustBuffer {
+    return FfiConverterTypeCredential.lower(value)
+}
+
+
+/**
+ * Information about the verified credential.
+ */
+public struct CredentialInfo {
+    /**
+     * The credential title that should be displayed on the success screen.
+     */
+    public var title: String
+    /**
+     * The image that should be displayed on the success screen.
+     */
+    public var image: Data
+    /**
+     * The claims decoded from the credential.
+     */
+    public var claims: [String: ClaimValue]
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * The credential title that should be displayed on the success screen.
+         */title: String, 
+        /**
+         * The image that should be displayed on the success screen.
+         */image: Data, 
+        /**
+         * The claims decoded from the credential.
+         */claims: [String: ClaimValue]) {
+        self.title = title
+        self.image = image
+        self.claims = claims
+    }
+}
+
+
+
+extension CredentialInfo: Equatable, Hashable {
+    public static func ==(lhs: CredentialInfo, rhs: CredentialInfo) -> Bool {
+        if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.image != rhs.image {
+            return false
+        }
+        if lhs.claims != rhs.claims {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(title)
+        hasher.combine(image)
+        hasher.combine(claims)
+    }
+}
+
+
+public struct FfiConverterTypeCredentialInfo: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CredentialInfo {
+        return
+            try CredentialInfo(
+                title: FfiConverterString.read(from: &buf), 
+                image: FfiConverterData.read(from: &buf), 
+                claims: FfiConverterDictionaryStringTypeClaimValue.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CredentialInfo, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.title, into: &buf)
+        FfiConverterData.write(value.image, into: &buf)
+        FfiConverterDictionaryStringTypeClaimValue.write(value.claims, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeCredentialInfo_lift(_ buf: RustBuffer) throws -> CredentialInfo {
+    return try FfiConverterTypeCredentialInfo.lift(buf)
+}
+
+public func FfiConverterTypeCredentialInfo_lower(_ value: CredentialInfo) -> RustBuffer {
+    return FfiConverterTypeCredentialInfo.lower(value)
+}
+
+
+public struct CredentialResponse {
+    public var format: CredentialFormat
+    public var payload: Data
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(format: CredentialFormat, payload: Data) {
+        self.format = format
+        self.payload = payload
+    }
+}
+
+
+
+extension CredentialResponse: Equatable, Hashable {
+    public static func ==(lhs: CredentialResponse, rhs: CredentialResponse) -> Bool {
+        if lhs.format != rhs.format {
+            return false
+        }
+        if lhs.payload != rhs.payload {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(format)
+        hasher.combine(payload)
+    }
+}
+
+
+public struct FfiConverterTypeCredentialResponse: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CredentialResponse {
+        return
+            try CredentialResponse(
+                format: FfiConverterTypeCredentialFormat.read(from: &buf), 
+                payload: FfiConverterData.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: CredentialResponse, into buf: inout [UInt8]) {
+        FfiConverterTypeCredentialFormat.write(value.format, into: &buf)
+        FfiConverterData.write(value.payload, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeCredentialResponse_lift(_ buf: RustBuffer) throws -> CredentialResponse {
+    return try FfiConverterTypeCredentialResponse.lift(buf)
+}
+
+public func FfiConverterTypeCredentialResponse_lower(_ value: CredentialResponse) -> RustBuffer {
+    return FfiConverterTypeCredentialResponse.lower(value)
+}
+
+
+/**
+ * Simple representation of an mdoc data element.
+ */
+public struct Element {
+    /**
+     * Name of the data element.
+     */
+    public var identifier: String
+    /**
+     * JSON representation of the data element, missing if the value cannot be represented as JSON.
+     */
+    public var value: String?
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * Name of the data element.
+         */identifier: String, 
+        /**
+         * JSON representation of the data element, missing if the value cannot be represented as JSON.
+         */value: String?) {
+        self.identifier = identifier
+        self.value = value
+    }
+}
+
+
+
+extension Element: Equatable, Hashable {
+    public static func ==(lhs: Element, rhs: Element) -> Bool {
+        if lhs.identifier != rhs.identifier {
+            return false
+        }
+        if lhs.value != rhs.value {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(identifier)
+        hasher.combine(value)
+    }
+}
+
+
+public struct FfiConverterTypeElement: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Element {
+        return
+            try Element(
+                identifier: FfiConverterString.read(from: &buf), 
+                value: FfiConverterOptionString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: Element, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.identifier, into: &buf)
+        FfiConverterOptionString.write(value.value, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeElement_lift(_ buf: RustBuffer) throws -> Element {
+    return try FfiConverterTypeElement.lift(buf)
+}
+
+public func FfiConverterTypeElement_lower(_ value: Element) -> RustBuffer {
+    return FfiConverterTypeElement.lower(value)
+}
+
+
+/**
+ * A verification failure with a code and reason.
+ */
+public struct Failure {
+    public var code: UInt64
+    public var reason: String
+    public var details: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(code: UInt64, reason: String, details: String) {
+        self.code = code
+        self.reason = reason
+        self.details = details
+    }
+}
+
+
+
+extension Failure: Equatable, Hashable {
+    public static func ==(lhs: Failure, rhs: Failure) -> Bool {
+        if lhs.code != rhs.code {
+            return false
+        }
+        if lhs.reason != rhs.reason {
+            return false
+        }
+        if lhs.details != rhs.details {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(code)
+        hasher.combine(reason)
+        hasher.combine(details)
+    }
+}
+
+
+public struct FfiConverterTypeFailure: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Failure {
+        return
+            try Failure(
+                code: FfiConverterUInt64.read(from: &buf), 
+                reason: FfiConverterString.read(from: &buf), 
+                details: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: Failure, into buf: inout [UInt8]) {
+        FfiConverterUInt64.write(value.code, into: &buf)
+        FfiConverterString.write(value.reason, into: &buf)
+        FfiConverterString.write(value.details, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeFailure_lift(_ buf: RustBuffer) throws -> Failure {
+    return try FfiConverterTypeFailure.lift(buf)
+}
+
+public func FfiConverterTypeFailure_lower(_ value: Failure) -> RustBuffer {
+    return FfiConverterTypeFailure.lower(value)
+}
+
+
+/**
+ * Plain Rust object representation of an HttpRequest that can be exported
+ * through `uniffi` and is used in `WithForeign` trait definitions for HTTP
+ * clients.
+ */
+public struct HttpRequest {
+    public var url: String
+    public var method: String
+    public var headers: [String: String]
+    public var body: Data
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(url: String, method: String, headers: [String: String], body: Data) {
+        self.url = url
+        self.method = method
+        self.headers = headers
+        self.body = body
+    }
+}
+
+
+
+extension HttpRequest: Equatable, Hashable {
+    public static func ==(lhs: HttpRequest, rhs: HttpRequest) -> Bool {
+        if lhs.url != rhs.url {
+            return false
+        }
+        if lhs.method != rhs.method {
+            return false
+        }
+        if lhs.headers != rhs.headers {
+            return false
+        }
+        if lhs.body != rhs.body {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(url)
+        hasher.combine(method)
+        hasher.combine(headers)
+        hasher.combine(body)
+    }
+}
+
+
+public struct FfiConverterTypeHttpRequest: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> HttpRequest {
+        return
+            try HttpRequest(
+                url: FfiConverterString.read(from: &buf), 
+                method: FfiConverterString.read(from: &buf), 
+                headers: FfiConverterDictionaryStringString.read(from: &buf), 
+                body: FfiConverterData.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: HttpRequest, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.url, into: &buf)
+        FfiConverterString.write(value.method, into: &buf)
+        FfiConverterDictionaryStringString.write(value.headers, into: &buf)
+        FfiConverterData.write(value.body, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeHttpRequest_lift(_ buf: RustBuffer) throws -> HttpRequest {
+    return try FfiConverterTypeHttpRequest.lift(buf)
+}
+
+public func FfiConverterTypeHttpRequest_lower(_ value: HttpRequest) -> RustBuffer {
+    return FfiConverterTypeHttpRequest.lower(value)
+}
+
+
+/**
+ * Plain Rust object representation of an HttpResponse that can be exported
+ * through `uniffi` and is used in `WithForeign` trait definitions for HTTP
+ * clients.
+ */
+public struct HttpResponse {
+    public var statusCode: UInt16
+    public var headers: [String: String]
+    public var body: Data
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(statusCode: UInt16, headers: [String: String], body: Data) {
+        self.statusCode = statusCode
+        self.headers = headers
+        self.body = body
+    }
+}
+
+
+
+extension HttpResponse: Equatable, Hashable {
+    public static func ==(lhs: HttpResponse, rhs: HttpResponse) -> Bool {
+        if lhs.statusCode != rhs.statusCode {
+            return false
+        }
+        if lhs.headers != rhs.headers {
+            return false
+        }
+        if lhs.body != rhs.body {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(statusCode)
+        hasher.combine(headers)
+        hasher.combine(body)
+    }
+}
+
+
+public struct FfiConverterTypeHttpResponse: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> HttpResponse {
+        return
+            try HttpResponse(
+                statusCode: FfiConverterUInt16.read(from: &buf), 
+                headers: FfiConverterDictionaryStringString.read(from: &buf), 
+                body: FfiConverterData.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: HttpResponse, into buf: inout [UInt8]) {
+        FfiConverterUInt16.write(value.statusCode, into: &buf)
+        FfiConverterDictionaryStringString.write(value.headers, into: &buf)
+        FfiConverterData.write(value.body, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeHttpResponse_lift(_ buf: RustBuffer) throws -> HttpResponse {
+    return try FfiConverterTypeHttpResponse.lift(buf)
+}
+
+public func FfiConverterTypeHttpResponse_lower(_ value: HttpResponse) -> RustBuffer {
+    return FfiConverterTypeHttpResponse.lower(value)
 }
 
 
@@ -2862,154 +4424,715 @@ public func FfiConverterTypeItemsRequest_lower(_ value: ItemsRequest) -> RustBuf
 }
 
 
-public enum CredentialCallbackError {
+public struct MdlReaderResponseData {
+    public var state: MdlSessionManager
+    /**
+     * Contains the namespaces for the mDL directly, without top-level doc types
+     */
+    public var verifiedResponse: [String: [String: MDocItem]]
 
-    
-    
-    case PermissionDenied
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(state: MdlSessionManager, 
+        /**
+         * Contains the namespaces for the mDL directly, without top-level doc types
+         */verifiedResponse: [String: [String: MDocItem]]) {
+        self.state = state
+        self.verifiedResponse = verifiedResponse
+    }
 }
 
 
-public struct FfiConverterTypeCredentialCallbackError: FfiConverterRustBuffer {
-    typealias SwiftType = CredentialCallbackError
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CredentialCallbackError {
+public struct FfiConverterTypeMDLReaderResponseData: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdlReaderResponseData {
+        return
+            try MdlReaderResponseData(
+                state: FfiConverterTypeMDLSessionManager.read(from: &buf), 
+                verifiedResponse: FfiConverterDictionaryStringDictionaryStringTypeMDocItem.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: MdlReaderResponseData, into buf: inout [UInt8]) {
+        FfiConverterTypeMDLSessionManager.write(value.state, into: &buf)
+        FfiConverterDictionaryStringDictionaryStringTypeMDocItem.write(value.verifiedResponse, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeMDLReaderResponseData_lift(_ buf: RustBuffer) throws -> MdlReaderResponseData {
+    return try FfiConverterTypeMDLReaderResponseData.lift(buf)
+}
+
+public func FfiConverterTypeMDLReaderResponseData_lower(_ value: MdlReaderResponseData) -> RustBuffer {
+    return FfiConverterTypeMDLReaderResponseData.lower(value)
+}
+
+
+public struct MdlReaderSessionData {
+    public var state: MdlSessionManager
+    public var uuid: Uuid
+    public var request: Data
+    public var bleIdent: Data
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(state: MdlSessionManager, uuid: Uuid, request: Data, bleIdent: Data) {
+        self.state = state
+        self.uuid = uuid
+        self.request = request
+        self.bleIdent = bleIdent
+    }
+}
+
+
+
+public struct FfiConverterTypeMDLReaderSessionData: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdlReaderSessionData {
+        return
+            try MdlReaderSessionData(
+                state: FfiConverterTypeMDLSessionManager.read(from: &buf), 
+                uuid: FfiConverterTypeUuid.read(from: &buf), 
+                request: FfiConverterData.read(from: &buf), 
+                bleIdent: FfiConverterData.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: MdlReaderSessionData, into buf: inout [UInt8]) {
+        FfiConverterTypeMDLSessionManager.write(value.state, into: &buf)
+        FfiConverterTypeUuid.write(value.uuid, into: &buf)
+        FfiConverterData.write(value.request, into: &buf)
+        FfiConverterData.write(value.bleIdent, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeMDLReaderSessionData_lift(_ buf: RustBuffer) throws -> MdlReaderSessionData {
+    return try FfiConverterTypeMDLReaderSessionData.lift(buf)
+}
+
+public func FfiConverterTypeMDLReaderSessionData_lower(_ value: MdlReaderSessionData) -> RustBuffer {
+    return FfiConverterTypeMDLReaderSessionData.lower(value)
+}
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+/**
+ * Credential claim values.
+ */
+
+public enum ClaimValue {
+    
+    /**
+     * Any text claim that doesn't need special formatting.
+     */
+    case text(value: String
+    )
+    /**
+     * A date claim in the format `[year]-[month]-[day]`.
+     */
+    case date(value: String
+    )
+    /**
+     * MapArray
+     */
+    case mapClaim(value: [String: String]
+    )
+}
+
+
+public struct FfiConverterTypeClaimValue: FfiConverterRustBuffer {
+    typealias SwiftType = ClaimValue
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ClaimValue {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .text(value: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 2: return .date(value: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 3: return .mapClaim(value: try FfiConverterDictionaryStringString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ClaimValue, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .text(value):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(value, into: &buf)
+            
+        
+        case let .date(value):
+            writeInt(&buf, Int32(2))
+            FfiConverterString.write(value, into: &buf)
+            
+        
+        case let .mapClaim(value):
+            writeInt(&buf, Int32(3))
+            FfiConverterDictionaryStringString.write(value, into: &buf)
+            
+        }
+    }
+}
+
+
+public func FfiConverterTypeClaimValue_lift(_ buf: RustBuffer) throws -> ClaimValue {
+    return try FfiConverterTypeClaimValue.lift(buf)
+}
+
+public func FfiConverterTypeClaimValue_lower(_ value: ClaimValue) -> RustBuffer {
+    return FfiConverterTypeClaimValue.lower(value)
+}
+
+
+
+extension ClaimValue: Equatable, Hashable {}
+
+
+
+
+public enum CredentialDecodingError {
+
+    
+    
+    case MsoMdoc(MdocInitError
+    )
+    case JsonVc(JsonVcInitError
+    )
+    case JwtVc(JwtVcInitError
+    )
+    case UnsupportedCredentialFormat
+}
+
+
+public struct FfiConverterTypeCredentialDecodingError: FfiConverterRustBuffer {
+    typealias SwiftType = CredentialDecodingError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CredentialDecodingError {
         let variant: Int32 = try readInt(&buf)
         switch variant {
 
         
 
         
-        case 1: return .PermissionDenied
+        case 1: return .MsoMdoc(
+            try FfiConverterTypeMdocInitError.read(from: &buf)
+            )
+        case 2: return .JsonVc(
+            try FfiConverterTypeJsonVcInitError.read(from: &buf)
+            )
+        case 3: return .JwtVc(
+            try FfiConverterTypeJwtVcInitError.read(from: &buf)
+            )
+        case 4: return .UnsupportedCredentialFormat
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
-    public static func write(_ value: CredentialCallbackError, into buf: inout [UInt8]) {
+    public static func write(_ value: CredentialDecodingError, into buf: inout [UInt8]) {
         switch value {
 
         
 
         
         
-        case .PermissionDenied:
+        case let .MsoMdoc(v1):
             writeInt(&buf, Int32(1))
+            FfiConverterTypeMdocInitError.write(v1, into: &buf)
+            
+        
+        case let .JsonVc(v1):
+            writeInt(&buf, Int32(2))
+            FfiConverterTypeJsonVcInitError.write(v1, into: &buf)
+            
+        
+        case let .JwtVc(v1):
+            writeInt(&buf, Int32(3))
+            FfiConverterTypeJwtVcInitError.write(v1, into: &buf)
+            
+        
+        case .UnsupportedCredentialFormat:
+            writeInt(&buf, Int32(4))
         
         }
     }
 }
 
 
-extension CredentialCallbackError: Equatable, Hashable {}
+extension CredentialDecodingError: Equatable, Hashable {}
 
-extension CredentialCallbackError: Foundation.LocalizedError {
+extension CredentialDecodingError: Foundation.LocalizedError {
     public var errorDescription: String? {
         String(reflecting: self)
     }
 }
 
 
-public enum KeyManagerError {
+public enum CredentialEncodingError {
 
     
     
-    case UnexpectedUniFfiCallbackError(String
+    case MsoMdoc(MdocEncodingError
     )
-    case FailedToGenerateKey
-    case FailedToEncrypt
-    case FailedToDecrypt
-    case FailedToSign
-    case FailedToVerify
-    case FailedToReset
-    case KeyNotFound
-    case KeyAlreadyExists
-    case KeyInvalid
+    case JsonVc(JsonVcEncodingError
+    )
 }
 
 
-public struct FfiConverterTypeKeyManagerError: FfiConverterRustBuffer {
-    typealias SwiftType = KeyManagerError
+public struct FfiConverterTypeCredentialEncodingError: FfiConverterRustBuffer {
+    typealias SwiftType = CredentialEncodingError
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> KeyManagerError {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CredentialEncodingError {
         let variant: Int32 = try readInt(&buf)
         switch variant {
 
         
 
         
-        case 1: return .UnexpectedUniFfiCallbackError(
-            try FfiConverterString.read(from: &buf)
+        case 1: return .MsoMdoc(
+            try FfiConverterTypeMdocEncodingError.read(from: &buf)
             )
-        case 2: return .FailedToGenerateKey
-        case 3: return .FailedToEncrypt
-        case 4: return .FailedToDecrypt
-        case 5: return .FailedToSign
-        case 6: return .FailedToVerify
-        case 7: return .FailedToReset
-        case 8: return .KeyNotFound
-        case 9: return .KeyAlreadyExists
-        case 10: return .KeyInvalid
+        case 2: return .JsonVc(
+            try FfiConverterTypeJsonVcEncodingError.read(from: &buf)
+            )
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
-    public static func write(_ value: KeyManagerError, into buf: inout [UInt8]) {
+    public static func write(_ value: CredentialEncodingError, into buf: inout [UInt8]) {
         switch value {
 
         
 
         
         
-        case let .UnexpectedUniFfiCallbackError(v1):
+        case let .MsoMdoc(v1):
             writeInt(&buf, Int32(1))
-            FfiConverterString.write(v1, into: &buf)
+            FfiConverterTypeMdocEncodingError.write(v1, into: &buf)
             
         
-        case .FailedToGenerateKey:
+        case let .JsonVc(v1):
+            writeInt(&buf, Int32(2))
+            FfiConverterTypeJsonVcEncodingError.write(v1, into: &buf)
+            
+        }
+    }
+}
+
+
+extension CredentialEncodingError: Equatable, Hashable {}
+
+extension CredentialEncodingError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+/**
+ * The format of the credential.
+ */
+
+public enum CredentialFormat {
+    
+    case msoMdoc
+    case jwtVcJson
+    case jwtVcJsonLd
+    case ldpVc
+    case other(String
+    )
+}
+
+
+public struct FfiConverterTypeCredentialFormat: FfiConverterRustBuffer {
+    typealias SwiftType = CredentialFormat
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CredentialFormat {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .msoMdoc
+        
+        case 2: return .jwtVcJson
+        
+        case 3: return .jwtVcJsonLd
+        
+        case 4: return .ldpVc
+        
+        case 5: return .other(try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: CredentialFormat, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .msoMdoc:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .jwtVcJson:
             writeInt(&buf, Int32(2))
         
         
-        case .FailedToEncrypt:
+        case .jwtVcJsonLd:
             writeInt(&buf, Int32(3))
         
         
-        case .FailedToDecrypt:
+        case .ldpVc:
             writeInt(&buf, Int32(4))
         
         
-        case .FailedToSign:
+        case let .other(v1):
+            writeInt(&buf, Int32(5))
+            FfiConverterString.write(v1, into: &buf)
+            
+        }
+    }
+}
+
+
+public func FfiConverterTypeCredentialFormat_lift(_ buf: RustBuffer) throws -> CredentialFormat {
+    return try FfiConverterTypeCredentialFormat.lift(buf)
+}
+
+public func FfiConverterTypeCredentialFormat_lower(_ value: CredentialFormat) -> RustBuffer {
+    return FfiConverterTypeCredentialFormat.lower(value)
+}
+
+
+
+extension CredentialFormat: Equatable, Hashable {}
+
+
+
+
+public enum HttpClientError {
+
+    
+    
+    case RequestBuilder
+    case ResponseBuilder
+    case UrlParse
+    case MethodParse
+    case HeaderParse
+    case HeaderKeyParse(key: String
+    )
+    case HeaderValueParse(value: String
+    )
+    case HeaderEntryParse(key: String, value: String
+    )
+    case Other(error: String
+    )
+}
+
+
+public struct FfiConverterTypeHttpClientError: FfiConverterRustBuffer {
+    typealias SwiftType = HttpClientError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> HttpClientError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .RequestBuilder
+        case 2: return .ResponseBuilder
+        case 3: return .UrlParse
+        case 4: return .MethodParse
+        case 5: return .HeaderParse
+        case 6: return .HeaderKeyParse(
+            key: try FfiConverterString.read(from: &buf)
+            )
+        case 7: return .HeaderValueParse(
+            value: try FfiConverterString.read(from: &buf)
+            )
+        case 8: return .HeaderEntryParse(
+            key: try FfiConverterString.read(from: &buf), 
+            value: try FfiConverterString.read(from: &buf)
+            )
+        case 9: return .Other(
+            error: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: HttpClientError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case .RequestBuilder:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .ResponseBuilder:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .UrlParse:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .MethodParse:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .HeaderParse:
             writeInt(&buf, Int32(5))
         
         
-        case .FailedToVerify:
+        case let .HeaderKeyParse(key):
             writeInt(&buf, Int32(6))
+            FfiConverterString.write(key, into: &buf)
+            
         
-        
-        case .FailedToReset:
+        case let .HeaderValueParse(value):
             writeInt(&buf, Int32(7))
+            FfiConverterString.write(value, into: &buf)
+            
         
-        
-        case .KeyNotFound:
+        case let .HeaderEntryParse(key,value):
             writeInt(&buf, Int32(8))
+            FfiConverterString.write(key, into: &buf)
+            FfiConverterString.write(value, into: &buf)
+            
         
-        
-        case .KeyAlreadyExists:
+        case let .Other(error):
             writeInt(&buf, Int32(9))
+            FfiConverterString.write(error, into: &buf)
+            
+        }
+    }
+}
+
+
+extension HttpClientError: Equatable, Hashable {}
+
+extension HttpClientError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
+
+
+public enum JsonVcEncodingError {
+
+    
+    
+    case JsonBytesEncoding
+}
+
+
+public struct FfiConverterTypeJsonVcEncodingError: FfiConverterRustBuffer {
+    typealias SwiftType = JsonVcEncodingError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> JsonVcEncodingError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .JsonBytesEncoding
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: JsonVcEncodingError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
         
         
-        case .KeyInvalid:
-            writeInt(&buf, Int32(10))
+        case .JsonBytesEncoding:
+            writeInt(&buf, Int32(1))
         
         }
     }
 }
 
 
-extension KeyManagerError: Equatable, Hashable {}
+extension JsonVcEncodingError: Equatable, Hashable {}
 
-extension KeyManagerError: Foundation.LocalizedError {
+extension JsonVcEncodingError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
+
+
+public enum JsonVcInitError {
+
+    
+    
+    case CredentialDecoding
+    case CredentialStringEncoding
+    case JsonBytesDecoding
+    case JsonStringDecoding
+}
+
+
+public struct FfiConverterTypeJsonVcInitError: FfiConverterRustBuffer {
+    typealias SwiftType = JsonVcInitError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> JsonVcInitError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .CredentialDecoding
+        case 2: return .CredentialStringEncoding
+        case 3: return .JsonBytesDecoding
+        case 4: return .JsonStringDecoding
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: JsonVcInitError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case .CredentialDecoding:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .CredentialStringEncoding:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .JsonBytesDecoding:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .JsonStringDecoding:
+            writeInt(&buf, Int32(4))
+        
+        }
+    }
+}
+
+
+extension JsonVcInitError: Equatable, Hashable {}
+
+extension JsonVcInitError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
+
+
+public enum JwtVcInitError {
+
+    
+    
+    case CompactJwsDecoding
+    case CredentialClaimDecoding
+    case CredentialClaimMissing
+    case CredentialStringEncoding
+    case JwsBytesDecoding
+    case JwtDecoding
+    case HeaderDecoding
+    case PayloadDecoding
+}
+
+
+public struct FfiConverterTypeJwtVcInitError: FfiConverterRustBuffer {
+    typealias SwiftType = JwtVcInitError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> JwtVcInitError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .CompactJwsDecoding
+        case 2: return .CredentialClaimDecoding
+        case 3: return .CredentialClaimMissing
+        case 4: return .CredentialStringEncoding
+        case 5: return .JwsBytesDecoding
+        case 6: return .JwtDecoding
+        case 7: return .HeaderDecoding
+        case 8: return .PayloadDecoding
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: JwtVcInitError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case .CompactJwsDecoding:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .CredentialClaimDecoding:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .CredentialClaimMissing:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .CredentialStringEncoding:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .JwsBytesDecoding:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .JwtDecoding:
+            writeInt(&buf, Int32(6))
+        
+        
+        case .HeaderDecoding:
+            writeInt(&buf, Int32(7))
+        
+        
+        case .PayloadDecoding:
+            writeInt(&buf, Int32(8))
+        
+        }
+    }
+}
+
+
+extension JwtVcInitError: Equatable, Hashable {}
+
+extension JwtVcInitError: Foundation.LocalizedError {
     public var errorDescription: String? {
         String(reflecting: self)
     }
@@ -3098,7 +5221,83 @@ extension KeyTransformationError: Foundation.LocalizedError {
 }
 
 
-public enum MDocInitError {
+public enum MdlReaderResponseError {
+
+    
+    
+    case InvalidDecryption
+    case InvalidParsing
+    case InvalidIssuerAuthentication
+    case InvalidDeviceAuthentication
+    case Generic(value: String
+    )
+}
+
+
+public struct FfiConverterTypeMDLReaderResponseError: FfiConverterRustBuffer {
+    typealias SwiftType = MdlReaderResponseError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdlReaderResponseError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .InvalidDecryption
+        case 2: return .InvalidParsing
+        case 3: return .InvalidIssuerAuthentication
+        case 4: return .InvalidDeviceAuthentication
+        case 5: return .Generic(
+            value: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: MdlReaderResponseError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case .InvalidDecryption:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .InvalidParsing:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .InvalidIssuerAuthentication:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .InvalidDeviceAuthentication:
+            writeInt(&buf, Int32(4))
+        
+        
+        case let .Generic(value):
+            writeInt(&buf, Int32(5))
+            FfiConverterString.write(value, into: &buf)
+            
+        }
+    }
+}
+
+
+extension MdlReaderResponseError: Equatable, Hashable {}
+
+extension MdlReaderResponseError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
+
+
+public enum MdlReaderSessionError {
 
     
     
@@ -3107,10 +5306,10 @@ public enum MDocInitError {
 }
 
 
-public struct FfiConverterTypeMDocInitError: FfiConverterRustBuffer {
-    typealias SwiftType = MDocInitError
+public struct FfiConverterTypeMDLReaderSessionError: FfiConverterRustBuffer {
+    typealias SwiftType = MdlReaderSessionError
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MDocInitError {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdlReaderSessionError {
         let variant: Int32 = try readInt(&buf)
         switch variant {
 
@@ -3125,7 +5324,7 @@ public struct FfiConverterTypeMDocInitError: FfiConverterRustBuffer {
         }
     }
 
-    public static func write(_ value: MDocInitError, into buf: inout [UInt8]) {
+    public static func write(_ value: MdlReaderSessionError, into buf: inout [UInt8]) {
         switch value {
 
         
@@ -3141,9 +5340,9 @@ public struct FfiConverterTypeMDocInitError: FfiConverterRustBuffer {
 }
 
 
-extension MDocInitError: Equatable, Hashable {}
+extension MdlReaderSessionError: Equatable, Hashable {}
 
-extension MDocInitError: Foundation.LocalizedError {
+extension MdlReaderSessionError: Foundation.LocalizedError {
     public var errorDescription: String? {
         String(reflecting: self)
     }
@@ -3152,113 +5351,402 @@ extension MDocInitError: Foundation.LocalizedError {
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
-public enum MdlPresentationState {
+public enum MDocItem {
     
-    case engaged
-    case inProcess
+    case text(String
+    )
+    case bool(Bool
+    )
+    case integer(Int64
+    )
+    case itemMap([String: MDocItem]
+    )
+    case array([MDocItem]
+    )
 }
 
 
-public struct FfiConverterTypeMdlPresentationState: FfiConverterRustBuffer {
-    typealias SwiftType = MdlPresentationState
+public struct FfiConverterTypeMDocItem: FfiConverterRustBuffer {
+    typealias SwiftType = MDocItem
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdlPresentationState {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MDocItem {
         let variant: Int32 = try readInt(&buf)
         switch variant {
         
-        case 1: return .engaged
+        case 1: return .text(try FfiConverterString.read(from: &buf)
+        )
         
-        case 2: return .inProcess
+        case 2: return .bool(try FfiConverterBool.read(from: &buf)
+        )
+        
+        case 3: return .integer(try FfiConverterInt64.read(from: &buf)
+        )
+        
+        case 4: return .itemMap(try FfiConverterDictionaryStringTypeMDocItem.read(from: &buf)
+        )
+        
+        case 5: return .array(try FfiConverterSequenceTypeMDocItem.read(from: &buf)
+        )
         
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
-    public static func write(_ value: MdlPresentationState, into buf: inout [UInt8]) {
+    public static func write(_ value: MDocItem, into buf: inout [UInt8]) {
         switch value {
         
         
-        case .engaged:
-            writeInt(&buf, Int32(1))
-        
-        
-        case .inProcess:
-            writeInt(&buf, Int32(2))
-        
-        }
-    }
-}
-
-
-public func FfiConverterTypeMdlPresentationState_lift(_ buf: RustBuffer) throws -> MdlPresentationState {
-    return try FfiConverterTypeMdlPresentationState.lift(buf)
-}
-
-public func FfiConverterTypeMdlPresentationState_lower(_ value: MdlPresentationState) -> RustBuffer {
-    return FfiConverterTypeMdlPresentationState.lower(value)
-}
-
-
-
-extension MdlPresentationState: Equatable, Hashable {}
-
-
-
-
-/**
- * The [OID4VPError] enum represents the errors that can occur
- * when using the oid4vp foreign library.
- */
-public enum Oid4vpError {
-
-    
-    
-    case UnexpectedUniFfiCallbackError(String
-    )
-}
-
-
-public struct FfiConverterTypeOID4VPError: FfiConverterRustBuffer {
-    typealias SwiftType = Oid4vpError
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Oid4vpError {
-        let variant: Int32 = try readInt(&buf)
-        switch variant {
-
-        
-
-        
-        case 1: return .UnexpectedUniFfiCallbackError(
-            try FfiConverterString.read(from: &buf)
-            )
-
-         default: throw UniffiInternalError.unexpectedEnumCase
-        }
-    }
-
-    public static func write(_ value: Oid4vpError, into buf: inout [UInt8]) {
-        switch value {
-
-        
-
-        
-        
-        case let .UnexpectedUniFfiCallbackError(v1):
+        case let .text(v1):
             writeInt(&buf, Int32(1))
             FfiConverterString.write(v1, into: &buf)
+            
+        
+        case let .bool(v1):
+            writeInt(&buf, Int32(2))
+            FfiConverterBool.write(v1, into: &buf)
+            
+        
+        case let .integer(v1):
+            writeInt(&buf, Int32(3))
+            FfiConverterInt64.write(v1, into: &buf)
+            
+        
+        case let .itemMap(v1):
+            writeInt(&buf, Int32(4))
+            FfiConverterDictionaryStringTypeMDocItem.write(v1, into: &buf)
+            
+        
+        case let .array(v1):
+            writeInt(&buf, Int32(5))
+            FfiConverterSequenceTypeMDocItem.write(v1, into: &buf)
             
         }
     }
 }
 
 
-extension Oid4vpError: Equatable, Hashable {}
+public func FfiConverterTypeMDocItem_lift(_ buf: RustBuffer) throws -> MDocItem {
+    return try FfiConverterTypeMDocItem.lift(buf)
+}
 
-extension Oid4vpError: Foundation.LocalizedError {
+public func FfiConverterTypeMDocItem_lower(_ value: MDocItem) -> RustBuffer {
+    return FfiConverterTypeMDocItem.lower(value)
+}
+
+
+
+extension MDocItem: Equatable, Hashable {}
+
+
+
+
+public enum MdocEncodingError {
+
+    
+    
+    case DocumentCborEncoding
+}
+
+
+public struct FfiConverterTypeMdocEncodingError: FfiConverterRustBuffer {
+    typealias SwiftType = MdocEncodingError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdocEncodingError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .DocumentCborEncoding
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: MdocEncodingError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case .DocumentCborEncoding:
+            writeInt(&buf, Int32(1))
+        
+        }
+    }
+}
+
+
+extension MdocEncodingError: Equatable, Hashable {}
+
+extension MdocEncodingError: Foundation.LocalizedError {
     public var errorDescription: String? {
         String(reflecting: self)
     }
 }
+
+
+public enum MdocInitError {
+
+    
+    
+    case DocumentCborDecoding
+    case IssuerSignedBase64UrlDecoding
+    case IssuerSignedCborDecoding
+    case IssuerAuthPayloadMissing
+    case IssuerAuthPayloadDecoding
+    case KeyAliasMissing
+    case NamespacesMissing
+    case DocumentUtf8Decoding
+}
+
+
+public struct FfiConverterTypeMdocInitError: FfiConverterRustBuffer {
+    typealias SwiftType = MdocInitError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdocInitError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .DocumentCborDecoding
+        case 2: return .IssuerSignedBase64UrlDecoding
+        case 3: return .IssuerSignedCborDecoding
+        case 4: return .IssuerAuthPayloadMissing
+        case 5: return .IssuerAuthPayloadDecoding
+        case 6: return .KeyAliasMissing
+        case 7: return .NamespacesMissing
+        case 8: return .DocumentUtf8Decoding
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: MdocInitError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case .DocumentCborDecoding:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .IssuerSignedBase64UrlDecoding:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .IssuerSignedCborDecoding:
+            writeInt(&buf, Int32(3))
+        
+        
+        case .IssuerAuthPayloadMissing:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .IssuerAuthPayloadDecoding:
+            writeInt(&buf, Int32(5))
+        
+        
+        case .KeyAliasMissing:
+            writeInt(&buf, Int32(6))
+        
+        
+        case .NamespacesMissing:
+            writeInt(&buf, Int32(7))
+        
+        
+        case .DocumentUtf8Decoding:
+            writeInt(&buf, Int32(8))
+        
+        }
+    }
+}
+
+
+extension MdocInitError: Equatable, Hashable {}
+
+extension MdocInitError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
+
+
+public enum Oid4vciError {
+
+    
+    
+    case SerdeJsonError(message: String)
+    
+    case RequestError(message: String)
+    
+    case UnsupportedGrantType(message: String)
+    
+    case InvalidSession(message: String)
+    
+    case InvalidParameter(message: String)
+    
+    case LockError(message: String)
+    
+    case Generic(message: String)
+    
+}
+
+
+public struct FfiConverterTypeOid4vciError: FfiConverterRustBuffer {
+    typealias SwiftType = Oid4vciError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Oid4vciError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .SerdeJsonError(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 2: return .RequestError(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 3: return .UnsupportedGrantType(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 4: return .InvalidSession(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 5: return .InvalidParameter(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 6: return .LockError(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 7: return .Generic(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: Oid4vciError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        case .SerdeJsonError(_ /* message is ignored*/):
+            writeInt(&buf, Int32(1))
+        case .RequestError(_ /* message is ignored*/):
+            writeInt(&buf, Int32(2))
+        case .UnsupportedGrantType(_ /* message is ignored*/):
+            writeInt(&buf, Int32(3))
+        case .InvalidSession(_ /* message is ignored*/):
+            writeInt(&buf, Int32(4))
+        case .InvalidParameter(_ /* message is ignored*/):
+            writeInt(&buf, Int32(5))
+        case .LockError(_ /* message is ignored*/):
+            writeInt(&buf, Int32(6))
+        case .Generic(_ /* message is ignored*/):
+            writeInt(&buf, Int32(7))
+
+        
+        }
+    }
+}
+
+
+extension Oid4vciError: Equatable, Hashable {}
+
+extension Oid4vciError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+/**
+ * The outcome of attempting to verify a credential.
+ */
+
+public enum Outcome {
+    
+    /**
+     * The credential was successfully verified.
+     */
+    case verified(credentialInfo: CredentialInfo
+    )
+    /**
+     * The credential could not be verified.
+     */
+    case unverified(credentialInfo: CredentialInfo?, failure: Failure
+    )
+}
+
+
+public struct FfiConverterTypeOutcome: FfiConverterRustBuffer {
+    typealias SwiftType = Outcome
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Outcome {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .verified(credentialInfo: try FfiConverterTypeCredentialInfo.read(from: &buf)
+        )
+        
+        case 2: return .unverified(credentialInfo: try FfiConverterOptionTypeCredentialInfo.read(from: &buf), failure: try FfiConverterTypeFailure.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: Outcome, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .verified(credentialInfo):
+            writeInt(&buf, Int32(1))
+            FfiConverterTypeCredentialInfo.write(credentialInfo, into: &buf)
+            
+        
+        case let .unverified(credentialInfo,failure):
+            writeInt(&buf, Int32(2))
+            FfiConverterOptionTypeCredentialInfo.write(credentialInfo, into: &buf)
+            FfiConverterTypeFailure.write(failure, into: &buf)
+            
+        }
+    }
+}
+
+
+public func FfiConverterTypeOutcome_lift(_ buf: RustBuffer) throws -> Outcome {
+    return try FfiConverterTypeOutcome.lift(buf)
+}
+
+public func FfiConverterTypeOutcome_lower(_ value: Outcome) -> RustBuffer {
+    return FfiConverterTypeOutcome.lower(value)
+}
+
+
+
+extension Outcome: Equatable, Hashable {}
+
+
 
 
 public enum RequestError {
@@ -3317,6 +5805,7 @@ public enum ResponseError {
 
     
     
+    case MissingSignature
     case Generic(value: String
     )
 }
@@ -3332,7 +5821,8 @@ public struct FfiConverterTypeResponseError: FfiConverterRustBuffer {
         
 
         
-        case 1: return .Generic(
+        case 1: return .MissingSignature
+        case 2: return .Generic(
             value: try FfiConverterString.read(from: &buf)
             )
 
@@ -3347,8 +5837,12 @@ public struct FfiConverterTypeResponseError: FfiConverterRustBuffer {
 
         
         
-        case let .Generic(value):
+        case .MissingSignature:
             writeInt(&buf, Int32(1))
+        
+        
+        case let .Generic(value):
+            writeInt(&buf, Int32(2))
             FfiConverterString.write(value, into: &buf)
             
         }
@@ -3426,7 +5920,6 @@ public enum SignatureError {
     case TooManyDocuments
     case Generic(value: String
     )
-    case MissingSignature
 }
 
 
@@ -3447,7 +5940,6 @@ public struct FfiConverterTypeSignatureError: FfiConverterRustBuffer {
         case 3: return .Generic(
             value: try FfiConverterString.read(from: &buf)
             )
-        case 4: return .MissingSignature
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -3473,10 +5965,6 @@ public struct FfiConverterTypeSignatureError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(3))
             FfiConverterString.write(value, into: &buf)
             
-        
-        case .MissingSignature:
-            writeInt(&buf, Int32(4))
-        
         }
     }
 }
@@ -3695,29 +6183,213 @@ extension VcbVerificationError: Foundation.LocalizedError {
 }
 
 
+public enum VcVerificationError {
+
+    
+    
+    case Generic(value: String
+    )
+}
+
+
+public struct FfiConverterTypeVCVerificationError: FfiConverterRustBuffer {
+    typealias SwiftType = VcVerificationError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> VcVerificationError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .Generic(
+            value: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: VcVerificationError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case let .Generic(value):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(value, into: &buf)
+            
+        }
+    }
+}
+
+
+extension VcVerificationError: Equatable, Hashable {}
+
+extension VcVerificationError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
+
+
+public enum VpError {
+
+    
+    
+    case Verification
+    case Signing
+    case Parsing(value: String
+    )
+    case Generic(value: String
+    )
+}
+
+
+public struct FfiConverterTypeVPError: FfiConverterRustBuffer {
+    typealias SwiftType = VpError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> VpError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .Verification
+        case 2: return .Signing
+        case 3: return .Parsing(
+            value: try FfiConverterString.read(from: &buf)
+            )
+        case 4: return .Generic(
+            value: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: VpError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case .Verification:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .Signing:
+            writeInt(&buf, Int32(2))
+        
+        
+        case let .Parsing(value):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(value, into: &buf)
+            
+        
+        case let .Generic(value):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(value, into: &buf)
+            
+        }
+    }
+}
+
+
+extension VpError: Equatable, Hashable {}
+
+extension VpError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
+public enum VcdmVersion {
+    
+    case v1
+    case v2
+}
+
+
+public struct FfiConverterTypeVcdmVersion: FfiConverterRustBuffer {
+    typealias SwiftType = VcdmVersion
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> VcdmVersion {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .v1
+        
+        case 2: return .v2
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: VcdmVersion, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .v1:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .v2:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+public func FfiConverterTypeVcdmVersion_lift(_ buf: RustBuffer) throws -> VcdmVersion {
+    return try FfiConverterTypeVcdmVersion.lift(buf)
+}
+
+public func FfiConverterTypeVcdmVersion_lower(_ value: VcdmVersion) -> RustBuffer {
+    return FfiConverterTypeVcdmVersion.lower(value)
+}
+
+
+
+extension VcdmVersion: Equatable, Hashable {}
+
+
+
+
 public enum VdcCollectionError {
 
     
     
     /**
-     * An unexpected error occurred.
-     */
-    case UnexpectedUniFfiCallbackError(String
-    )
-    /**
      * Attempt to convert the credential to a serialized form suitable for writing to storage failed.
      */
-    case SerializeFailed(String
-    )
+    case SerializeFailed
     /**
      * Attempting to convert the credential to a deserialized form suitable for runtime use failed.
      */
-    case DeserializeFailed(String
+    case DeserializeFailed
+    /**
+     * Attempting to write the credential to storage failed.
+     */
+    case StoreFailed(StorageManagerError
     )
     /**
-     * A Storage Manager Error occurred.
+     * Attempting to read the credential from storage failed.
      */
-    case Storage(StorageManagerError
+    case LoadFailed(StorageManagerError
+    )
+    /**
+     * Attempting to delete a credential from storage failed.
+     */
+    case DeleteFailed(StorageManagerError
     )
 }
 
@@ -3732,16 +6404,15 @@ public struct FfiConverterTypeVdcCollectionError: FfiConverterRustBuffer {
         
 
         
-        case 1: return .UnexpectedUniFfiCallbackError(
-            try FfiConverterString.read(from: &buf)
+        case 1: return .SerializeFailed
+        case 2: return .DeserializeFailed
+        case 3: return .StoreFailed(
+            try FfiConverterTypeStorageManagerError.read(from: &buf)
             )
-        case 2: return .SerializeFailed(
-            try FfiConverterString.read(from: &buf)
+        case 4: return .LoadFailed(
+            try FfiConverterTypeStorageManagerError.read(from: &buf)
             )
-        case 3: return .DeserializeFailed(
-            try FfiConverterString.read(from: &buf)
-            )
-        case 4: return .Storage(
+        case 5: return .DeleteFailed(
             try FfiConverterTypeStorageManagerError.read(from: &buf)
             )
 
@@ -3756,23 +6427,26 @@ public struct FfiConverterTypeVdcCollectionError: FfiConverterRustBuffer {
 
         
         
-        case let .UnexpectedUniFfiCallbackError(v1):
+        case .SerializeFailed:
             writeInt(&buf, Int32(1))
-            FfiConverterString.write(v1, into: &buf)
-            
         
-        case let .SerializeFailed(v1):
+        
+        case .DeserializeFailed:
             writeInt(&buf, Int32(2))
-            FfiConverterString.write(v1, into: &buf)
-            
         
-        case let .DeserializeFailed(v1):
+        
+        case let .StoreFailed(v1):
             writeInt(&buf, Int32(3))
-            FfiConverterString.write(v1, into: &buf)
+            FfiConverterTypeStorageManagerError.write(v1, into: &buf)
             
         
-        case let .Storage(v1):
+        case let .LoadFailed(v1):
             writeInt(&buf, Int32(4))
+            FfiConverterTypeStorageManagerError.write(v1, into: &buf)
+            
+        
+        case let .DeleteFailed(v1):
+            writeInt(&buf, Int32(5))
             FfiConverterTypeStorageManagerError.write(v1, into: &buf)
             
         }
@@ -3788,296 +6462,66 @@ extension VdcCollectionError: Foundation.LocalizedError {
     }
 }
 
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
-/**
- * The [WalletError] enum represents the errors that can occur
- * when working with the [Wallet] between foreign function interfaces.
- */
-public enum WalletError {
-
+public enum VerificationResult {
     
-    
-    case UnexpectedUniFfiCallbackError(String
+    case success
+    case failure(cause: String
     )
-    case HttpClientInitialization(String
-    )
-    case Oid4vpRequestValidation(String
-    )
-    case Oid4vpPresentationDefinitionResolution(String
-    )
-    case Storage(StorageManagerError
-    )
-    case VdcCollection(VdcCollectionError
-    )
-    case KeyManager(KeyManagerError
-    )
-    case RequiredCredentialNotFound(String
-    )
-    case KeyNotFound(UInt8
-    )
-    case Deserialization(String
-    )
-    case SerdeJson(String
-    )
-    case Oid4vpResponseSubmission(String
-    )
-    case PresentationSubmissionCreation(String
-    )
-    case VerifiablePresentation(String
-    )
-    case GenerateJwt(String
-    )
-    case ActiveKeyIndexReadWriteError(String
-    )
-    case JwkParseError(String
-    )
-    case DidKeyGenerateUrl(String
-    )
-    case InvalidDidUrl(String
-    )
-    case Oid4vpUnsupportedResponseMode(String
-    )
-    case SigningAlgorithmNotFound(String
-    )
-    case SigningError(String
-    )
-    case InvalidCredentialReference
-    case CredentialCallback(CredentialCallbackError
-    )
-    case Unknown
 }
 
 
-public struct FfiConverterTypeWalletError: FfiConverterRustBuffer {
-    typealias SwiftType = WalletError
+public struct FfiConverterTypeVerificationResult: FfiConverterRustBuffer {
+    typealias SwiftType = VerificationResult
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> WalletError {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> VerificationResult {
         let variant: Int32 = try readInt(&buf)
         switch variant {
-
         
-
+        case 1: return .success
         
-        case 1: return .UnexpectedUniFfiCallbackError(
-            try FfiConverterString.read(from: &buf)
-            )
-        case 2: return .HttpClientInitialization(
-            try FfiConverterString.read(from: &buf)
-            )
-        case 3: return .Oid4vpRequestValidation(
-            try FfiConverterString.read(from: &buf)
-            )
-        case 4: return .Oid4vpPresentationDefinitionResolution(
-            try FfiConverterString.read(from: &buf)
-            )
-        case 5: return .Storage(
-            try FfiConverterTypeStorageManagerError.read(from: &buf)
-            )
-        case 6: return .VdcCollection(
-            try FfiConverterTypeVdcCollectionError.read(from: &buf)
-            )
-        case 7: return .KeyManager(
-            try FfiConverterTypeKeyManagerError.read(from: &buf)
-            )
-        case 8: return .RequiredCredentialNotFound(
-            try FfiConverterString.read(from: &buf)
-            )
-        case 9: return .KeyNotFound(
-            try FfiConverterUInt8.read(from: &buf)
-            )
-        case 10: return .Deserialization(
-            try FfiConverterString.read(from: &buf)
-            )
-        case 11: return .SerdeJson(
-            try FfiConverterString.read(from: &buf)
-            )
-        case 12: return .Oid4vpResponseSubmission(
-            try FfiConverterString.read(from: &buf)
-            )
-        case 13: return .PresentationSubmissionCreation(
-            try FfiConverterString.read(from: &buf)
-            )
-        case 14: return .VerifiablePresentation(
-            try FfiConverterString.read(from: &buf)
-            )
-        case 15: return .GenerateJwt(
-            try FfiConverterString.read(from: &buf)
-            )
-        case 16: return .ActiveKeyIndexReadWriteError(
-            try FfiConverterString.read(from: &buf)
-            )
-        case 17: return .JwkParseError(
-            try FfiConverterString.read(from: &buf)
-            )
-        case 18: return .DidKeyGenerateUrl(
-            try FfiConverterString.read(from: &buf)
-            )
-        case 19: return .InvalidDidUrl(
-            try FfiConverterString.read(from: &buf)
-            )
-        case 20: return .Oid4vpUnsupportedResponseMode(
-            try FfiConverterString.read(from: &buf)
-            )
-        case 21: return .SigningAlgorithmNotFound(
-            try FfiConverterString.read(from: &buf)
-            )
-        case 22: return .SigningError(
-            try FfiConverterString.read(from: &buf)
-            )
-        case 23: return .InvalidCredentialReference
-        case 24: return .CredentialCallback(
-            try FfiConverterTypeCredentialCallbackError.read(from: &buf)
-            )
-        case 25: return .Unknown
-
-         default: throw UniffiInternalError.unexpectedEnumCase
+        case 2: return .failure(cause: try FfiConverterString.read(from: &buf)
+        )
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
-    public static func write(_ value: WalletError, into buf: inout [UInt8]) {
+    public static func write(_ value: VerificationResult, into buf: inout [UInt8]) {
         switch value {
-
-        
-
         
         
-        case let .UnexpectedUniFfiCallbackError(v1):
+        case .success:
             writeInt(&buf, Int32(1))
-            FfiConverterString.write(v1, into: &buf)
-            
         
-        case let .HttpClientInitialization(v1):
+        
+        case let .failure(cause):
             writeInt(&buf, Int32(2))
-            FfiConverterString.write(v1, into: &buf)
+            FfiConverterString.write(cause, into: &buf)
             
-        
-        case let .Oid4vpRequestValidation(v1):
-            writeInt(&buf, Int32(3))
-            FfiConverterString.write(v1, into: &buf)
-            
-        
-        case let .Oid4vpPresentationDefinitionResolution(v1):
-            writeInt(&buf, Int32(4))
-            FfiConverterString.write(v1, into: &buf)
-            
-        
-        case let .Storage(v1):
-            writeInt(&buf, Int32(5))
-            FfiConverterTypeStorageManagerError.write(v1, into: &buf)
-            
-        
-        case let .VdcCollection(v1):
-            writeInt(&buf, Int32(6))
-            FfiConverterTypeVdcCollectionError.write(v1, into: &buf)
-            
-        
-        case let .KeyManager(v1):
-            writeInt(&buf, Int32(7))
-            FfiConverterTypeKeyManagerError.write(v1, into: &buf)
-            
-        
-        case let .RequiredCredentialNotFound(v1):
-            writeInt(&buf, Int32(8))
-            FfiConverterString.write(v1, into: &buf)
-            
-        
-        case let .KeyNotFound(v1):
-            writeInt(&buf, Int32(9))
-            FfiConverterUInt8.write(v1, into: &buf)
-            
-        
-        case let .Deserialization(v1):
-            writeInt(&buf, Int32(10))
-            FfiConverterString.write(v1, into: &buf)
-            
-        
-        case let .SerdeJson(v1):
-            writeInt(&buf, Int32(11))
-            FfiConverterString.write(v1, into: &buf)
-            
-        
-        case let .Oid4vpResponseSubmission(v1):
-            writeInt(&buf, Int32(12))
-            FfiConverterString.write(v1, into: &buf)
-            
-        
-        case let .PresentationSubmissionCreation(v1):
-            writeInt(&buf, Int32(13))
-            FfiConverterString.write(v1, into: &buf)
-            
-        
-        case let .VerifiablePresentation(v1):
-            writeInt(&buf, Int32(14))
-            FfiConverterString.write(v1, into: &buf)
-            
-        
-        case let .GenerateJwt(v1):
-            writeInt(&buf, Int32(15))
-            FfiConverterString.write(v1, into: &buf)
-            
-        
-        case let .ActiveKeyIndexReadWriteError(v1):
-            writeInt(&buf, Int32(16))
-            FfiConverterString.write(v1, into: &buf)
-            
-        
-        case let .JwkParseError(v1):
-            writeInt(&buf, Int32(17))
-            FfiConverterString.write(v1, into: &buf)
-            
-        
-        case let .DidKeyGenerateUrl(v1):
-            writeInt(&buf, Int32(18))
-            FfiConverterString.write(v1, into: &buf)
-            
-        
-        case let .InvalidDidUrl(v1):
-            writeInt(&buf, Int32(19))
-            FfiConverterString.write(v1, into: &buf)
-            
-        
-        case let .Oid4vpUnsupportedResponseMode(v1):
-            writeInt(&buf, Int32(20))
-            FfiConverterString.write(v1, into: &buf)
-            
-        
-        case let .SigningAlgorithmNotFound(v1):
-            writeInt(&buf, Int32(21))
-            FfiConverterString.write(v1, into: &buf)
-            
-        
-        case let .SigningError(v1):
-            writeInt(&buf, Int32(22))
-            FfiConverterString.write(v1, into: &buf)
-            
-        
-        case .InvalidCredentialReference:
-            writeInt(&buf, Int32(23))
-        
-        
-        case let .CredentialCallback(v1):
-            writeInt(&buf, Int32(24))
-            FfiConverterTypeCredentialCallbackError.write(v1, into: &buf)
-            
-        
-        case .Unknown:
-            writeInt(&buf, Int32(25))
-        
         }
     }
 }
 
 
-extension WalletError: Equatable, Hashable {}
-
-extension WalletError: Foundation.LocalizedError {
-    public var errorDescription: String? {
-        String(reflecting: self)
-    }
+public func FfiConverterTypeVerificationResult_lift(_ buf: RustBuffer) throws -> VerificationResult {
+    return try FfiConverterTypeVerificationResult.lift(buf)
 }
 
-fileprivate struct FfiConverterOptionTypeUrl: FfiConverterRustBuffer {
-    typealias SwiftType = Url?
+public func FfiConverterTypeVerificationResult_lower(_ value: VerificationResult) -> RustBuffer {
+    return FfiConverterTypeVerificationResult.lower(value)
+}
+
+
+
+extension VerificationResult: Equatable, Hashable {}
+
+
+
+fileprivate struct FfiConverterOptionInt64: FfiConverterRustBuffer {
+    typealias SwiftType = Int64?
 
     public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
         guard let value = value else {
@@ -4085,13 +6529,118 @@ fileprivate struct FfiConverterOptionTypeUrl: FfiConverterRustBuffer {
             return
         }
         writeInt(&buf, Int8(1))
-        FfiConverterTypeUrl.write(value, into: &buf)
+        FfiConverterInt64.write(value, into: &buf)
     }
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
         switch try readInt(&buf) as Int8 {
         case 0: return nil
-        case 1: return try FfiConverterTypeUrl.read(from: &buf)
+        case 1: return try FfiConverterInt64.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
+    typealias SwiftType = String?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterString.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterString.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+fileprivate struct FfiConverterOptionTypeCredential: FfiConverterRustBuffer {
+    typealias SwiftType = Credential?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCredential.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCredential.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+fileprivate struct FfiConverterOptionTypeCredentialInfo: FfiConverterRustBuffer {
+    typealias SwiftType = CredentialInfo?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeCredentialInfo.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeCredentialInfo.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+fileprivate struct FfiConverterOptionSequenceString: FfiConverterRustBuffer {
+    typealias SwiftType = [String]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceString.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceString.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+fileprivate struct FfiConverterOptionTypeKeyAlias: FfiConverterRustBuffer {
+    typealias SwiftType = KeyAlias?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeKeyAlias.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeKeyAlias.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -4140,23 +6689,67 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
     }
 }
 
-fileprivate struct FfiConverterSequenceTypeCredential: FfiConverterRustBuffer {
-    typealias SwiftType = [Credential]
+fileprivate struct FfiConverterSequenceTypeCredentialRequest: FfiConverterRustBuffer {
+    typealias SwiftType = [CredentialRequest]
 
-    public static func write(_ value: [Credential], into buf: inout [UInt8]) {
+    public static func write(_ value: [CredentialRequest], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
         for item in value {
-            FfiConverterTypeCredential.write(item, into: &buf)
+            FfiConverterTypeCredentialRequest.write(item, into: &buf)
         }
     }
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Credential] {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CredentialRequest] {
         let len: Int32 = try readInt(&buf)
-        var seq = [Credential]()
+        var seq = [CredentialRequest]()
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
-            seq.append(try FfiConverterTypeCredential.read(from: &buf))
+            seq.append(try FfiConverterTypeCredentialRequest.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+fileprivate struct FfiConverterSequenceTypeCredentialResponse: FfiConverterRustBuffer {
+    typealias SwiftType = [CredentialResponse]
+
+    public static func write(_ value: [CredentialResponse], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeCredentialResponse.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CredentialResponse] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [CredentialResponse]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeCredentialResponse.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+fileprivate struct FfiConverterSequenceTypeElement: FfiConverterRustBuffer {
+    typealias SwiftType = [Element]
+
+    public static func write(_ value: [Element], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeElement.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Element] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [Element]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeElement.read(from: &buf))
         }
         return seq
     }
@@ -4184,6 +6777,28 @@ fileprivate struct FfiConverterSequenceTypeItemsRequest: FfiConverterRustBuffer 
     }
 }
 
+fileprivate struct FfiConverterSequenceTypeMDocItem: FfiConverterRustBuffer {
+    typealias SwiftType = [MDocItem]
+
+    public static func write(_ value: [MDocItem], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeMDocItem.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [MDocItem] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [MDocItem]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeMDocItem.read(from: &buf))
+        }
+        return seq
+    }
+}
+
 fileprivate struct FfiConverterSequenceTypeKey: FfiConverterRustBuffer {
     typealias SwiftType = [Key]
 
@@ -4206,6 +6821,28 @@ fileprivate struct FfiConverterSequenceTypeKey: FfiConverterRustBuffer {
     }
 }
 
+fileprivate struct FfiConverterSequenceTypeUuid: FfiConverterRustBuffer {
+    typealias SwiftType = [Uuid]
+
+    public static func write(_ value: [Uuid], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeUuid.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Uuid] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [Uuid]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeUuid.read(from: &buf))
+        }
+        return seq
+    }
+}
+
 fileprivate struct FfiConverterDictionaryStringBool: FfiConverterRustBuffer {
     public static func write(_ value: [String: Bool], into buf: inout [UInt8]) {
         let len = Int32(value.count)
@@ -4223,6 +6860,75 @@ fileprivate struct FfiConverterDictionaryStringBool: FfiConverterRustBuffer {
         for _ in 0..<len {
             let key = try FfiConverterString.read(from: &buf)
             let value = try FfiConverterBool.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
+    }
+}
+
+fileprivate struct FfiConverterDictionaryStringString: FfiConverterRustBuffer {
+    public static func write(_ value: [String: String], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterString.write(key, into: &buf)
+            FfiConverterString.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String: String] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [String: String]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0..<len {
+            let key = try FfiConverterString.read(from: &buf)
+            let value = try FfiConverterString.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
+    }
+}
+
+fileprivate struct FfiConverterDictionaryStringTypeClaimValue: FfiConverterRustBuffer {
+    public static func write(_ value: [String: ClaimValue], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterString.write(key, into: &buf)
+            FfiConverterTypeClaimValue.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String: ClaimValue] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [String: ClaimValue]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0..<len {
+            let key = try FfiConverterString.read(from: &buf)
+            let value = try FfiConverterTypeClaimValue.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
+    }
+}
+
+fileprivate struct FfiConverterDictionaryStringTypeMDocItem: FfiConverterRustBuffer {
+    public static func write(_ value: [String: MDocItem], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterString.write(key, into: &buf)
+            FfiConverterTypeMDocItem.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String: MDocItem] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [String: MDocItem]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0..<len {
+            let key = try FfiConverterString.read(from: &buf)
+            let value = try FfiConverterTypeMDocItem.read(from: &buf)
             dict[key] = value
         }
         return dict
@@ -4275,6 +6981,29 @@ fileprivate struct FfiConverterDictionaryStringDictionaryStringBool: FfiConverte
     }
 }
 
+fileprivate struct FfiConverterDictionaryStringDictionaryStringTypeMDocItem: FfiConverterRustBuffer {
+    public static func write(_ value: [String: [String: MDocItem]], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterString.write(key, into: &buf)
+            FfiConverterDictionaryStringTypeMDocItem.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String: [String: MDocItem]] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [String: [String: MDocItem]]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0..<len {
+            let key = try FfiConverterString.read(from: &buf)
+            let value = try FfiConverterDictionaryStringTypeMDocItem.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
+    }
+}
+
 fileprivate struct FfiConverterDictionaryStringDictionaryStringSequenceString: FfiConverterRustBuffer {
     public static func write(_ value: [String: [String: [String]]], into buf: inout [UInt8]) {
         let len = Int32(value.count)
@@ -4298,39 +7027,28 @@ fileprivate struct FfiConverterDictionaryStringDictionaryStringSequenceString: F
     }
 }
 
-
-/**
- * Typealias from the type name used in the UDL file to the builtin type.  This
- * is needed because the UDL type name is used in function/method signatures.
- */
-public typealias ClaimFormatDesignation = String
-public struct FfiConverterTypeClaimFormatDesignation: FfiConverter {
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ClaimFormatDesignation {
-        return try FfiConverterString.read(from: &buf)
+fileprivate struct FfiConverterDictionaryTypeNamespaceSequenceTypeElement: FfiConverterRustBuffer {
+    public static func write(_ value: [Namespace: [Element]], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterTypeNamespace.write(key, into: &buf)
+            FfiConverterSequenceTypeElement.write(value, into: &buf)
+        }
     }
 
-    public static func write(_ value: ClaimFormatDesignation, into buf: inout [UInt8]) {
-        return FfiConverterString.write(value, into: &buf)
-    }
-
-    public static func lift(_ value: RustBuffer) throws -> ClaimFormatDesignation {
-        return try FfiConverterString.lift(value)
-    }
-
-    public static func lower(_ value: ClaimFormatDesignation) -> RustBuffer {
-        return FfiConverterString.lower(value)
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Namespace: [Element]] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [Namespace: [Element]]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0..<len {
+            let key = try FfiConverterTypeNamespace.read(from: &buf)
+            let value = try FfiConverterSequenceTypeElement.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
     }
 }
-
-
-public func FfiConverterTypeClaimFormatDesignation_lift(_ value: RustBuffer) throws -> ClaimFormatDesignation {
-    return try FfiConverterTypeClaimFormatDesignation.lift(value)
-}
-
-public func FfiConverterTypeClaimFormatDesignation_lower(_ value: ClaimFormatDesignation) -> RustBuffer {
-    return FfiConverterTypeClaimFormatDesignation.lower(value)
-}
-
 
 
 /**
@@ -4405,32 +7123,66 @@ public func FfiConverterTypeKey_lower(_ value: Key) -> RustBuffer {
  * Typealias from the type name used in the UDL file to the builtin type.  This
  * is needed because the UDL type name is used in function/method signatures.
  */
-public typealias Url = String
-public struct FfiConverterTypeUrl: FfiConverter {
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Url {
+public typealias KeyAlias = String
+public struct FfiConverterTypeKeyAlias: FfiConverter {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> KeyAlias {
         return try FfiConverterString.read(from: &buf)
     }
 
-    public static func write(_ value: Url, into buf: inout [UInt8]) {
+    public static func write(_ value: KeyAlias, into buf: inout [UInt8]) {
         return FfiConverterString.write(value, into: &buf)
     }
 
-    public static func lift(_ value: RustBuffer) throws -> Url {
+    public static func lift(_ value: RustBuffer) throws -> KeyAlias {
         return try FfiConverterString.lift(value)
     }
 
-    public static func lower(_ value: Url) -> RustBuffer {
+    public static func lower(_ value: KeyAlias) -> RustBuffer {
         return FfiConverterString.lower(value)
     }
 }
 
 
-public func FfiConverterTypeUrl_lift(_ value: RustBuffer) throws -> Url {
-    return try FfiConverterTypeUrl.lift(value)
+public func FfiConverterTypeKeyAlias_lift(_ value: RustBuffer) throws -> KeyAlias {
+    return try FfiConverterTypeKeyAlias.lift(value)
 }
 
-public func FfiConverterTypeUrl_lower(_ value: Url) -> RustBuffer {
-    return FfiConverterTypeUrl.lower(value)
+public func FfiConverterTypeKeyAlias_lower(_ value: KeyAlias) -> RustBuffer {
+    return FfiConverterTypeKeyAlias.lower(value)
+}
+
+
+
+/**
+ * Typealias from the type name used in the UDL file to the builtin type.  This
+ * is needed because the UDL type name is used in function/method signatures.
+ */
+public typealias Namespace = String
+public struct FfiConverterTypeNamespace: FfiConverter {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Namespace {
+        return try FfiConverterString.read(from: &buf)
+    }
+
+    public static func write(_ value: Namespace, into buf: inout [UInt8]) {
+        return FfiConverterString.write(value, into: &buf)
+    }
+
+    public static func lift(_ value: RustBuffer) throws -> Namespace {
+        return try FfiConverterString.lift(value)
+    }
+
+    public static func lower(_ value: Namespace) -> RustBuffer {
+        return FfiConverterString.lower(value)
+    }
+}
+
+
+public func FfiConverterTypeNamespace_lift(_ value: RustBuffer) throws -> Namespace {
+    return try FfiConverterTypeNamespace.lift(value)
+}
+
+public func FfiConverterTypeNamespace_lower(_ value: Namespace) -> RustBuffer {
+    return FfiConverterTypeNamespace.lower(value)
 }
 
 
@@ -4613,6 +7365,162 @@ private func uniffiForeignFutureFree(handle: UInt64) {
 public func uniffiForeignFutureHandleCountMobileSdkRs() -> Int {
     UNIFFI_FOREIGN_FUTURE_HANDLE_MAP.count
 }
+public func establishSession(uri: String, requestedItems: [String: [String: Bool]], trustAnchorRegistry: [String]?)throws  -> MdlReaderSessionData {
+    return try  FfiConverterTypeMDLReaderSessionData.lift(try rustCallWithError(FfiConverterTypeMDLReaderSessionError.lift) {
+    uniffi_mobile_sdk_rs_fn_func_establish_session(
+        FfiConverterString.lower(uri),
+        FfiConverterDictionaryStringDictionaryStringBool.lower(requestedItems),
+        FfiConverterOptionSequenceString.lower(trustAnchorRegistry),$0
+    )
+})
+}
+public func generatePopComplete(signingInput: Data, signature: Data)throws  -> String {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeOid4vciError.lift) {
+    uniffi_mobile_sdk_rs_fn_func_generate_pop_complete(
+        FfiConverterData.lower(signingInput),
+        FfiConverterData.lower(signature),$0
+    )
+})
+}
+public func generatePopPrepare(audience: String, issuer: String, nonce: String?, vm: String, publicJwk: String, durationInSecs: Int64?)throws  -> Data {
+    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeOid4vciError.lift) {
+    uniffi_mobile_sdk_rs_fn_func_generate_pop_prepare(
+        FfiConverterString.lower(audience),
+        FfiConverterString.lower(issuer),
+        FfiConverterOptionString.lower(nonce),
+        FfiConverterString.lower(vm),
+        FfiConverterString.lower(publicJwk),
+        FfiConverterOptionInt64.lower(durationInSecs),$0
+    )
+})
+}
+public func handleResponse(state: MdlSessionManager, response: Data)throws  -> MdlReaderResponseData {
+    return try  FfiConverterTypeMDLReaderResponseData.lift(try rustCallWithError(FfiConverterTypeMDLReaderResponseError.lift) {
+    uniffi_mobile_sdk_rs_fn_func_handle_response(
+        FfiConverterTypeMDLSessionManager.lower(state),
+        FfiConverterData.lower(response),$0
+    )
+})
+}
+public func initializeMdlPresentation(uuid: Uuid, storageManager: StorageManagerInterface)async throws  -> MdlPresentationSession {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_func_initialize_mdl_presentation(FfiConverterTypeUuid.lower(uuid),FfiConverterTypeStorageManagerInterface.lower(storageManager)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_pointer,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_pointer,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_pointer,
+            liftFunc: FfiConverterTypeMdlPresentationSession.lift,
+            errorHandler: FfiConverterTypeSessionError.lift
+        )
+}
+public func oid4vciExchangeCredential(session: Oid4vciSession, proofsOfPossession: [String], httpClient: IHttpClient)async throws  -> [CredentialResponse] {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_func_oid4vci_exchange_credential(FfiConverterTypeOid4vciSession.lower(session),FfiConverterSequenceString.lower(proofsOfPossession),FfiConverterTypeIHttpClient.lower(httpClient)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterSequenceTypeCredentialResponse.lift,
+            errorHandler: FfiConverterTypeOid4vciError.lift
+        )
+}
+public func oid4vciExchangeToken(session: Oid4vciSession, httpClient: IHttpClient)async throws  -> String? {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_func_oid4vci_exchange_token(FfiConverterTypeOid4vciSession.lower(session),FfiConverterTypeIHttpClient.lower(httpClient)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterOptionString.lift,
+            errorHandler: FfiConverterTypeOid4vciError.lift
+        )
+}
+public func oid4vciGetMetadata(session: Oid4vciSession)throws  -> Oid4vciMetadata {
+    return try  FfiConverterTypeOid4vciMetadata.lift(try rustCallWithError(FfiConverterTypeOid4vciError.lift) {
+    uniffi_mobile_sdk_rs_fn_func_oid4vci_get_metadata(
+        FfiConverterTypeOid4vciSession.lower(session),$0
+    )
+})
+}
+public func oid4vciInitiate(baseUrl: String, clientId: String, redirectUrl: String, httpClient: IHttpClient)async throws  -> Oid4vciSession {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_func_oid4vci_initiate(FfiConverterString.lower(baseUrl),FfiConverterString.lower(clientId),FfiConverterString.lower(redirectUrl),FfiConverterTypeIHttpClient.lower(httpClient)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_pointer,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_pointer,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_pointer,
+            liftFunc: FfiConverterTypeOid4vciSession.lift,
+            errorHandler: FfiConverterTypeOid4vciError.lift
+        )
+}
+public func oid4vciInitiateWithOffer(credentialOffer: String, clientId: String, redirectUrl: String, httpClient: IHttpClient)async throws  -> Oid4vciSession {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_func_oid4vci_initiate_with_offer(FfiConverterString.lower(credentialOffer),FfiConverterString.lower(clientId),FfiConverterString.lower(redirectUrl),FfiConverterTypeIHttpClient.lower(httpClient)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_pointer,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_pointer,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_pointer,
+            liftFunc: FfiConverterTypeOid4vciSession.lift,
+            errorHandler: FfiConverterTypeOid4vciError.lift
+        )
+}
+public func vcToSignedVp(vc: String, keyStr: String)async throws  -> String {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_func_vc_to_signed_vp(FfiConverterString.lower(vc),FfiConverterString.lower(keyStr)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterString.lift,
+            errorHandler: FfiConverterTypeVPError.lift
+        )
+}
+public func verifyJsonVcString(json: String)async throws  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_func_verify_json_vc_string(FfiConverterString.lower(json)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_void,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_void,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeVCVerificationError.lift
+        )
+}
+public func verifyJwtVp(jwtVp: String)async throws  {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_func_verify_jwt_vp(FfiConverterString.lower(jwtVp)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_void,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_void,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_void,
+            liftFunc: { $0 },
+            errorHandler: FfiConverterTypeVPError.lift
+        )
+}
 public func verifyPdf417Barcode(payload: String)async throws  {
     return
         try  await uniffiRustCallAsync(
@@ -4657,67 +7565,97 @@ private var initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
+    if (uniffi_mobile_sdk_rs_checksum_func_establish_session() != 26937) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_func_generate_pop_complete() != 56778) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_func_generate_pop_prepare() != 18468) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_func_handle_response() != 43961) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_func_initialize_mdl_presentation() != 27609) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_exchange_credential() != 13827) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_exchange_token() != 3394) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_get_metadata() != 16967) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_initiate() != 45435) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_initiate_with_offer() != 12958) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_func_vc_to_signed_vp() != 47312) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_func_verify_json_vc_string() != 13072) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_func_verify_jwt_vp() != 8825) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mobile_sdk_rs_checksum_func_verify_pdf417_barcode() != 14164) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_func_verify_vcb_qrcode_against_mrz() != 36527) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_credential_as_storage_key() != 11095) {
+    if (uniffi_mobile_sdk_rs_checksum_method_asynchttpclient_http_client() != 44924) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_credential_as_storage_key_prefix() != 47243) {
+    if (uniffi_mobile_sdk_rs_checksum_method_jsonvc_credential_as_json_encoded_utf8_string() != 36585) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_credential_ctype() != 4657) {
+    if (uniffi_mobile_sdk_rs_checksum_method_jsonvc_id() != 12139) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_credential_format() != 29822) {
+    if (uniffi_mobile_sdk_rs_checksum_method_jsonvc_key_alias() != 36306) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_credential_id() != 50552) {
+    if (uniffi_mobile_sdk_rs_checksum_method_jsonvc_type() != 48063) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_credential_payload() != 24759) {
+    if (uniffi_mobile_sdk_rs_checksum_method_jsonvc_types() != 3171) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_credentialcallbackinterface_permit_presentation() != 31447) {
+    if (uniffi_mobile_sdk_rs_checksum_method_jsonvc_vcdm_version() != 26490) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_credentialcallbackinterface_select_credentials() != 52508) {
+    if (uniffi_mobile_sdk_rs_checksum_method_jwtvc_credential_as_json_encoded_utf8_string() != 41803) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_encryptedpayload_ciphertext() != 44237) {
+    if (uniffi_mobile_sdk_rs_checksum_method_jwtvc_id() != 55448) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_encryptedpayload_iv() != 46304) {
+    if (uniffi_mobile_sdk_rs_checksum_method_jwtvc_jws_header_as_json_encoded_utf8_string() != 46211) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_keymanagerinterface_reset() != 18603) {
+    if (uniffi_mobile_sdk_rs_checksum_method_jwtvc_jws_payload_as_json_encoded_utf8_string() != 6252) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_keymanagerinterface_key_exists() != 36618) {
+    if (uniffi_mobile_sdk_rs_checksum_method_jwtvc_key_alias() != 13659) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_keymanagerinterface_generate_signing_key() != 2163) {
+    if (uniffi_mobile_sdk_rs_checksum_method_jwtvc_type() != 41101) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_keymanagerinterface_get_jwk() != 60485) {
+    if (uniffi_mobile_sdk_rs_checksum_method_jwtvc_types() != 60467) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_keymanagerinterface_sign_payload() != 40265) {
+    if (uniffi_mobile_sdk_rs_checksum_method_jwtvc_vcdm_version() != 26158) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_keymanagerinterface_generate_encryption_key() != 29175) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_mobile_sdk_rs_checksum_method_keymanagerinterface_encrypt_payload() != 62994) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_mobile_sdk_rs_checksum_method_keymanagerinterface_decrypt_payload() != 14477) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_mobile_sdk_rs_checksum_method_mdoc_id() != 4321) {
+    if (uniffi_mobile_sdk_rs_checksum_method_mdlpresentationsession_generate_response() != 37013) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_method_mdlpresentationsession_get_ble_ident() != 25991) {
@@ -4729,10 +7667,67 @@ private var initializationResult: InitializationResult = {
     if (uniffi_mobile_sdk_rs_checksum_method_mdlpresentationsession_handle_request() != 21650) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_mdlpresentationsession_submit_response() != 36501) {
+    if (uniffi_mobile_sdk_rs_checksum_method_mdlpresentationsession_submit_response() != 684) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_method_mdlpresentationsession_terminate_session() != 8677) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_mdoc_details() != 29355) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_mdoc_doctype() != 46465) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_mdoc_id() != 18877) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_mdoc_key_alias() != 39341) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vci_exchange_credential() != 17336) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vci_exchange_token() != 35585) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vci_get_metadata() != 38460) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vci_initiate() != 12704) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vci_initiate_with_offer() != 23294) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vcimetadata_authorization_servers() != 42340) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vcimetadata_batch_credential_endpoint() != 60237) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vcimetadata_credential_endpoint() != 16138) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vcimetadata_deferred_credential_endpoint() != 24938) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vcimetadata_issuer() != 28727) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vcimetadata_notification_endpoint() != 39275) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vcimetadata_to_json() != 52469) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vcisession_get_all_credential_requests() != 32094) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vcisession_get_credential_request_by_index() != 55077) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_parsedcredential_into_generic_form() != 30318) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_add() != 39162) {
@@ -4747,38 +7742,91 @@ private var initializationResult: InitializationResult = {
     if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_remove() != 24982) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_wallet_add_credential() != 20213) {
+    if (uniffi_mobile_sdk_rs_checksum_method_synchttpclient_http_client() != 53085) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_wallet_get_credential_list() != 45665) {
+    if (uniffi_mobile_sdk_rs_checksum_method_vdccollection_add() != 42040) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_wallet_handle_oid4vp_request() != 61469) {
+    if (uniffi_mobile_sdk_rs_checksum_method_vdccollection_all_entries() != 7074) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_wallet_initialize_mdl_presentation() != 10028) {
+    if (uniffi_mobile_sdk_rs_checksum_method_vdccollection_all_entries_by_type() != 232) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_constructor_credential_new() != 30947) {
+    if (uniffi_mobile_sdk_rs_checksum_method_vdccollection_delete() != 63691) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_constructor_credential_new_as_arc() != 51066) {
+    if (uniffi_mobile_sdk_rs_checksum_method_vdccollection_dump() != 37372) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_constructor_encryptedpayload_new() != 10622) {
+    if (uniffi_mobile_sdk_rs_checksum_method_vdccollection_get() != 1085) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_constructor_mdoc_from_cbor() != 65194) {
+    if (uniffi_mobile_sdk_rs_checksum_constructor_ihttpclient_new_async() != 55307) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_constructor_wallet_new() != 54025) {
+    if (uniffi_mobile_sdk_rs_checksum_constructor_ihttpclient_new_sync() != 47576) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_constructor_jsonvc_new_from_compact_jws() != 1871) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_constructor_jsonvc_new_from_compact_jws_with_key() != 58227) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_constructor_jwtvc_new_from_compact_jws() != 5193) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_constructor_jwtvc_new_from_compact_jws_with_key() != 27338) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_constructor_mdoc_from_cbor_encoded_document() != 32979) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_constructor_mdoc_from_stringified_document() != 58042) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_constructor_mdoc_new_from_base64url_encoded_issuer_signed() != 17520) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_constructor_oid4vci_new() != 27200) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_constructor_oid4vci_new_with_async_client() != 57260) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_constructor_oid4vci_new_with_default_async_client() != 51040) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_constructor_oid4vci_new_with_default_sync_client() != 30492) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_constructor_oid4vci_new_with_sync_client() != 31928) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_constructor_parsedcredential_new_jwt_vc_json() != 56340) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_constructor_parsedcredential_new_jwt_vc_json_ld() != 46832) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_constructor_parsedcredential_new_ldp_vc() != 45177) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_constructor_parsedcredential_new_mso_mdoc() != 58058) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_constructor_parsedcredential_parse_from_credential() != 15018) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_constructor_vdccollection_new() != 31236) {
         return InitializationResult.apiChecksumMismatch
     }
 
-    uniffiCallbackInitCredentialCallbackInterface()
-    uniffiCallbackInitKeyManagerInterface()
-    uniffiCallbackInitSecretKeyInterface()
+    uniffiCallbackInitAsyncHttpClient()
     uniffiCallbackInitStorageManagerInterface()
+    uniffiCallbackInitSyncHttpClient()
     return InitializationResult.ok
 }()
 
