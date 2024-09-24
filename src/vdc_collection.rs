@@ -158,7 +158,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_vdc() {
-        let smi: Arc<dyn StorageManagerInterface> = Arc::new(LocalStore);
+        let smi: Arc<dyn StorageManagerInterface> = Arc::new(LocalStore::new());
         let vdc = VdcCollection::new(smi);
         for id in vdc.all_entries().await.unwrap() {
             vdc.delete(id).await.unwrap();

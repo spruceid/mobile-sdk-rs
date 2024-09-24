@@ -391,7 +391,7 @@ mod tests {
             p256::SecretKey::from_sec1_pem(include_str!("../../tests/res/sec1.pem"))
                 .unwrap()
                 .into();
-        let smi = Arc::new(local_store::LocalStore);
+        let smi = Arc::new(local_store::LocalStore::new());
 
         let vdc_collection = VdcCollection::new(smi.clone());
 
@@ -470,7 +470,7 @@ mod tests {
             p256::SecretKey::from_sec1_pem(include_str!("../../tests/res/sec1.pem"))
                 .unwrap()
                 .into();
-        let smi = Arc::new(local_store::LocalStore);
+        let smi = Arc::new(local_store::LocalStore::new());
 
         let vdc_collection = VdcCollection::new(smi.clone());
 
