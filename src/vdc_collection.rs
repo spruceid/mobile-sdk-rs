@@ -158,8 +158,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_vdc() {
-        let smi: Arc<dyn StorageManagerInterface> = Arc::new(LocalStore);
+        let smi: Arc<dyn StorageManagerInterface> = Arc::new(LocalStore::new());
         let vdc = VdcCollection::new(smi);
+        for id in vdc.all_entries().await.unwrap() {
+            vdc.delete(id).await.unwrap();
+        }
         let payload_1: Vec<u8> = "Some random collection of bytes. ⚛".into();
         let payload_2: Vec<u8> = "Some other random collection of bytes. 📯".into();
         let payload_3: Vec<u8> = "Some third random collection of bytes. λ".into();

@@ -1,74 +1,65 @@
 use crate::common::*;
 use crate::storage_manager::*;
 
-use std::fs;
-
-const DATASTORE_PATH: &str = "sprucekit-datastore";
+use std::collections::HashMap;
+use std::sync::Mutex;
 
 /// A version of secure storage for debugging purposes, and as a minimal interface example.  Do not
 /// use in production!  This encrypts nothing, uses a path relative to the current working directory,
 /// and is generally cavalier about errors it encounters along the way.
 #[derive(Debug)]
-pub struct LocalStore;
+pub struct LocalStore {
+    store: Mutex<HashMap<Key, Value>>,
+}
+
+impl LocalStore {
+    pub fn new() -> Self {
+        Self {
+            store: Mutex::new(HashMap::new()),
+        }
+    }
+}
+
+impl Default for LocalStore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 #[async_trait::async_trait]
 impl StorageManagerInterface for LocalStore {
     /// Add a key/value pair to storage.
     async fn add(&self, key: Key, value: Value) -> Result<(), StorageManagerError> {
-        // Make sure the directory exists.
-        match fs::create_dir(DATASTORE_PATH) {
-            Ok(_) => {}                                                       // Success.
-            Err(ref e) if e.kind() == std::io::ErrorKind::AlreadyExists => {} // Success.
-            Err(_) => return Err(StorageManagerError::InternalError),         // Fail.
-        }
+        let mut store = self.store.lock().unwrap();
 
-        match fs::write(gen_path(key.0), value.0) {
-            Ok(_) => Ok(()),
-            Err(_) => Err(StorageManagerError::InternalError),
-        }
+        store.insert(key, value);
+
+        Ok(())
     }
 
     /// Retrieve the value associated with a key.
     async fn get(&self, key: Key) -> Result<Option<Value>, StorageManagerError> {
-        match fs::read(gen_path(key.0)) {
-            Ok(x) => Ok(Some(Value(x))),
-            Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
-            Err(_) => Err(StorageManagerError::InternalError),
+        let store = self.store.lock().unwrap();
+
+        match store.get(&key) {
+            Some(x) => Ok(Some(Value(x.0.clone()))),
+            None => Ok(None),
         }
     }
 
     /// List the available key/value pairs.
     async fn list(&self) -> Result<Vec<Key>, StorageManagerError> {
-        let mut keys = Vec::new();
+        let store = self.store.lock().unwrap();
 
-        let files = match fs::read_dir(DATASTORE_PATH) {
-            Ok(x) => x,
-            Err(_) => return Err(StorageManagerError::InternalError),
-        };
-
-        for f in files.into_iter().flatten() {
-            match f.file_name().to_str() {
-                Some(x) => keys.push(Key(x.to_string())),
-                None => return Err(StorageManagerError::InternalError),
-            }
-            //if let Some(x) = f.file_name().to_str() {
-            //    keys.push(Key(x.to_string()));
-            //}
-        }
-
-        Ok(keys)
+        Ok(store.keys().map(|x| x.to_owned()).collect())
     }
 
     /// Delete a given key/value pair from storage.
     async fn remove(&self, key: Key) -> Result<(), StorageManagerError> {
-        match fs::remove_file(gen_path(key.0)) {
-            Ok(_) => Ok(()),
-            Err(_) => Ok(()), // Removing something that isn't there shouldn't generate an error.
-        }
-    }
-}
+        let mut store = self.store.lock().unwrap();
 
-/// Generate the path to a file in the storage.
-fn gen_path(file: String) -> String {
-    format!("{}/{}", DATASTORE_PATH, file)
+        _ = store.remove(&key);
+
+        Ok(())
+    }
 }

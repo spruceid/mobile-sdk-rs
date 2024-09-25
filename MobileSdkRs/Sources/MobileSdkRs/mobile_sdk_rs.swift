@@ -1182,6 +1182,99 @@ public func FfiConverterTypeIHttpClient_lower(_ value: IHttpClient) -> UnsafeMut
 
 
 
+public protocol InProcessRecordProtocol : AnyObject {
+    
+}
+
+open class InProcessRecord:
+    InProcessRecordProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_inprocessrecord(self.pointer, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_inprocessrecord(pointer, $0) }
+    }
+
+    
+
+    
+
+}
+
+public struct FfiConverterTypeInProcessRecord: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = InProcessRecord
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> InProcessRecord {
+        return InProcessRecord(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: InProcessRecord) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> InProcessRecord {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: InProcessRecord, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+public func FfiConverterTypeInProcessRecord_lift(_ pointer: UnsafeMutableRawPointer) throws -> InProcessRecord {
+    return try FfiConverterTypeInProcessRecord.lift(pointer)
+}
+
+public func FfiConverterTypeInProcessRecord_lower(_ value: InProcessRecord) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeInProcessRecord.lower(value)
+}
+
+
+
+
 /**
  * A verifiable credential secured as JSON.
  */
@@ -1732,6 +1825,210 @@ public func FfiConverterTypeMDLSessionManager_lift(_ pointer: UnsafeMutableRawPo
 
 public func FfiConverterTypeMDLSessionManager_lower(_ value: MdlSessionManager) -> UnsafeMutableRawPointer {
     return FfiConverterTypeMDLSessionManager.lower(value)
+}
+
+
+
+
+public protocol MdlPresentationSessionProtocol : AnyObject {
+    
+    /**
+     * Constructs the response to be sent from the holder to the reader containing
+     * the items of information the user has consented to share.
+     *
+     * Takes a HashMap of items the user has authorized the app to share, as well
+     * as the id of a key stored in the key manager to be used to sign the response.
+     * Returns a byte array containing the signed response to be returned to the
+     * reader.
+     */
+    func generateResponse(permittedItems: [String: [String: [String]]]) throws  -> Data
+    
+    /**
+     * Returns the BLE identification
+     */
+    func getBleIdent()  -> Data
+    
+    /**
+     * Returns the generated QR code
+     */
+    func getQrCodeUri()  -> String
+    
+    /**
+     * Handle a request from a reader that is seeking information from the mDL holder.
+     *
+     * Takes the raw bytes received from the reader by the holder over the transmission
+     * technology. Returns a Vector of information items requested by the reader, or an
+     * error.
+     */
+    func handleRequest(request: Data) throws  -> [ItemsRequest]
+    
+    func submitResponse(derSignature: Data) throws  -> Data
+    
+    /**
+     * Terminates the mDL exchange session.
+     *
+     * Returns the termination message to be transmitted to the reader.
+     */
+    func terminateSession() throws  -> Data
+    
+}
+
+open class MdlPresentationSession:
+    MdlPresentationSessionProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer!
+
+    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
+    public struct NoPointer {
+        public init() {}
+    }
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    /// This constructor can be used to instantiate a fake object.
+    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
+    ///
+    /// - Warning:
+    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
+    public init(noPointer: NoPointer) {
+        self.pointer = nil
+    }
+
+    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
+        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_mdlpresentationsession(self.pointer, $0) }
+    }
+    // No primary constructor declared for this class.
+
+    deinit {
+        guard let pointer = pointer else {
+            return
+        }
+
+        try! rustCall { uniffi_mobile_sdk_rs_fn_free_mdlpresentationsession(pointer, $0) }
+    }
+
+    
+
+    
+    /**
+     * Constructs the response to be sent from the holder to the reader containing
+     * the items of information the user has consented to share.
+     *
+     * Takes a HashMap of items the user has authorized the app to share, as well
+     * as the id of a key stored in the key manager to be used to sign the response.
+     * Returns a byte array containing the signed response to be returned to the
+     * reader.
+     */
+open func generateResponse(permittedItems: [String: [String: [String]]])throws  -> Data {
+    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeSignatureError.lift) {
+    uniffi_mobile_sdk_rs_fn_method_mdlpresentationsession_generate_response(self.uniffiClonePointer(),
+        FfiConverterDictionaryStringDictionaryStringSequenceString.lower(permittedItems),$0
+    )
+})
+}
+    
+    /**
+     * Returns the BLE identification
+     */
+open func getBleIdent() -> Data {
+    return try!  FfiConverterData.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_mdlpresentationsession_get_ble_ident(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * Returns the generated QR code
+     */
+open func getQrCodeUri() -> String {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_mdlpresentationsession_get_qr_code_uri(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * Handle a request from a reader that is seeking information from the mDL holder.
+     *
+     * Takes the raw bytes received from the reader by the holder over the transmission
+     * technology. Returns a Vector of information items requested by the reader, or an
+     * error.
+     */
+open func handleRequest(request: Data)throws  -> [ItemsRequest] {
+    return try  FfiConverterSequenceTypeItemsRequest.lift(try rustCallWithError(FfiConverterTypeRequestError.lift) {
+    uniffi_mobile_sdk_rs_fn_method_mdlpresentationsession_handle_request(self.uniffiClonePointer(),
+        FfiConverterData.lower(request),$0
+    )
+})
+}
+    
+open func submitResponse(derSignature: Data)throws  -> Data {
+    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeSignatureError.lift) {
+    uniffi_mobile_sdk_rs_fn_method_mdlpresentationsession_submit_response(self.uniffiClonePointer(),
+        FfiConverterData.lower(derSignature),$0
+    )
+})
+}
+    
+    /**
+     * Terminates the mDL exchange session.
+     *
+     * Returns the termination message to be transmitted to the reader.
+     */
+open func terminateSession()throws  -> Data {
+    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeTerminationError.lift) {
+    uniffi_mobile_sdk_rs_fn_method_mdlpresentationsession_terminate_session(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+
+}
+
+public struct FfiConverterTypeMdlPresentationSession: FfiConverter {
+
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = MdlPresentationSession
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> MdlPresentationSession {
+        return MdlPresentationSession(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: MdlPresentationSession) -> UnsafeMutableRawPointer {
+        return value.uniffiClonePointer()
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdlPresentationSession {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: MdlPresentationSession, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+}
+
+
+
+
+public func FfiConverterTypeMdlPresentationSession_lift(_ pointer: UnsafeMutableRawPointer) throws -> MdlPresentationSession {
+    return try FfiConverterTypeMdlPresentationSession.lift(pointer)
+}
+
+public func FfiConverterTypeMdlPresentationSession_lower(_ value: MdlPresentationSession) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeMdlPresentationSession.lower(value)
 }
 
 
@@ -2569,192 +2866,6 @@ public func FfiConverterTypeParsedCredential_lift(_ pointer: UnsafeMutableRawPoi
 
 public func FfiConverterTypeParsedCredential_lower(_ value: ParsedCredential) -> UnsafeMutableRawPointer {
     return FfiConverterTypeParsedCredential.lower(value)
-}
-
-
-
-
-public protocol SessionManagerProtocol : AnyObject {
-    
-}
-
-open class SessionManager:
-    SessionManagerProtocol {
-    fileprivate let pointer: UnsafeMutableRawPointer!
-
-    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
-    public struct NoPointer {
-        public init() {}
-    }
-
-    // TODO: We'd like this to be `private` but for Swifty reasons,
-    // we can't implement `FfiConverter` without making this `required` and we can't
-    // make it `required` without making it `public`.
-    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
-        self.pointer = pointer
-    }
-
-    /// This constructor can be used to instantiate a fake object.
-    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
-    ///
-    /// - Warning:
-    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
-    public init(noPointer: NoPointer) {
-        self.pointer = nil
-    }
-
-    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_sessionmanager(self.pointer, $0) }
-    }
-    // No primary constructor declared for this class.
-
-    deinit {
-        guard let pointer = pointer else {
-            return
-        }
-
-        try! rustCall { uniffi_mobile_sdk_rs_fn_free_sessionmanager(pointer, $0) }
-    }
-
-    
-
-    
-
-}
-
-public struct FfiConverterTypeSessionManager: FfiConverter {
-
-    typealias FfiType = UnsafeMutableRawPointer
-    typealias SwiftType = SessionManager
-
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> SessionManager {
-        return SessionManager(unsafeFromRawPointer: pointer)
-    }
-
-    public static func lower(_ value: SessionManager) -> UnsafeMutableRawPointer {
-        return value.uniffiClonePointer()
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SessionManager {
-        let v: UInt64 = try readInt(&buf)
-        // The Rust code won't compile if a pointer won't fit in a UInt64.
-        // We have to go via `UInt` because that's the thing that's the size of a pointer.
-        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
-        if (ptr == nil) {
-            throw UniffiInternalError.unexpectedNullPointer
-        }
-        return try lift(ptr!)
-    }
-
-    public static func write(_ value: SessionManager, into buf: inout [UInt8]) {
-        // This fiddling is because `Int` is the thing that's the same size as a pointer.
-        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
-        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
-    }
-}
-
-
-
-
-public func FfiConverterTypeSessionManager_lift(_ pointer: UnsafeMutableRawPointer) throws -> SessionManager {
-    return try FfiConverterTypeSessionManager.lift(pointer)
-}
-
-public func FfiConverterTypeSessionManager_lower(_ value: SessionManager) -> UnsafeMutableRawPointer {
-    return FfiConverterTypeSessionManager.lower(value)
-}
-
-
-
-
-public protocol SessionManagerEngagedProtocol : AnyObject {
-    
-}
-
-open class SessionManagerEngaged:
-    SessionManagerEngagedProtocol {
-    fileprivate let pointer: UnsafeMutableRawPointer!
-
-    /// Used to instantiate a [FFIObject] without an actual pointer, for fakes in tests, mostly.
-    public struct NoPointer {
-        public init() {}
-    }
-
-    // TODO: We'd like this to be `private` but for Swifty reasons,
-    // we can't implement `FfiConverter` without making this `required` and we can't
-    // make it `required` without making it `public`.
-    required public init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
-        self.pointer = pointer
-    }
-
-    /// This constructor can be used to instantiate a fake object.
-    /// - Parameter noPointer: Placeholder value so we can have a constructor separate from the default empty one that may be implemented for classes extending [FFIObject].
-    ///
-    /// - Warning:
-    ///     Any object instantiated with this constructor cannot be passed to an actual Rust-backed object. Since there isn't a backing [Pointer] the FFI lower functions will crash.
-    public init(noPointer: NoPointer) {
-        self.pointer = nil
-    }
-
-    public func uniffiClonePointer() -> UnsafeMutableRawPointer {
-        return try! rustCall { uniffi_mobile_sdk_rs_fn_clone_sessionmanagerengaged(self.pointer, $0) }
-    }
-    // No primary constructor declared for this class.
-
-    deinit {
-        guard let pointer = pointer else {
-            return
-        }
-
-        try! rustCall { uniffi_mobile_sdk_rs_fn_free_sessionmanagerengaged(pointer, $0) }
-    }
-
-    
-
-    
-
-}
-
-public struct FfiConverterTypeSessionManagerEngaged: FfiConverter {
-
-    typealias FfiType = UnsafeMutableRawPointer
-    typealias SwiftType = SessionManagerEngaged
-
-    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> SessionManagerEngaged {
-        return SessionManagerEngaged(unsafeFromRawPointer: pointer)
-    }
-
-    public static func lower(_ value: SessionManagerEngaged) -> UnsafeMutableRawPointer {
-        return value.uniffiClonePointer()
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SessionManagerEngaged {
-        let v: UInt64 = try readInt(&buf)
-        // The Rust code won't compile if a pointer won't fit in a UInt64.
-        // We have to go via `UInt` because that's the thing that's the size of a pointer.
-        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
-        if (ptr == nil) {
-            throw UniffiInternalError.unexpectedNullPointer
-        }
-        return try lift(ptr!)
-    }
-
-    public static func write(_ value: SessionManagerEngaged, into buf: inout [UInt8]) {
-        // This fiddling is because `Int` is the thing that's the same size as a pointer.
-        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
-        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
-    }
-}
-
-
-
-
-public func FfiConverterTypeSessionManagerEngaged_lift(_ pointer: UnsafeMutableRawPointer) throws -> SessionManagerEngaged {
-    return try FfiConverterTypeSessionManagerEngaged.lift(pointer)
-}
-
-public func FfiConverterTypeSessionManagerEngaged_lower(_ value: SessionManagerEngaged) -> UnsafeMutableRawPointer {
-    return FfiConverterTypeSessionManagerEngaged.lower(value)
 }
 
 
@@ -4402,88 +4513,6 @@ public func FfiConverterTypeMDLReaderSessionData_lift(_ buf: RustBuffer) throws 
 
 public func FfiConverterTypeMDLReaderSessionData_lower(_ value: MdlReaderSessionData) -> RustBuffer {
     return FfiConverterTypeMDLReaderSessionData.lower(value)
-}
-
-
-public struct RequestData {
-    public var sessionManager: SessionManager
-    public var itemsRequests: [ItemsRequest]
-
-    // Default memberwise initializers are never public by default, so we
-    // declare one manually.
-    public init(sessionManager: SessionManager, itemsRequests: [ItemsRequest]) {
-        self.sessionManager = sessionManager
-        self.itemsRequests = itemsRequests
-    }
-}
-
-
-
-public struct FfiConverterTypeRequestData: FfiConverterRustBuffer {
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RequestData {
-        return
-            try RequestData(
-                sessionManager: FfiConverterTypeSessionManager.read(from: &buf), 
-                itemsRequests: FfiConverterSequenceTypeItemsRequest.read(from: &buf)
-        )
-    }
-
-    public static func write(_ value: RequestData, into buf: inout [UInt8]) {
-        FfiConverterTypeSessionManager.write(value.sessionManager, into: &buf)
-        FfiConverterSequenceTypeItemsRequest.write(value.itemsRequests, into: &buf)
-    }
-}
-
-
-public func FfiConverterTypeRequestData_lift(_ buf: RustBuffer) throws -> RequestData {
-    return try FfiConverterTypeRequestData.lift(buf)
-}
-
-public func FfiConverterTypeRequestData_lower(_ value: RequestData) -> RustBuffer {
-    return FfiConverterTypeRequestData.lower(value)
-}
-
-
-public struct SessionData {
-    public var state: SessionManagerEngaged
-    public var qrCodeUri: String
-    public var bleIdent: Data
-
-    // Default memberwise initializers are never public by default, so we
-    // declare one manually.
-    public init(state: SessionManagerEngaged, qrCodeUri: String, bleIdent: Data) {
-        self.state = state
-        self.qrCodeUri = qrCodeUri
-        self.bleIdent = bleIdent
-    }
-}
-
-
-
-public struct FfiConverterTypeSessionData: FfiConverterRustBuffer {
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SessionData {
-        return
-            try SessionData(
-                state: FfiConverterTypeSessionManagerEngaged.read(from: &buf), 
-                qrCodeUri: FfiConverterString.read(from: &buf), 
-                bleIdent: FfiConverterData.read(from: &buf)
-        )
-    }
-
-    public static func write(_ value: SessionData, into buf: inout [UInt8]) {
-        FfiConverterTypeSessionManagerEngaged.write(value.state, into: &buf)
-        FfiConverterString.write(value.qrCodeUri, into: &buf)
-        FfiConverterData.write(value.bleIdent, into: &buf)
-    }
-}
-
-
-public func FfiConverterTypeSessionData_lift(_ buf: RustBuffer) throws -> SessionData {
-    return try FfiConverterTypeSessionData.lift(buf)
-}
-
-public func FfiConverterTypeSessionData_lower(_ value: SessionData) -> RustBuffer {
-    return FfiConverterTypeSessionData.lower(value)
 }
 
 // Note that we don't yet support `indirect` for enums.
@@ -7365,14 +7394,6 @@ public func generatePopPrepare(audience: String, issuer: String, nonce: String?,
     )
 })
 }
-public func handleRequest(state: SessionManagerEngaged, request: Data)throws  -> RequestData {
-    return try  FfiConverterTypeRequestData.lift(try rustCallWithError(FfiConverterTypeRequestError.lift) {
-    uniffi_mobile_sdk_rs_fn_func_handle_request(
-        FfiConverterTypeSessionManagerEngaged.lower(state),
-        FfiConverterData.lower(request),$0
-    )
-})
-}
 public func handleResponse(state: MdlSessionManager, response: Data)throws  -> MdlReaderResponseData {
     return try  FfiConverterTypeMDLReaderResponseData.lift(try rustCallWithError(FfiConverterTypeMDLReaderResponseError.lift) {
     uniffi_mobile_sdk_rs_fn_func_handle_response(
@@ -7381,13 +7402,68 @@ public func handleResponse(state: MdlSessionManager, response: Data)throws  -> M
     )
 })
 }
-public func initialiseSession(document: Mdoc, uuid: Uuid)throws  -> SessionData {
-    return try  FfiConverterTypeSessionData.lift(try rustCallWithError(FfiConverterTypeSessionError.lift) {
-    uniffi_mobile_sdk_rs_fn_func_initialise_session(
-        FfiConverterTypeMdoc.lower(document),
-        FfiConverterTypeUuid.lower(uuid),$0
-    )
-})
+/**
+ * Begin the mDL presentation process for the holder when the desired
+ * Mdoc is already stored in a [VdcCollection].
+ *
+ * Initializes the presentation session for an ISO 18013-5 mDL and stores
+ * the session state object in the device storage_manager.
+ *
+ * Arguments:
+ * mdoc_id: unique identifier for the credential to present, to be looked up
+ * in the VDC collection
+ * uuid:    the Bluetooth Low Energy Client Central Mode UUID to be used
+ *
+ * Returns:
+ * A Result, with the `Ok` containing a tuple consisting of an enum representing
+ * the state of the presentation, a String containing the QR code URI, and a
+ * String containing the BLE ident.
+
+ */
+public func initializeMdlPresentation(mdocId: Uuid, uuid: Uuid, storageManager: StorageManagerInterface)async throws  -> MdlPresentationSession {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_func_initialize_mdl_presentation(FfiConverterTypeUuid.lower(mdocId),FfiConverterTypeUuid.lower(uuid),FfiConverterTypeStorageManagerInterface.lower(storageManager)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_pointer,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_pointer,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_pointer,
+            liftFunc: FfiConverterTypeMdlPresentationSession.lift,
+            errorHandler: FfiConverterTypeSessionError.lift
+        )
+}
+/**
+ * Begin the mDL presentation process for the holder by passing in the raw
+ * bytes of an Mdoc as a CBOR encoded Vec<u8>.
+ *
+ * Initializes the presentation session for an ISO 18013-5 mDL and stores
+ * the session state object in the device storage_manager.
+ *
+ * Arguments:
+ * mdoc_bytes: bytes of the Mdoc in CBOR encoded Vec<u8>
+ * uuid:       the Bluetooth Low Energy Client Central Mode UUID to be used
+ *
+ * Returns:
+ * A Result, with the `Ok` containing a tuple consisting of an enum representing
+ * the state of the presentation, a String containing the QR code URI, and a
+ * String containing the BLE ident.
+
+ */
+public func initializeMdlPresentationFromBytes(mdocBytes: Data, keyAlias: KeyAlias, uuid: Uuid)async throws  -> MdlPresentationSession {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_func_initialize_mdl_presentation_from_bytes(FfiConverterData.lower(mdocBytes),FfiConverterTypeKeyAlias.lower(keyAlias),FfiConverterTypeUuid.lower(uuid)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_pointer,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_pointer,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_pointer,
+            liftFunc: FfiConverterTypeMdlPresentationSession.lift,
+            errorHandler: FfiConverterTypeSessionError.lift
+        )
 }
 public func oid4vciExchangeCredential(session: Oid4vciSession, proofsOfPossession: [String], httpClient: IHttpClient)async throws  -> [CredentialResponse] {
     return
@@ -7451,28 +7527,6 @@ public func oid4vciInitiateWithOffer(credentialOffer: String, clientId: String, 
             liftFunc: FfiConverterTypeOid4vciSession.lift,
             errorHandler: FfiConverterTypeOid4vciError.lift
         )
-}
-public func submitResponse(sessionManager: SessionManager, permittedItems: [String: [String: [String]]])throws  -> Data {
-    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeResponseError.lift) {
-    uniffi_mobile_sdk_rs_fn_func_submit_response(
-        FfiConverterTypeSessionManager.lower(sessionManager),
-        FfiConverterDictionaryStringDictionaryStringSequenceString.lower(permittedItems),$0
-    )
-})
-}
-public func submitSignature(sessionManager: SessionManager, derSignature: Data)throws  -> Data {
-    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeSignatureError.lift) {
-    uniffi_mobile_sdk_rs_fn_func_submit_signature(
-        FfiConverterTypeSessionManager.lower(sessionManager),
-        FfiConverterData.lower(derSignature),$0
-    )
-})
-}
-public func terminateSession()throws  -> Data {
-    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeTerminationError.lift) {
-    uniffi_mobile_sdk_rs_fn_func_terminate_session($0
-    )
-})
 }
 public func vcToSignedVp(vc: String, keyStr: String)async throws  -> String {
     return
@@ -7569,13 +7623,13 @@ private var initializationResult: InitializationResult = {
     if (uniffi_mobile_sdk_rs_checksum_func_generate_pop_prepare() != 18468) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_func_handle_request() != 26058) {
-        return InitializationResult.apiChecksumMismatch
-    }
     if (uniffi_mobile_sdk_rs_checksum_func_handle_response() != 43961) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_func_initialise_session() != 11172) {
+    if (uniffi_mobile_sdk_rs_checksum_func_initialize_mdl_presentation() != 29387) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_func_initialize_mdl_presentation_from_bytes() != 35281) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_exchange_credential() != 13827) {
@@ -7591,15 +7645,6 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_initiate_with_offer() != 12958) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_mobile_sdk_rs_checksum_func_submit_response() != 50547) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_mobile_sdk_rs_checksum_func_submit_signature() != 17097) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_mobile_sdk_rs_checksum_func_terminate_session() != 25700) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_func_vc_to_signed_vp() != 47312) {
@@ -7660,6 +7705,24 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_method_jwtvc_vcdm_version() != 26158) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_mdlpresentationsession_generate_response() != 37013) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_mdlpresentationsession_get_ble_ident() != 25991) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_mdlpresentationsession_get_qr_code_uri() != 36281) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_mdlpresentationsession_handle_request() != 21650) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_mdlpresentationsession_submit_response() != 684) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_mdlpresentationsession_terminate_session() != 8677) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_method_mdoc_details() != 29355) {
