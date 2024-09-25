@@ -11,6 +11,11 @@ jobs:
   validation:
     runs-on: ubuntu-latest
     steps:
+    - name: Validate main branch
+      if: github.ref_name != github.event.repository.default_branch
+      run: |
+        echo "Branch is not main"
+        exit 0
     - name: Validate tag
       run: |
         echo "${{ github.event.inputs.version }}" | grep -P '^[0-9]+\.[0-9]+\.[0-9]+'
