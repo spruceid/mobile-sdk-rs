@@ -74,7 +74,7 @@ jobs:
         pod trunk push SpruceIDMobileSdkRs.podspec --synchronous
 
   kotlin:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest-medium
     needs: validation
     defaults:
       run:
