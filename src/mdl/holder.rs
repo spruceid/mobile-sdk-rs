@@ -87,7 +87,7 @@ pub async fn initialize_mdl_presentation(
             value: format!("Could not generate qr engagement: {e:?}"),
         })?;
     Ok(MdlPresentationSession {
-        engaged: Mutex::new(Some(engaged_state)),
+        engaged: Mutex::new(engaged_state),
         in_process: Mutex::new(None),
         qr_code_uri,
         ble_ident,
@@ -142,7 +142,7 @@ pub async fn initialize_mdl_presentation_from_bytes(
             value: format!("Could not generate qr engagement: {e:?}"),
         })?;
     Ok(MdlPresentationSession {
-        engaged: Mutex::new(Some(engaged_state)),
+        engaged: Mutex::new(engaged_state),
         in_process: Mutex::new(None),
         qr_code_uri,
         ble_ident,
@@ -151,7 +151,7 @@ pub async fn initialize_mdl_presentation_from_bytes(
 
 #[derive(uniffi::Object)]
 pub struct MdlPresentationSession {
-    engaged: Mutex<Option<device::SessionManagerEngaged>>,
+    engaged: Mutex<device::SessionManagerEngaged>,
     in_process: Mutex<Option<InProcessRecord>>,
     pub qr_code_uri: String,
     pub ble_ident: Vec<u8>,
@@ -176,35 +176,27 @@ impl MdlPresentationSession {
                 .map_err(|e| RequestError::Generic {
                     value: format!("Could not deserialize request: {e:?}"),
                 })?;
-            // Mutexes only return Err if another thread has panicked while holding the mutex
-            // If that has happened, its probably better to just crash. This is what the standard documentation recommends.
-            // See https://doc.rust-lang.org/std/sync/struct.Mutex.html
-            let engaged = self
-                .engaged
+            self.engaged
                 .lock()
-                .expect("Could not lock mutex")
-                .deref_mut()
-                .take();
-            engaged
-                .unwrap()
+                .map_err(|_| RequestError::Generic {
+                    value: "Could not lock mutex".to_string(),
+                })?
+                .clone()
                 .process_session_establishment(session_establishment)
                 .map_err(|e| RequestError::Generic {
                     value: format!("Could not process process session establishment: {e:?}"),
                 })?
         };
 
-        let mut in_process = self.in_process.lock().unwrap();
+        let mut in_process = self.in_process.lock().map_err(|_| RequestError::Generic {
+            value: "Could not lock mutex".to_string(),
+        })?;
         *in_process = Some(InProcessRecord {
             session: session_manager,
             items_request: items_requests.clone(),
         });
 
-        // Unwrapping here is safe because we set in_process to Some() in the previous line.
-        Ok(in_process
-            .as_ref()
-            .unwrap()
-            .items_request
-            .clone()
+        Ok(items_requests
             .into_iter()
             .map(|req| ItemsRequest {
                 doc_type: req.doc_type,
