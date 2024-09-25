@@ -3,9 +3,9 @@ use std::sync::Arc;
 use base64::prelude::*;
 use ssi::{
     claims::{
-        jwt::IntoDecodedJWT,
+        jwt::IntoDecodedJwt,
         vc::{v1::Credential as _, v2::Credential as _},
-        CompactJWSString,
+        JwsString,
     },
     prelude::AnyJsonCredential,
 };
@@ -19,7 +19,7 @@ use super::{Credential, VcdmVersion};
 /// A verifiable credential secured as a JWT.
 pub struct JwtVc {
     id: Uuid,
-    jws: CompactJWSString,
+    jws: JwsString,
     credential: AnyJsonCredential,
     credential_string: String,
     header_json_string: String,
@@ -117,8 +117,7 @@ impl JwtVc {
         jws: String,
         key_alias: Option<KeyAlias>,
     ) -> Result<Arc<Self>, JwtVcInitError> {
-        let jws =
-            CompactJWSString::from_string(jws).map_err(|_| JwtVcInitError::CompactJwsDecoding)?;
+        let jws = JwsString::from_string(jws).map_err(|_| JwtVcInitError::CompactJwsDecoding)?;
         let header_json_string =
             Self::convert_to_json_string(jws.header()).ok_or(JwtVcInitError::HeaderDecoding)?;
         let payload_json_string =

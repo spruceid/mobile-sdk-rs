@@ -5859,6 +5859,66 @@ extension ResponseError: Foundation.LocalizedError {
 }
 
 
+public enum SdJwtVcError {
+
+    
+    
+    case JwtDecoding
+    case InvalidSdJwt
+    case Serialization
+}
+
+
+public struct FfiConverterTypeSdJwtVcError: FfiConverterRustBuffer {
+    typealias SwiftType = SdJwtVcError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SdJwtVcError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .JwtDecoding
+        case 2: return .InvalidSdJwt
+        case 3: return .Serialization
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: SdJwtVcError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case .JwtDecoding:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .InvalidSdJwt:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .Serialization:
+            writeInt(&buf, Int32(3))
+        
+        }
+    }
+}
+
+
+extension SdJwtVcError: Equatable, Hashable {}
+
+extension SdJwtVcError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
+
+
 public enum SessionError {
 
     
@@ -7365,6 +7425,13 @@ private func uniffiForeignFutureFree(handle: UInt64) {
 public func uniffiForeignFutureHandleCountMobileSdkRs() -> Int {
     UNIFFI_FOREIGN_FUTURE_HANDLE_MAP.count
 }
+public func decodeRevealSdJwt(input: String)throws  -> String {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeSdJwtVcError.lift) {
+    uniffi_mobile_sdk_rs_fn_func_decode_reveal_sd_jwt(
+        FfiConverterString.lower(input),$0
+    )
+})
+}
 public func establishSession(uri: String, requestedItems: [String: [String: Bool]], trustAnchorRegistry: [String]?)throws  -> MdlReaderSessionData {
     return try  FfiConverterTypeMDLReaderSessionData.lift(try rustCallWithError(FfiConverterTypeMDLReaderSessionError.lift) {
     uniffi_mobile_sdk_rs_fn_func_establish_session(
@@ -7613,6 +7680,9 @@ private var initializationResult: InitializationResult = {
     let scaffolding_contract_version = ffi_mobile_sdk_rs_uniffi_contract_version()
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_func_decode_reveal_sd_jwt() != 24154) {
+        return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_func_establish_session() != 26937) {
         return InitializationResult.apiChecksumMismatch

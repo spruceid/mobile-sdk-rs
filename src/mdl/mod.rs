@@ -72,7 +72,7 @@ pub async fn vc_to_signed_vp(vc: String, key_str: String) -> Result<String, VPEr
 pub async fn verify_jwt_vp(jwt_vp: String) -> Result<(), VPError> {
     use ssi::prelude::*;
 
-    let jwt = CompactJWSString::from_string(jwt_vp.to_string()).map_err(|e| VPError::Parsing {
+    let jwt = JwsString::from_string(jwt_vp.to_string()).map_err(|e| VPError::Parsing {
         value: e.to_string(),
     })?;
 
