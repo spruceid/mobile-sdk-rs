@@ -1,6 +1,7 @@
 pub mod json_vc;
 pub mod jwt_vc;
 pub mod mdoc;
+pub mod sd_jwt_vc;
 
 use std::sync::Arc;
 
