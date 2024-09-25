@@ -10,6 +10,7 @@
 //!
 
 use crate::common::*;
+use crate::credential::mdoc::Mdoc;
 use crate::{storage_manager::StorageManagerInterface, vdc_collection::VdcCollection};
 use std::ops::DerefMut;
 use std::{
@@ -60,13 +61,7 @@ pub async fn initialize_mdl_presentation(
             value: "No credential with that ID in the VDC collection.".to_string(),
         })?;
 
-    let mdoc = crate::credential::mdoc::Mdoc::from_cbor_encoded_document(
-        document.payload,
-        document.key_alias.ok_or(SessionError::Generic {
-            value: "key_alias missing in vdc collection".to_string(),
-        })?,
-    )
-    .map_err(|e| SessionError::Generic {
+    let mdoc: Arc<Mdoc> = document.try_into().map_err(|e| SessionError::Generic {
         value: format!("Error retrieving MDoc from storage: {e:}"),
     })?;
     let drms = DeviceRetrievalMethods::new(DeviceRetrievalMethod::BLE(BleOptions {
@@ -176,14 +171,14 @@ impl MdlPresentationSession {
     /// technology. Returns a Vector of information items requested by the reader, or an
     /// error.
     pub fn handle_request(&self, request: Vec<u8>) -> Result<Vec<ItemsRequest>, RequestError> {
-        // Mutexes only return Err if another thread has panicked while holding the mutex
-        // If that has happened, its probably better to just crash. This is what the standard documentation recommends.
-        // See https://doc.rust-lang.org/std/sync/struct.Mutex.html
         let (session_manager, items_requests) = {
             let session_establishment: SessionEstablishment = serde_cbor::from_slice(&request)
                 .map_err(|e| RequestError::Generic {
                     value: format!("Could not deserialize request: {e:?}"),
                 })?;
+            // Mutexes only return Err if another thread has panicked while holding the mutex
+            // If that has happened, its probably better to just crash. This is what the standard documentation recommends.
+            // See https://doc.rust-lang.org/std/sync/struct.Mutex.html
             let engaged = self
                 .engaged
                 .lock()
@@ -203,6 +198,8 @@ impl MdlPresentationSession {
             session: session_manager,
             items_request: items_requests.clone(),
         });
+
+        // Unwrapping here is safe because we set in_process to Some() in the previous line.
         Ok(in_process
             .as_ref()
             .unwrap()
