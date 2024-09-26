@@ -25,7 +25,7 @@ pub struct JsonVc {
 impl JsonVc {
     #[uniffi::constructor]
     /// Construct a new credential from UTF-8 encoded JSON.
-    pub fn new_from_compact_jws(utf8_json_string: String) -> Result<Arc<Self>, JsonVcInitError> {
+    pub fn new_from_json(utf8_json_string: String) -> Result<Arc<Self>, JsonVcInitError> {
         let id = Uuid::new_v4();
         let json = serde_json::from_str(&utf8_json_string)
             .map_err(|_| JsonVcInitError::JsonStringDecoding)?;
@@ -34,7 +34,7 @@ impl JsonVc {
 
     #[uniffi::constructor]
     /// Construct a new credential from UTF-8 encoded JSON.
-    pub fn new_from_compact_jws_with_key(
+    pub fn new_from_json_with_key(
         utf8_json_string: String,
         key_alias: KeyAlias,
     ) -> Result<Arc<Self>, JsonVcInitError> {
