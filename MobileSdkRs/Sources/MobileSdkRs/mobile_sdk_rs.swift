@@ -1358,9 +1358,9 @@ open class JsonVc:
     /**
      * Construct a new credential from UTF-8 encoded JSON.
      */
-public static func newFromCompactJws(utf8JsonString: String)throws  -> JsonVc {
+public static func newFromJson(utf8JsonString: String)throws  -> JsonVc {
     return try  FfiConverterTypeJsonVc.lift(try rustCallWithError(FfiConverterTypeJsonVcInitError.lift) {
-    uniffi_mobile_sdk_rs_fn_constructor_jsonvc_new_from_compact_jws(
+    uniffi_mobile_sdk_rs_fn_constructor_jsonvc_new_from_json(
         FfiConverterString.lower(utf8JsonString),$0
     )
 })
@@ -1369,9 +1369,9 @@ public static func newFromCompactJws(utf8JsonString: String)throws  -> JsonVc {
     /**
      * Construct a new credential from UTF-8 encoded JSON.
      */
-public static func newFromCompactJwsWithKey(utf8JsonString: String, keyAlias: KeyAlias)throws  -> JsonVc {
+public static func newFromJsonWithKey(utf8JsonString: String, keyAlias: KeyAlias)throws  -> JsonVc {
     return try  FfiConverterTypeJsonVc.lift(try rustCallWithError(FfiConverterTypeJsonVcInitError.lift) {
-    uniffi_mobile_sdk_rs_fn_constructor_jsonvc_new_from_compact_jws_with_key(
+    uniffi_mobile_sdk_rs_fn_constructor_jsonvc_new_from_json_with_key(
         FfiConverterString.lower(utf8JsonString),
         FfiConverterTypeKeyAlias.lower(keyAlias),$0
     )
@@ -7891,10 +7891,10 @@ private var initializationResult: InitializationResult = {
     if (uniffi_mobile_sdk_rs_checksum_constructor_ihttpclient_new_sync() != 47576) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_constructor_jsonvc_new_from_compact_jws() != 1871) {
+    if (uniffi_mobile_sdk_rs_checksum_constructor_jsonvc_new_from_json() != 40674) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_constructor_jsonvc_new_from_compact_jws_with_key() != 58227) {
+    if (uniffi_mobile_sdk_rs_checksum_constructor_jsonvc_new_from_json_with_key() != 63463) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_constructor_jwtvc_new_from_compact_jws() != 5193) {
