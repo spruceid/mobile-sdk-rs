@@ -94,15 +94,15 @@ pub async fn initialize_mdl_presentation(
     })
 }
 
-/// Begin the mDL presentation process for the holder by passing in the raw
-/// bytes of an Mdoc as a CBOR encoded Vec<u8>.
+/// Begin the mDL presentation process for the holder by passing in the credential
+/// to be presented in the form of an [Mdoc] object.
 ///
 /// Initializes the presentation session for an ISO 18013-5 mDL and stores
 /// the session state object in the device storage_manager.
 ///
 /// Arguments:
-/// mdoc_bytes: bytes of the Mdoc in CBOR encoded Vec<u8>
-/// uuid:       the Bluetooth Low Energy Client Central Mode UUID to be used
+/// mdoc: the Mdoc to be presented, as an [Mdoc] object
+/// uuid: the Bluetooth Low Energy Client Central Mode UUID to be used
 ///
 /// Returns:
 /// A Result, with the `Ok` containing a tuple consisting of an enum representing
