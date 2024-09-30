@@ -7518,11 +7518,11 @@ public func initializeMdlPresentation(mdocId: Uuid, uuid: Uuid, storageManager: 
  * String containing the BLE ident.
 
  */
-public func initializeMdlPresentationFromBytes(mdocBytes: Data, keyAlias: KeyAlias, uuid: Uuid)async throws  -> MdlPresentationSession {
+public func initializeMdlPresentationFromBytes(mdoc: Mdoc, uuid: Uuid)async throws  -> MdlPresentationSession {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_mobile_sdk_rs_fn_func_initialize_mdl_presentation_from_bytes(FfiConverterData.lower(mdocBytes),FfiConverterTypeKeyAlias.lower(keyAlias),FfiConverterTypeUuid.lower(uuid)
+                uniffi_mobile_sdk_rs_fn_func_initialize_mdl_presentation_from_bytes(FfiConverterTypeMdoc.lower(mdoc),FfiConverterTypeUuid.lower(uuid)
                 )
             },
             pollFunc: ffi_mobile_sdk_rs_rust_future_poll_pointer,
@@ -7699,7 +7699,7 @@ private var initializationResult: InitializationResult = {
     if (uniffi_mobile_sdk_rs_checksum_func_initialize_mdl_presentation() != 29387) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_func_initialize_mdl_presentation_from_bytes() != 35281) {
+    if (uniffi_mobile_sdk_rs_checksum_func_initialize_mdl_presentation_from_bytes() != 23808) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_exchange_credential() != 13827) {
