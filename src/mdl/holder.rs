@@ -111,14 +111,9 @@ pub async fn initialize_mdl_presentation(
 ///
 #[uniffi::export]
 pub async fn initialize_mdl_presentation_from_bytes(
-    mdoc_bytes: Vec<u8>,
-    key_alias: KeyAlias,
+    mdoc: Arc<Mdoc>,
     uuid: Uuid,
 ) -> Result<MdlPresentationSession, SessionError> {
-    let mdoc = crate::credential::mdoc::Mdoc::from_cbor_encoded_document(mdoc_bytes, key_alias)
-        .map_err(|e| SessionError::Generic {
-            value: format!("Error retrieving MDoc from storage: {e:}"),
-        })?;
     let drms = DeviceRetrievalMethods::new(DeviceRetrievalMethod::BLE(BleOptions {
         peripheral_server_mode: None,
         central_client_mode: Some(CentralClientMode { uuid }),
