@@ -7699,7 +7699,7 @@ private var initializationResult: InitializationResult = {
     if (uniffi_mobile_sdk_rs_checksum_func_initialize_mdl_presentation() != 29387) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_func_initialize_mdl_presentation_from_bytes() != 64088) {
+    if (uniffi_mobile_sdk_rs_checksum_func_initialize_mdl_presentation_from_bytes() != 12482) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_exchange_credential() != 13827) {
