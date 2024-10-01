@@ -119,6 +119,31 @@ impl ParsedCredential {
             }),
         }
     }
+
+    /// Return the credential as a JwtVc if it is of that format.
+    pub fn as_jwt_vc(&self) -> Option<Arc<JwtVc>> {
+        match &self.inner {
+            ParsedCredentialInner::JwtVcJson(jwt_vc)
+            | ParsedCredentialInner::JwtVcJsonLd(jwt_vc) => Some(jwt_vc.clone()),
+            _ => None,
+        }
+    }
+
+    /// Return the credential as a JsonVc if it is of that format.
+    pub fn as_json_vc(&self) -> Option<Arc<JsonVc>> {
+        match &self.inner {
+            ParsedCredentialInner::LdpVc(ldp_vc) => Some(ldp_vc.clone()),
+            _ => None,
+        }
+    }
+
+    /// Return the credential as an Mdoc if it is of that format.
+    pub fn as_mso_mdoc(&self) -> Option<Arc<Mdoc>> {
+        match &self.inner {
+            ParsedCredentialInner::MsoMdoc(mdoc) => Some(mdoc.clone()),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, uniffi::Enum)]
