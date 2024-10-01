@@ -2708,6 +2708,21 @@ public func FfiConverterTypeOid4vciSession_lower(_ value: Oid4vciSession) -> Uns
 public protocol ParsedCredentialProtocol : AnyObject {
     
     /**
+     * Return the credential as a JsonVc if it is of that format.
+     */
+    func asJsonVc()  -> JsonVc?
+    
+    /**
+     * Return the credential as a JwtVc if it is of that format.
+     */
+    func asJwtVc()  -> JwtVc?
+    
+    /**
+     * Return the credential as an Mdoc if it is of that format.
+     */
+    func asMsoMdoc()  -> Mdoc?
+    
+    /**
      * Convert a parsed credential into the generic form for storage.
      */
     func intoGenericForm() throws  -> Credential
@@ -2812,6 +2827,36 @@ public static func parseFromCredential(credential: Credential)throws  -> ParsedC
 }
     
 
+    
+    /**
+     * Return the credential as a JsonVc if it is of that format.
+     */
+open func asJsonVc() -> JsonVc? {
+    return try!  FfiConverterOptionTypeJsonVc.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_parsedcredential_as_json_vc(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * Return the credential as a JwtVc if it is of that format.
+     */
+open func asJwtVc() -> JwtVc? {
+    return try!  FfiConverterOptionTypeJwtVc.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_parsedcredential_as_jwt_vc(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * Return the credential as an Mdoc if it is of that format.
+     */
+open func asMsoMdoc() -> Mdoc? {
+    return try!  FfiConverterOptionTypeMdoc.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_parsedcredential_as_mso_mdoc(self.uniffiClonePointer(),$0
+    )
+})
+}
     
     /**
      * Convert a parsed credential into the generic form for storage.
@@ -6622,6 +6667,69 @@ fileprivate struct FfiConverterOptionString: FfiConverterRustBuffer {
     }
 }
 
+fileprivate struct FfiConverterOptionTypeJsonVc: FfiConverterRustBuffer {
+    typealias SwiftType = JsonVc?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeJsonVc.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeJsonVc.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+fileprivate struct FfiConverterOptionTypeJwtVc: FfiConverterRustBuffer {
+    typealias SwiftType = JwtVc?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeJwtVc.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeJwtVc.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+fileprivate struct FfiConverterOptionTypeMdoc: FfiConverterRustBuffer {
+    typealias SwiftType = Mdoc?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeMdoc.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeMdoc.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
 fileprivate struct FfiConverterOptionTypeCredential: FfiConverterRustBuffer {
     typealias SwiftType = Credential?
 
@@ -7847,6 +7955,15 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_method_oid4vcisession_get_credential_request_by_index() != 55077) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_parsedcredential_as_json_vc() != 62122) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_parsedcredential_as_jwt_vc() != 38850) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_parsedcredential_as_mso_mdoc() != 54804) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_method_parsedcredential_into_generic_form() != 30318) {
