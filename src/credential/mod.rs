@@ -120,6 +120,26 @@ impl ParsedCredential {
         }
     }
 
+    /// Get the local ID for this credential.
+    pub fn id(&self) -> Uuid {
+        match &self.inner {
+            ParsedCredentialInner::MsoMdoc(arc) => arc.id(),
+            ParsedCredentialInner::JwtVcJson(arc) => arc.id(),
+            ParsedCredentialInner::JwtVcJsonLd(arc) => arc.id(),
+            ParsedCredentialInner::LdpVc(arc) => arc.id(),
+        }
+    }
+
+    /// Get the key alias for this credential.
+    pub fn key_alias(&self) -> Option<KeyAlias> {
+        match &self.inner {
+            ParsedCredentialInner::MsoMdoc(arc) => Some(arc.key_alias()),
+            ParsedCredentialInner::JwtVcJson(arc) => arc.key_alias(),
+            ParsedCredentialInner::JwtVcJsonLd(arc) => arc.key_alias(),
+            ParsedCredentialInner::LdpVc(arc) => arc.key_alias(),
+        }
+    }
+
     /// Return the credential as a JwtVc if it is of that format.
     pub fn as_jwt_vc(&self) -> Option<Arc<JwtVc>> {
         match &self.inner {
