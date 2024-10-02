@@ -1527,12 +1527,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dyn-clone"
-version = "1.0.17"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d6ef0072f8a535281e4876be788938b528e9a1d43900b82c2569af7da799125"
-
-[[package]]
 name = "ecdsa"
 version = "0.16.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2592,15 +2586,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "itertools"
-version = "0.10.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
-dependencies = [
- "either",
-]
-
-[[package]]
 name = "itoa"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3422,19 +3407,22 @@ dependencies = [
 [[package]]
 name = "oid4vci"
 version = "0.1.0"
-source = "git+https://github.com/spruceid/oid4vci-rs?rev=8120138#81201384589cfa4ebbf24cd9be551fae9621b4cc"
+source = "git+https://github.com/spruceid/oid4vci-rs?rev=8b9acf5#8b9acf54708f361b05e3abe55b333187286702e6"
 dependencies = [
+ "anyhow",
  "async-signature",
  "base64 0.21.7",
+ "form_urlencoded",
  "isomdl 0.1.0 (git+https://github.com/spruceid/isomdl?rev=90ce218)",
  "oauth2",
- "openidconnect",
+ "percent-encoding",
  "rand",
  "serde",
  "serde_json",
  "serde_path_to_error",
  "serde_urlencoded",
  "serde_with 3.10.0",
+ "sha2 0.10.8",
  "ssi-claims",
  "ssi-dids-core",
  "ssi-jwk 0.3.0",
@@ -3458,37 +3446,6 @@ name = "opaque-debug"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c08d65885ee38876c4f86fa503fb49d7b507c2b62552df7c70b2fce627e06381"
-
-[[package]]
-name = "openidconnect"
-version = "4.0.0-rc.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a93a50789d0b649986bfb104cdef97736ca072d579ec88496d5c6f9abed0ea85"
-dependencies = [
- "base64 0.21.7",
- "chrono",
- "dyn-clone",
- "ed25519-dalek",
- "hmac",
- "http 1.1.0",
- "itertools",
- "log",
- "oauth2",
- "p256",
- "p384",
- "rand",
- "rsa 0.9.6",
- "serde",
- "serde-value",
- "serde_json",
- "serde_path_to_error",
- "serde_plain",
- "serde_with 3.10.0",
- "sha2 0.10.8",
- "subtle",
- "thiserror",
- "url",
-]
 
 [[package]]
 name = "openssl"
@@ -3542,15 +3499,6 @@ dependencies = [
  "openssl-src",
  "pkg-config",
  "vcpkg",
-]
-
-[[package]]
-name = "ordered-float"
-version = "2.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68f19d67e5a2795c94e73e0bb1cc1a7edeb2e28efd39e2e1c9b7a40c1108b11c"
-dependencies = [
- "num-traits",
 ]
 
 [[package]]
@@ -3744,17 +3692,6 @@ dependencies = [
  "der 0.5.1",
  "pkcs8 0.8.0",
  "zeroize",
-]
-
-[[package]]
-name = "pkcs1"
-version = "0.7.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8ffb9f10fa047879315e6625af03c164b16962a5368d724ed16323b68ace47f"
-dependencies = [
- "der 0.7.9",
- "pkcs8 0.10.2",
- "spki 0.7.3",
 ]
 
 [[package]]
@@ -4264,30 +4201,10 @@ dependencies = [
  "num-integer",
  "num-iter",
  "num-traits",
- "pkcs1 0.3.3",
+ "pkcs1",
  "pkcs8 0.8.0",
  "rand_core",
  "smallvec",
- "subtle",
- "zeroize",
-]
-
-[[package]]
-name = "rsa"
-version = "0.9.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d0e5124fcb30e76a7e79bfee683a2746db83784b86289f6251b54b7950a0dfc"
-dependencies = [
- "const-oid 0.9.6",
- "digest 0.10.7",
- "num-bigint-dig",
- "num-integer",
- "num-traits",
- "pkcs1 0.7.5",
- "pkcs8 0.10.2",
- "rand_core",
- "signature",
- "spki 0.7.3",
  "subtle",
  "zeroize",
 ]
@@ -4571,16 +4488,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde-value"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3a1a3341211875ef120e117ea7fd5228530ae7e7036a779fdc9117be6b3282c"
-dependencies = [
- "ordered-float 2.10.1",
- "serde",
-]
-
-[[package]]
 name = "serde_bytes"
 version = "0.11.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4640,15 +4547,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af99884400da37c88f5e9146b7f1fd0fbcae8f6eec4e9da38b67d05486f814a6"
 dependencies = [
  "itoa",
- "serde",
-]
-
-[[package]]
-name = "serde_plain"
-version = "1.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ce1fc6db65a611022b23a0dec6975d63fb80a302cb3388835ff02c097258d50"
-dependencies = [
  "serde",
 ]
 
@@ -5338,7 +5236,7 @@ dependencies = [
  "num-traits",
  "p256",
  "rand",
- "rsa 0.6.1",
+ "rsa",
  "serde",
  "simple_asn1",
  "ssi-crypto 0.1.1",
@@ -5369,7 +5267,7 @@ dependencies = [
  "p256",
  "p384",
  "rand",
- "rsa 0.6.1",
+ "rsa",
  "serde",
  "serde_jcs",
  "serde_json",
@@ -5398,7 +5296,7 @@ dependencies = [
  "p256",
  "p384",
  "rand",
- "rsa 0.6.1",
+ "rsa",
  "serde",
  "serde_json",
  "sha2 0.10.8",

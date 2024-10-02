@@ -2592,10 +2592,6 @@ public func FfiConverterTypeOid4vciMetadata_lower(_ value: Oid4vciMetadata) -> U
 
 public protocol Oid4vciSessionProtocol : AnyObject {
     
-    func getAllCredentialRequests() throws  -> [CredentialRequest]
-    
-    func getCredentialRequestByIndex(index: UInt16) throws  -> CredentialRequest
-    
 }
 
 open class Oid4vciSession:
@@ -2638,21 +2634,6 @@ open class Oid4vciSession:
 
     
 
-    
-open func getAllCredentialRequests()throws  -> [CredentialRequest] {
-    return try  FfiConverterSequenceTypeCredentialRequest.lift(try rustCallWithError(FfiConverterTypeOid4vciError.lift) {
-    uniffi_mobile_sdk_rs_fn_method_oid4vcisession_get_all_credential_requests(self.uniffiClonePointer(),$0
-    )
-})
-}
-    
-open func getCredentialRequestByIndex(index: UInt16)throws  -> CredentialRequest {
-    return try  FfiConverterTypeCredentialRequest.lift(try rustCallWithError(FfiConverterTypeOid4vciError.lift) {
-    uniffi_mobile_sdk_rs_fn_method_oid4vcisession_get_credential_request_by_index(self.uniffiClonePointer(),
-        FfiConverterUInt16.lower(index),$0
-    )
-})
-}
     
 
 }
@@ -5669,6 +5650,8 @@ public enum Oid4vciError {
     
     case LockError(message: String)
     
+    case VpRequestRequired(message: String)
+    
     case Generic(message: String)
     
 }
@@ -5708,7 +5691,11 @@ public struct FfiConverterTypeOid4vciError: FfiConverterRustBuffer {
             message: try FfiConverterString.read(from: &buf)
         )
         
-        case 7: return .Generic(
+        case 7: return .VpRequestRequired(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 8: return .Generic(
             message: try FfiConverterString.read(from: &buf)
         )
         
@@ -5735,8 +5722,10 @@ public struct FfiConverterTypeOid4vciError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(5))
         case .LockError(_ /* message is ignored*/):
             writeInt(&buf, Int32(6))
-        case .Generic(_ /* message is ignored*/):
+        case .VpRequestRequired(_ /* message is ignored*/):
             writeInt(&buf, Int32(7))
+        case .Generic(_ /* message is ignored*/):
+            writeInt(&buf, Int32(8))
 
         
         }
@@ -6887,28 +6876,6 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
     }
 }
 
-fileprivate struct FfiConverterSequenceTypeCredentialRequest: FfiConverterRustBuffer {
-    typealias SwiftType = [CredentialRequest]
-
-    public static func write(_ value: [CredentialRequest], into buf: inout [UInt8]) {
-        let len = Int32(value.count)
-        writeInt(&buf, len)
-        for item in value {
-            FfiConverterTypeCredentialRequest.write(item, into: &buf)
-        }
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CredentialRequest] {
-        let len: Int32 = try readInt(&buf)
-        var seq = [CredentialRequest]()
-        seq.reserveCapacity(Int(len))
-        for _ in 0 ..< len {
-            seq.append(try FfiConverterTypeCredentialRequest.read(from: &buf))
-        }
-        return seq
-    }
-}
-
 fileprivate struct FfiConverterSequenceTypeCredentialResponse: FfiConverterRustBuffer {
     typealias SwiftType = [CredentialResponse]
 
@@ -7979,12 +7946,6 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_method_oid4vcimetadata_to_json() != 52469) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_mobile_sdk_rs_checksum_method_oid4vcisession_get_all_credential_requests() != 32094) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_mobile_sdk_rs_checksum_method_oid4vcisession_get_credential_request_by_index() != 55077) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_method_parsedcredential_as_json_vc() != 62122) {
