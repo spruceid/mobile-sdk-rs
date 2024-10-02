@@ -2723,9 +2723,19 @@ public protocol ParsedCredentialProtocol : AnyObject {
     func asMsoMdoc()  -> Mdoc?
     
     /**
+     * Get the local ID for this credential.
+     */
+    func id()  -> Uuid
+    
+    /**
      * Convert a parsed credential into the generic form for storage.
      */
     func intoGenericForm() throws  -> Credential
+    
+    /**
+     * Get the key alias for this credential.
+     */
+    func keyAlias()  -> KeyAlias?
     
 }
 
@@ -2859,11 +2869,31 @@ open func asMsoMdoc() -> Mdoc? {
 }
     
     /**
+     * Get the local ID for this credential.
+     */
+open func id() -> Uuid {
+    return try!  FfiConverterTypeUuid.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_parsedcredential_id(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
      * Convert a parsed credential into the generic form for storage.
      */
 open func intoGenericForm()throws  -> Credential {
     return try  FfiConverterTypeCredential.lift(try rustCallWithError(FfiConverterTypeCredentialEncodingError.lift) {
     uniffi_mobile_sdk_rs_fn_method_parsedcredential_into_generic_form(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * Get the key alias for this credential.
+     */
+open func keyAlias() -> KeyAlias? {
+    return try!  FfiConverterOptionTypeKeyAlias.lift(try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_parsedcredential_key_alias(self.uniffiClonePointer(),$0
     )
 })
 }
@@ -7966,7 +7996,13 @@ private var initializationResult: InitializationResult = {
     if (uniffi_mobile_sdk_rs_checksum_method_parsedcredential_as_mso_mdoc() != 54804) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mobile_sdk_rs_checksum_method_parsedcredential_id() != 46894) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mobile_sdk_rs_checksum_method_parsedcredential_into_generic_form() != 30318) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_parsedcredential_key_alias() != 52023) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_method_storagemanagerinterface_add() != 39162) {
