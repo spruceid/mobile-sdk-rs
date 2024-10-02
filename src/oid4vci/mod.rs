@@ -1,14 +1,12 @@
 mod error;
 mod http_client;
 mod metadata;
-mod proof_of_possession;
 mod session;
 mod wrapper;
 
 pub use error::*;
 pub use http_client::*;
 pub use metadata::*;
-pub use proof_of_possession::*;
 pub use session::*;
 use url::Url;
 pub use wrapper::*;

@@ -5,6 +5,7 @@ pub mod credential;
 pub mod local_store;
 pub mod mdl;
 pub mod oid4vci;
+pub mod proof_of_possession;
 pub mod storage_manager;
 pub mod vdc_collection;
 pub mod verifier;
