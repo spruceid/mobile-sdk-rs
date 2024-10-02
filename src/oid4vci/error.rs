@@ -1,5 +1,7 @@
 use oid4vci::credential::RequestError;
 
+use crate::did::DidError;
+
 use super::HttpClientError;
 
 #[derive(thiserror::Error, uniffi::Error, Debug)]
@@ -25,6 +27,9 @@ pub enum Oid4vciError {
 
     #[error("{vp_request}")]
     VpRequestRequired { vp_request: serde_json::Value },
+
+    #[error("{_0}")]
+    DidError(#[from] DidError),
 
     #[error("{0}")]
     Generic(String),

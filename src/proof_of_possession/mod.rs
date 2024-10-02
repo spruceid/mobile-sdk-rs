@@ -9,33 +9,30 @@ use oid4vci::{
 use ssi::{dids::DIDURLBuf, jwk::JWK};
 use url::Url;
 
-use crate::oid4vci::Oid4vciError;
+use crate::{did, oid4vci::Oid4vciError};
+
+mod error;
+pub use error::*;
 
 // TODO: consider unifying prepare and complete fns by using a trait for
 // signing/crypto functions similar to `HttpClient` for requests
 #[uniffi::export]
-fn generate_pop_prepare(
+async fn generate_pop_prepare(
     audience: String,
-    issuer: String,
     nonce: Option<String>,
-    vm: String,
+    did_method: did::DidMethod,
     public_jwk: String,
     duration_in_secs: Option<i64>,
-) -> Result<Vec<u8>, Oid4vciError> {
+) -> Result<Vec<u8>, PopError> {
+    let issuer = did_method.did_from_jwk(&public_jwk)?;
+    let vm = did_method.vm_from_jwk(&public_jwk).await?;
+
     let pop_params = ProofOfPossessionParams {
-        audience: Url::from_str(&audience)
-            .map_err(|e| e.to_string())
-            .map_err(Oid4vciError::from)?,
+        audience: Url::from_str(&audience).map_err(PopError::from)?,
         issuer,
         controller: ProofOfPossessionController {
-            vm: Some(
-                DIDURLBuf::from_string(vm)
-                    .map_err(|e| e.to_string())
-                    .map_err(Oid4vciError::from)?,
-            ),
-            jwk: JWK::from_str(&public_jwk)
-                .map_err(|e| e.to_string())
-                .map_err(Oid4vciError::from)?,
+            vm: Some(DIDURLBuf::from_string(vm).map_err(PopError::from)?),
+            jwk: JWK::from_str(&public_jwk).map_err(PopError::from)?,
         },
         nonce: nonce.map(Nonce::new),
     };
@@ -47,8 +44,7 @@ fn generate_pop_prepare(
             .unwrap_or(time::Duration::minutes(5)),
     )
     .to_jwt_signing_input()
-    .map_err(|e| e.to_string())
-    .map_err(Oid4vciError::from)?;
+    .map_err(PopError::from)?;
 
     Ok(signing_input)
 }
