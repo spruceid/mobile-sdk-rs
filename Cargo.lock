@@ -122,6 +122,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e999941b234f3131b00bc13c22d06e8c5ff726d1b6318ac7eb276997bbb4fef0"
 
 [[package]]
+name = "android_log-sys"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5ecc8056bf6ab9892dcd53216c83d1597487d7dacac16c8df6b877d127df9937"
+
+[[package]]
+name = "android_logger"
+version = "0.13.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c494134f746c14dc653a35a4ea5aca24ac368529da5370ecf41fe0341c35772f"
+dependencies = [
+ "android_log-sys",
+ "env_logger 0.10.2",
+ "log",
+ "once_cell",
+]
+
+[[package]]
 name = "android_system_properties"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -768,7 +786,7 @@ dependencies = [
  "chrono",
  "ciborium",
  "clap",
- "env_logger",
+ "env_logger 0.11.5",
  "hex",
  "iref",
  "json-ld",
@@ -1665,6 +1683,16 @@ name = "env_filter"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4f2c92ceda6ceec50f43169f9ee8424fe2db276791afde7b2cd8bc084cb376ab"
+dependencies = [
+ "log",
+ "regex",
+]
+
+[[package]]
+name = "env_logger"
+version = "0.10.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4cd405aab171cb85d6735e5c8d9db038c17d3ca007a4d2c25f337935c3d90580"
 dependencies = [
  "log",
  "regex",
@@ -3104,6 +3132,7 @@ version = "0.4.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7a70ba024b9dc04c27ea2f0c0548feb474ec5c54bba33a7f72f873a39d07b24"
 dependencies = [
+ "serde",
  "value-bag",
 ]
 
@@ -3169,6 +3198,7 @@ dependencies = [
 name = "mobile-sdk-rs"
 version = "0.1.0"
 dependencies = [
+ "android_logger",
  "async-trait",
  "base64 0.22.1",
  "cose-rs 0.1.0 (git+https://github.com/spruceid/cose-rs?rev=0018c9b)",
@@ -3177,6 +3207,7 @@ dependencies = [
  "hex",
  "isomdl 0.1.0 (git+https://github.com/spruceid/isomdl?rev=1f4f762)",
  "json-syntax",
+ "log",
  "miniz_oxide 0.7.4",
  "num-bigint",
  "num-traits",
@@ -3190,6 +3221,7 @@ dependencies = [
  "serde_json",
  "signature",
  "ssi",
+ "ssi-contexts",
  "thiserror",
  "time",
  "time-macros",
@@ -4703,6 +4735,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
 
 [[package]]
+name = "signal-hook-registry"
+version = "1.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a9e9e0b4211b72e7b8b6e85c807d36c212bdb33ea8587f7569562a84df5465b1"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "signature"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5888,7 +5929,9 @@ dependencies = [
  "bytes",
  "libc",
  "mio",
+ "parking_lot",
  "pin-project-lite",
+ "signal-hook-registry",
  "socket2",
  "tokio-macros",
  "windows-sys 0.52.0",

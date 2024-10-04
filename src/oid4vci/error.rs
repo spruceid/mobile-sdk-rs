@@ -1,4 +1,5 @@
 use oid4vci::credential::RequestError;
+use ssi::json_ld::FromContextMapError;
 
 use crate::did::DidError;
 
@@ -30,6 +31,9 @@ pub enum Oid4vciError {
 
     #[error("{_0}")]
     DidError(#[from] DidError),
+
+    #[error("{_0}")]
+    ContextMapError(#[from] FromContextMapError),
 
     #[error("{0}")]
     Generic(String),

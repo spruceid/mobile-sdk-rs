@@ -9,10 +9,11 @@ use oid4vci::{
 use ssi::{dids::DIDURLBuf, jwk::JWK};
 use url::Url;
 
+pub use error::*;
+
 use crate::{did, oid4vci::Oid4vciError};
 
 mod error;
-pub use error::*;
 
 // TODO: consider unifying prepare and complete fns by using a trait for
 // signing/crypto functions similar to `HttpClient` for requests

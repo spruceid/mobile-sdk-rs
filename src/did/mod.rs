@@ -1,8 +1,8 @@
 use ssi::dids::DIDResolver;
 
-mod error;
-
 pub use error::*;
+
+mod error;
 
 #[derive(uniffi::Enum)]
 pub enum DidMethod {

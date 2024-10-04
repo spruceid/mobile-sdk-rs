@@ -17,7 +17,7 @@ path = "uniffi-bindgen.rs"
 
 [dependencies]
 cose-rs = { git = "https://github.com/spruceid/cose-rs", rev = "0018c9b", features = [
-  "time",
+    "time",
 ] }
 isomdl = { git = "https://github.com/spruceid/isomdl", rev = "1f4f762" }
 oid4vci = { git = "https://github.com/spruceid/oid4vci-rs", rev = "8b9acf5" }
@@ -31,6 +31,7 @@ either = "1.13"
 futures = "0.3"
 hex = "0.4.3"
 json-syntax = { version = "0.12.5", features = ["serde_json"] }
+log = { version = "0.4", features = ["std", "serde"] }
 miniz_oxide = "0.7.2"
 num-bigint = "0.4.4"
 num-traits = "0.2.19"
@@ -41,20 +42,25 @@ serde = { version = "1.0.204", features = ["derive"] }
 serde_cbor = "0.11.2"
 serde_json = "1.0.111"
 signature = "2.2.0"
+ssi-contexts = "0.1.6"
 thiserror = "1.0.56"
 time = { version = "0.3.36", features = [
-  "macros",
-  "formatting",
-  "parsing",
-  "serde",
+    "macros",
+    "formatting",
+    "parsing",
+    "serde",
 ] }
 time-macros = "0.2.18"
+tokio = { version = "1", features = ["full"] }
 tracing = "0.1.40"
 uniffi = { version = "0.28.1", features = ["cli"] }
 url = { version = "2.5", features = ["serde"] }
 uuid = { version = "1.6.1", features = ["v4"] }
 w3c-vc-barcodes = { git = "https://github.com/spruceid/w3c-vc-barcodes", rev = "c1c99da" }
 x509-cert = { version = "0.2.5" }
+
+[target.'cfg(target_os = "android")'.dependencies]
+android_logger = "0.13"
 
 [dev-dependencies]
 rstest = "0.22.0"

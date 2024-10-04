@@ -1,15 +1,17 @@
+use std::sync::Arc;
+
+use serde::{Deserialize, Serialize};
+
+use json_vc::{JsonVc, JsonVcEncodingError, JsonVcInitError};
+use jwt_vc::{JwtVc, JwtVcInitError};
+use mdoc::{Mdoc, MdocEncodingError, MdocInitError};
+
+use crate::{CredentialType, KeyAlias, Uuid};
+
 pub mod json_vc;
 pub mod jwt_vc;
 pub mod mdoc;
 pub mod sd_jwt_vc;
-
-use std::sync::Arc;
-
-use crate::{CredentialType, KeyAlias, Uuid};
-use json_vc::{JsonVc, JsonVcEncodingError, JsonVcInitError};
-use jwt_vc::{JwtVc, JwtVcInitError};
-use mdoc::{Mdoc, MdocEncodingError, MdocInitError};
-use serde::{Deserialize, Serialize};
 
 /// An unparsed credential, retrieved from storage.
 #[derive(Debug, Serialize, Deserialize, uniffi::Record)]

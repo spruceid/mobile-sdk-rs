@@ -1,4 +1,7 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use super::{
     oid4vci_exchange_credential, oid4vci_exchange_token, oid4vci_get_metadata, oid4vci_initiate,
@@ -10,9 +13,19 @@ use super::{
 pub struct Oid4vci {
     http_client: Arc<IHttpClient>,
     session: Mutex<Option<Arc<Oid4vciSession>>>,
+    context_map: Mutex<Option<HashMap<String, String>>>,
 }
 
 impl Oid4vci {
+    fn context_map(&self) -> Result<Option<HashMap<String, String>>, Oid4vciError> {
+        let context_map = self
+            .context_map
+            .lock()
+            .map_err(|_| Oid4vciError::LockError("context_map".into()))?;
+
+        Ok(context_map.clone())
+    }
+
     fn session(&self) -> Result<Arc<Oid4vciSession>, Oid4vciError> {
         let session = self
             .session
@@ -68,6 +81,7 @@ impl Oid4vci {
         let http_client = Arc::new(client.into());
         Self {
             session: Mutex::new(None),
+            context_map: Mutex::new(None),
             http_client,
         }
         .into()
@@ -78,9 +92,41 @@ impl Oid4vci {
         let http_client = Arc::new(client.into());
         Self {
             session: Mutex::new(None),
+            context_map: Mutex::new(None),
             http_client,
         }
         .into()
+    }
+
+    fn set_context_map(&self, values: HashMap<String, String>) -> Result<(), Oid4vciError> {
+        let mut context_map = self
+            .context_map
+            .lock()
+            .map_err(|_| Oid4vciError::LockError("context_map".into()))?;
+
+        *context_map = Some(values);
+
+        Ok(())
+    }
+
+    fn clear_context_map(&self) -> Result<(), Oid4vciError> {
+        let mut context_map = self
+            .context_map
+            .lock()
+            .map_err(|_| Oid4vciError::LockError("context_map".into()))?;
+
+        *context_map = None;
+
+        Ok(())
+    }
+
+    fn initiate_logger(&self) {
+        #[cfg(target_os = "android")]
+        android_logger::init_once(
+            android_logger::Config::default()
+                .with_max_level(log::LevelFilter::Trace)
+                .with_tag("MOBILE_SDK_RS"),
+        );
     }
 
     fn get_metadata(&self) -> Result<Oid4vciMetadata, Oid4vciError> {
@@ -125,6 +171,7 @@ impl Oid4vci {
         oid4vci_exchange_credential(
             self.session()?,
             proofs_of_possession,
+            self.context_map()?,
             self.http_client.clone(),
         )
         .await

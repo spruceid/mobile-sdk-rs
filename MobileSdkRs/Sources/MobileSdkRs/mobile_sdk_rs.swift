@@ -2221,6 +2221,8 @@ public func FfiConverterTypeMdoc_lower(_ value: Mdoc) -> UnsafeMutableRawPointer
 
 public protocol Oid4vciProtocol : AnyObject {
     
+    func clearContextMap() throws 
+    
     func exchangeCredential(proofsOfPossession: [String]) async throws  -> [CredentialResponse]
     
     func exchangeToken() async throws  -> String?
@@ -2229,7 +2231,11 @@ public protocol Oid4vciProtocol : AnyObject {
     
     func initiate(baseUrl: String, clientId: String, redirectUrl: String) async throws 
     
+    func initiateLogger() 
+    
     func initiateWithOffer(credentialOffer: String, clientId: String, redirectUrl: String) async throws 
+    
+    func setContextMap(values: [String: String]) throws 
     
 }
 
@@ -2311,6 +2317,12 @@ public static func newWithSyncClient(client: SyncHttpClient) -> Oid4vci {
     
 
     
+open func clearContextMap()throws  {try rustCallWithError(FfiConverterTypeOid4vciError.lift) {
+    uniffi_mobile_sdk_rs_fn_method_oid4vci_clear_context_map(self.uniffiClonePointer(),$0
+    )
+}
+}
+    
 open func exchangeCredential(proofsOfPossession: [String])async throws  -> [CredentialResponse] {
     return
         try  await uniffiRustCallAsync(
@@ -2369,6 +2381,12 @@ open func initiate(baseUrl: String, clientId: String, redirectUrl: String)async 
         )
 }
     
+open func initiateLogger() {try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_oid4vci_initiate_logger(self.uniffiClonePointer(),$0
+    )
+}
+}
+    
 open func initiateWithOffer(credentialOffer: String, clientId: String, redirectUrl: String)async throws  {
     return
         try  await uniffiRustCallAsync(
@@ -2384,6 +2402,13 @@ open func initiateWithOffer(credentialOffer: String, clientId: String, redirectU
             liftFunc: { $0 },
             errorHandler: FfiConverterTypeOid4vciError.lift
         )
+}
+    
+open func setContextMap(values: [String: String])throws  {try rustCallWithError(FfiConverterTypeOid4vciError.lift) {
+    uniffi_mobile_sdk_rs_fn_method_oid4vci_set_context_map(self.uniffiClonePointer(),
+        FfiConverterDictionaryStringString.lower(values),$0
+    )
+}
 }
     
 
@@ -5785,6 +5810,8 @@ public enum Oid4vciError {
     
     case DidError(message: String)
     
+    case ContextMapError(message: String)
+    
     case Generic(message: String)
     
 }
@@ -5832,7 +5859,11 @@ public struct FfiConverterTypeOid4vciError: FfiConverterRustBuffer {
             message: try FfiConverterString.read(from: &buf)
         )
         
-        case 9: return .Generic(
+        case 9: return .ContextMapError(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 10: return .Generic(
             message: try FfiConverterString.read(from: &buf)
         )
         
@@ -5863,8 +5894,10 @@ public struct FfiConverterTypeOid4vciError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(7))
         case .DidError(_ /* message is ignored*/):
             writeInt(&buf, Int32(8))
-        case .Generic(_ /* message is ignored*/):
+        case .ContextMapError(_ /* message is ignored*/):
             writeInt(&buf, Int32(9))
+        case .Generic(_ /* message is ignored*/):
+            writeInt(&buf, Int32(10))
 
         
         }
@@ -7035,6 +7068,27 @@ fileprivate struct FfiConverterOptionSequenceString: FfiConverterRustBuffer {
     }
 }
 
+fileprivate struct FfiConverterOptionDictionaryStringString: FfiConverterRustBuffer {
+    typealias SwiftType = [String: String]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterDictionaryStringString.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterDictionaryStringString.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
 fileprivate struct FfiConverterOptionTypeKeyAlias: FfiConverterRustBuffer {
     typealias SwiftType = KeyAlias?
 
@@ -7862,11 +7916,11 @@ public func initializeMdlPresentationFromBytes(mdoc: Mdoc, uuid: Uuid)async thro
             errorHandler: FfiConverterTypeSessionError.lift
         )
 }
-public func oid4vciExchangeCredential(session: Oid4vciSession, proofsOfPossession: [String], httpClient: IHttpClient)async throws  -> [CredentialResponse] {
+public func oid4vciExchangeCredential(session: Oid4vciSession, proofsOfPossession: [String], contextMap: [String: String]?, httpClient: IHttpClient)async throws  -> [CredentialResponse] {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_mobile_sdk_rs_fn_func_oid4vci_exchange_credential(FfiConverterTypeOid4vciSession.lower(session),FfiConverterSequenceString.lower(proofsOfPossession),FfiConverterTypeIHttpClient.lower(httpClient)
+                uniffi_mobile_sdk_rs_fn_func_oid4vci_exchange_credential(FfiConverterTypeOid4vciSession.lower(session),FfiConverterSequenceString.lower(proofsOfPossession),FfiConverterOptionDictionaryStringString.lower(contextMap),FfiConverterTypeIHttpClient.lower(httpClient)
                 )
             },
             pollFunc: ffi_mobile_sdk_rs_rust_future_poll_rust_buffer,
@@ -8032,7 +8086,7 @@ private var initializationResult: InitializationResult = {
     if (uniffi_mobile_sdk_rs_checksum_func_initialize_mdl_presentation_from_bytes() != 12482) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_exchange_credential() != 13827) {
+    if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_exchange_credential() != 59343) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_exchange_token() != 3394) {
@@ -8137,6 +8191,9 @@ private var initializationResult: InitializationResult = {
     if (uniffi_mobile_sdk_rs_checksum_method_mdoc_key_alias() != 39341) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vci_clear_context_map() != 165) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mobile_sdk_rs_checksum_method_oid4vci_exchange_credential() != 17336) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -8149,7 +8206,13 @@ private var initializationResult: InitializationResult = {
     if (uniffi_mobile_sdk_rs_checksum_method_oid4vci_initiate() != 12704) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vci_initiate_logger() != 11448) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mobile_sdk_rs_checksum_method_oid4vci_initiate_with_offer() != 23294) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vci_set_context_map() != 64024) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_method_oid4vcimetadata_authorization_servers() != 42340) {

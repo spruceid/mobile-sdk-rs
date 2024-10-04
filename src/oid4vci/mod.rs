@@ -1,17 +1,4 @@
-mod error;
-mod http_client;
-mod metadata;
-mod session;
-mod wrapper;
-
-pub use error::*;
-pub use http_client::*;
-pub use metadata::*;
-pub use session::*;
-use url::Url;
-pub use wrapper::*;
-
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use either::Either;
 use oid4vci::{
@@ -37,8 +24,23 @@ use ssi::{
     },
     dids::{AnyDidMethod, DIDResolver},
 };
+use url::Url;
+
+use context_loader::context_loader_from_map;
+pub use error::*;
+pub use http_client::*;
+pub use metadata::*;
+pub use session::*;
+pub use wrapper::*;
 
 use crate::credential::CredentialFormat;
+
+mod context_loader;
+mod error;
+mod http_client;
+mod metadata;
+mod session;
+mod wrapper;
 
 #[uniffi::export]
 pub async fn oid4vci_initiate_with_offer(
@@ -262,16 +264,22 @@ pub async fn oid4vci_exchange_token(
 pub async fn oid4vci_exchange_credential(
     session: Arc<Oid4vciSession>,
     proofs_of_possession: Vec<String>,
+    context_map: Option<HashMap<String, String>>,
     http_client: Arc<IHttpClient>,
 ) -> Result<Vec<CredentialResponse>, Oid4vciError> {
+    log::trace!("oid4vci_exchange_credential");
+
+    log::trace!("session.get_credential_requests");
     let credential_requests = session.get_credential_requests()?.clone();
 
+    log::trace!("credential_requests.is_empty");
     if credential_requests.is_empty() {
         return Err(Oid4vciError::InvalidSession(
             "credential_requests unset".to_string(),
         ));
     }
 
+    log::trace!("compare length proofs_of_possession vs credential_requests");
     if proofs_of_possession.len() != credential_requests.len() {
         return Err(Oid4vciError::InvalidParameter(
             "invalid number of proofs received, must match credential request count".into(),
@@ -279,6 +287,9 @@ pub async fn oid4vci_exchange_credential(
     }
 
     let credential_responses = if credential_requests.len() == 1 {
+        log::trace!("processing single request");
+
+        log::trace!("build request");
         let request = session
             .get_client()
             .request_credential(
@@ -289,17 +300,22 @@ pub async fn oid4vci_exchange_credential(
                 jwt: proofs_of_possession.first().unwrap().to_owned(),
             }));
 
+        log::trace!("execute with http client");
         let response = match &http_client.0 {
             Either::Left(sync_client) => request.request(sync_client),
             Either::Right(async_client) => request.request_async(async_client).await,
         }?;
 
+        log::trace!("match response kind");
         match response.response_kind() {
             ResponseEnum::Immediate { credential } => vec![credential.to_owned()],
             ResponseEnum::ImmediateMany { credentials } => credentials.to_owned(),
             ResponseEnum::Deferred { .. } => todo!(),
         }
     } else {
+        log::trace!("processing muliple requests");
+
+        log::trace!("build request");
         let request = session
             .get_client()
             .batch_request_credential(
@@ -313,11 +329,13 @@ pub async fn oid4vci_exchange_credential(
                     .collect(),
             )?;
 
+        log::trace!("execute with http client");
         let response = match &http_client.0 {
             Either::Left(sync_client) => request.request(sync_client)?,
             Either::Right(async_client) => request.request_async(async_client).await?,
         };
 
+        log::trace!("map match response kind");
         response
             .credential_responses()
             .iter()
@@ -329,47 +347,67 @@ pub async fn oid4vci_exchange_credential(
             .collect()
     };
 
-    futures::future::try_join_all(credential_responses.into_iter().map(
-        move |credential_response| async {
-            let vm_resolver = AnyDidMethod::default().into_vm_resolver();
-            let params = VerificationParameters::from_resolver(vm_resolver);
+    log::trace!("create vm_resolver");
+    let vm_resolver = AnyDidMethod::default().into_vm_resolver();
+    log::trace!("create verification params");
+    let params = match context_map {
+        Some(context_map) => VerificationParameters::from_resolver(vm_resolver)
+            .with_json_ld_loader(context_loader_from_map(context_map)?),
+        None => VerificationParameters::from_resolver(vm_resolver),
+    };
 
+    log::trace!("verify and convert http response into credential response");
+    futures::future::try_join_all(credential_responses.into_iter().map(
+        |credential_response| async {
             use oid4vci::core::profiles::CoreProfilesCredentialResponseType::*;
 
             match credential_response {
-                JwtVcJson(response) => Ok(CredentialResponse {
-                    format: CredentialFormat::JwtVcJson,
-                    payload: response
-                        .verify_jwt(&params)
+                JwtVcJson(response) => {
+                    log::trace!("processing a JwtVcJson");
+                    let rt = tokio::runtime::Runtime::new().unwrap();
+
+                    Ok(CredentialResponse {
+                        format: CredentialFormat::JwtVcJson,
+                        payload: rt.block_on(async {
+                            response
+                                .verify_jwt(&params)
+                                .await
+                                .map_err(|e| e.to_string())
+                                .map_err(Oid4vciError::from)
+                                .map(|_| response.as_bytes().to_vec())
+                        })?,
+                    })
+                }
+                JwtVcJsonLd(response) => {
+                    log::trace!("processing a JwtVcJsonLd");
+                    Ok(CredentialResponse {
+                        format: CredentialFormat::JwtVcJsonLd,
+                        payload: any_credential_from_json_str(
+                            &serde_json::to_string(&response).unwrap(),
+                        )
+                        .unwrap()
+                        .verify(&params)
                         .await
                         .map_err(|e| e.to_string())
                         .map_err(Oid4vciError::from)
-                        .map(|_| response.as_bytes().to_vec())?,
-                }),
-                JwtVcJsonLd(response) => Ok(CredentialResponse {
-                    format: CredentialFormat::JwtVcJsonLd,
-                    payload: any_credential_from_json_str(
-                        &serde_json::to_string(&response).unwrap(),
-                    )
-                    .unwrap()
-                    .verify(&params)
-                    .await
-                    .map_err(|e| e.to_string())
-                    .map_err(Oid4vciError::from)
-                    .map(|_| serde_json::to_vec(&response).unwrap())?,
-                }),
-                LdpVc(response) => Ok(CredentialResponse {
-                    format: CredentialFormat::JwtVcJson,
-                    payload: any_credential_from_json_str(
-                        &serde_json::to_string(&response).unwrap(),
-                    )
-                    .unwrap()
-                    .verify(&params)
-                    .await
-                    .map_err(|e| e.to_string())
-                    .map_err(Oid4vciError::from)
-                    .map(|_| serde_json::to_vec(&response).unwrap())?,
-                }),
+                        .map(|_| serde_json::to_vec(&response).unwrap())?,
+                    })
+                }
+                LdpVc(response) => {
+                    log::trace!("processing an LdpVc");
+                    Ok(CredentialResponse {
+                        format: CredentialFormat::LdpVc,
+                        payload: any_credential_from_json_str(
+                            &serde_json::to_string(&response).unwrap(),
+                        )
+                        .unwrap()
+                        .verify(&params)
+                        .await
+                        .map_err(|e| e.to_string())
+                        .map_err(Oid4vciError::from)
+                        .map(|_| serde_json::to_vec(&response).unwrap())?,
+                    })
+                }
                 MsoMdoc(_) => todo!(),
             }
         },
