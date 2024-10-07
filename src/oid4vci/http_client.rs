@@ -2,7 +2,7 @@ use std::{collections::HashMap, future::Future, pin::Pin, str::FromStr, sync::Ar
 
 use async_trait::async_trait;
 use either::Either;
-use oid4vci::openidconnect::{
+use oid4vci::oauth2::{
     http::{HeaderMap, Method, Request, Response, StatusCode, Uri},
     AsyncHttpClient as ExtAsyncHttpClient, HttpRequest as ExtHttpRequest,
     HttpResponse as ExtHttpResponse, SyncHttpClient as ExtSyncHttpClient,
@@ -187,10 +187,7 @@ impl From<Arc<dyn AsyncHttpClient>> for IHttpClient {
 }
 
 impl IHttpClient {
-    pub(crate) async fn call(
-        &self,
-        request: ExtHttpRequest,
-    ) -> Result<ExtHttpResponse, HttpClientError> {
+    pub async fn call(&self, request: ExtHttpRequest) -> Result<ExtHttpResponse, HttpClientError> {
         match &self.0 {
             Either::Left(sync_client) => sync_client.call(request),
             Either::Right(async_client) => async_client.call(request).await,

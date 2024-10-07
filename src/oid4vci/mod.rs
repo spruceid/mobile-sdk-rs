@@ -1,40 +1,21 @@
-mod error;
-mod http_client;
-mod metadata;
-mod proof_of_possession;
-mod session;
-mod wrapper;
-
-pub use error::*;
-pub use http_client::*;
-pub use metadata::*;
-pub use proof_of_possession::*;
-pub use session::*;
-use url::Url;
-pub use wrapper::*;
-
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use either::Either;
 use oid4vci::{
+    client,
     core::{
-        client,
         metadata::CredentialIssuerMetadata as ICredentialIssuerMetadata,
         profiles::{
-            self,
-            w3c::{CredentialDefinition, CredentialDefinitionLD},
-            CoreProfilesConfiguration, CoreProfilesResponse,
+            jwt_vc_json_ld, ldp_vc, CoreProfilesCredentialConfiguration,
+            CoreProfilesCredentialRequest, CredentialRequestWithFormat,
         },
     },
     credential::ResponseEnum,
-    credential_offer::CredentialOfferParameters,
-    metadata::AuthorizationMetadata,
-    openidconnect::{
-        core::CoreGrantType, http::Request as ExtRequest, AuthorizationCode, ClientId, IssuerUrl,
-        OAuth2TokenResponse, RedirectUrl,
-    },
-    profiles::CredentialConfigurationProfile,
+    credential_offer::CredentialOffer,
+    metadata::{authorization_server::GrantType, AuthorizationServerMetadata, MetadataDiscovery},
+    oauth2::{ClientId, RedirectUrl, TokenResponse as ITokenResponse},
     proof_of_possession::Proof,
+    types::{CredentialOfferRequest, IssuerUrl, PreAuthorizedCode},
 };
 use ssi::{
     claims::{
@@ -43,8 +24,23 @@ use ssi::{
     },
     dids::{AnyDidMethod, DIDResolver},
 };
+use url::Url;
+
+use context_loader::context_loader_from_map;
+pub use error::*;
+pub use http_client::*;
+pub use metadata::*;
+pub use session::*;
+pub use wrapper::*;
 
 use crate::credential::CredentialFormat;
+
+mod context_loader;
+mod error;
+mod http_client;
+mod metadata;
+mod session;
+mod wrapper;
 
 #[uniffi::export]
 pub async fn oid4vci_initiate_with_offer(
@@ -57,161 +53,117 @@ pub async fn oid4vci_initiate_with_offer(
         Oid4vciError::InvalidParameter("invalid credential_offer: failed to parse url".into())
     })?;
 
-    let credential_offer = if let Some((_, uri)) = credential_offer
-        .query_pairs()
-        .find(|(k, _)| k == "credential_offer_uri")
-    {
-        let request = ExtRequest::get(&uri.to_string()).body(vec![]).unwrap();
-        let response = http_client.call(request).await?;
+    let credential_offer = CredentialOffer::from_request(
+        CredentialOfferRequest::from_url_checked(credential_offer).map_err(|_| {
+            Oid4vciError::InvalidParameter("invalid credential_offer: failed to parse offer".into())
+        })?,
+    )
+    .map_err(|_| {
+        Oid4vciError::InvalidParameter("invalid credential_offer: failed to decode offer".into())
+    })?;
 
-        serde_json::from_slice(response.body()).map_err(|_| {
-            Oid4vciError::InvalidParameter(
-                "invalid credential_offer: failed to parse response".into(),
-            )
-        })
-    } else if let Some((_, offer)) = credential_offer
-        .query_pairs()
-        .find(|(k, _)| k == "credential_offer")
-    {
-        serde_json::from_str(&offer).map_err(|_| {
-            Oid4vciError::InvalidParameter(
-                "invalid credential_offer: failed to parse object".into(),
-            )
-        })
-    } else {
-        Err(Oid4vciError::InvalidParameter(
-            "invalid credential_offer: missing query parameter".into(),
-        ))
-    }?;
+    let credential_offer = match &http_client.0 {
+        Either::Left(sync_client) => credential_offer.resolve(sync_client),
+        Either::Right(async_client) => credential_offer.resolve_async(async_client).await,
+    }
+    .map_err(|_| {
+        Oid4vciError::InvalidParameter("invalid credential_offer: failed to resolve offer".into())
+    })?;
 
-    let base_url = match &credential_offer {
-        CredentialOfferParameters::Value {
-            credential_issuer, ..
-        } => credential_issuer,
-        CredentialOfferParameters::Reference {
-            credential_issuer, ..
-        } => credential_issuer,
-    };
+    let base_url = credential_offer.issuer();
 
     let issuer_metadata = match &http_client.0 {
         Either::Left(sync_client) => ICredentialIssuerMetadata::discover(base_url, sync_client),
         Either::Right(async_client) => {
-            ICredentialIssuerMetadata::discover_async(base_url.to_owned(), async_client).await
+            ICredentialIssuerMetadata::discover_async(base_url, async_client).await
         }
-    }?;
-
-    let grants = match &credential_offer {
-        CredentialOfferParameters::Value { grants, .. } => grants,
-        CredentialOfferParameters::Reference { grants, .. } => grants,
     }
-    .clone();
+    .map_err(|_| {
+        Oid4vciError::RequestError("failed to discover credential issuer metadata".into())
+    })?;
 
-    let authorization_metadata = if let Some(grants) = &grants {
-        // TODO: maybe offer a way for the wallet to pick grant ordering
-        // when multiple options are present
-        let grant_type = if grants.authorization_code().is_some() {
-            Ok(Some(CoreGrantType::AuthorizationCode))
-        } else if grants.pre_authorized_code().is_some() {
-            Ok(Some(CoreGrantType::Extension(
-                "urn:ietf:params:oauth:grant-type:pre-authorized_code".into(),
-            )))
-        } else {
-            Err(Oid4vciError::InvalidParameter(
-                "Invalid missing parameter".into(),
-            ))
-        }?;
+    let grants = credential_offer.grants().map(|g| g.to_owned());
 
-        match &http_client.0 {
-            Either::Left(sync_client) => {
-                AuthorizationMetadata::discover(&issuer_metadata, grant_type, sync_client)
-            }
-            Either::Right(async_client) => {
-                AuthorizationMetadata::discover_async(&issuer_metadata, grant_type, async_client)
+    let authorization_metadata =
+        if let Some(grant) = credential_offer.pre_authorized_code_grant() {
+            // TODO: maybe offer a way for the wallet to pick grant ordering
+            // when multiple options are present
+
+            let authorization_server = grant.authorization_server();
+
+            match &http_client.0 {
+                Either::Left(sync_client) => {
+                    AuthorizationServerMetadata::discover_from_credential_issuer_metadata(
+                        sync_client,
+                        &issuer_metadata,
+                        Some(&GrantType::PreAuthorizedCode),
+                        authorization_server,
+                    )
+                }
+                Either::Right(async_client) => {
+                    AuthorizationServerMetadata::discover_from_credential_issuer_metadata_async(
+                        async_client,
+                        &issuer_metadata,
+                        Some(&GrantType::PreAuthorizedCode),
+                        authorization_server,
+                    )
                     .await
+                }
             }
+        } else {
+            // TODO: if grants isn't present in the credential offer
+            // we must determine the grant type by using the metadata.
+            // Potentially defer to caller using a ForeignTrait after
+            // obtaining `grant_types_supported` from authorization server
+            // metadata. Future solution must keep in mind that the
+            // `authorization_servers` field is an array, so multiple
+            // grant options from different servers may be available.
+            todo!("determine grant type with metadata")
         }
-    } else {
-        // TODO: if grants isn't present in the credential offer
-        // we must determine the grant type by using the metadata.
-        // Potentially defer to caller using a ForeignTrait after
-        // obtaining `grant_types_supported` from authorization server
-        // metadata. Future solution must keep in mind that the
-        // `authorization_servers` field is an array, so multiple
-        // grant options from different servers may be available.
-        todo!("determine grant type with metadata")
-    }?;
+        .map_err(|_| {
+            Oid4vciError::RequestError("failed to discover authorization server metadata".into())
+        })?;
 
-    let credential_requests: Vec<profiles::CoreProfilesRequest> = match &credential_offer {
-        CredentialOfferParameters::Value { credentials, .. } => credentials
-            .iter()
-            .map(|c| {
-                use oid4vci::core::profiles::w3c;
-                use oid4vci::core::profiles::CoreProfilesOffer::*;
-                use oid4vci::credential_offer::CredentialOfferFormat::*;
-                match c {
-                    Reference(_scope) => todo!(),
-                    Value(JWTVC(offer)) => CoreProfilesConfiguration::JWTVC(
-                        w3c::jwt::Configuration::new(CredentialDefinition::new(
-                            offer.credential_definition().r#type().to_owned(),
-                        )),
-                    )
-                    .to_request(),
-                    Value(JWTLDVC(offer)) => CoreProfilesConfiguration::JWTLDVC(
-                        w3c::jwtld::Configuration::new(CredentialDefinitionLD::new(
-                            CredentialDefinition::new(
-                                offer
-                                    .credential_definition()
-                                    .credential_offer_definition()
-                                    .r#type()
-                                    .to_owned(),
-                            ),
-                            offer.credential_definition().context().to_owned(),
-                        )),
-                    )
-                    .to_request(),
-                    Value(LDVC(offer)) => {
-                        CoreProfilesConfiguration::LDVC(w3c::ldp::Configuration::new(
-                            offer.credential_definition().context().to_owned(),
-                            CredentialDefinitionLD::new(
-                                CredentialDefinition::new(
-                                    offer
-                                        .credential_definition()
-                                        .credential_offer_definition()
-                                        .r#type()
-                                        .to_owned(),
-                                ),
-                                offer.credential_definition().context().to_owned(),
-                            ),
-                        ))
-                        .to_request()
-                    }
-                    Value(ISOmDL(_)) => todo!(),
-                }
-            })
-            .collect(),
-        CredentialOfferParameters::Reference {
-            credential_configuration_ids,
-            ..
-        } => issuer_metadata
-            .credential_configurations_supported()
-            .iter()
-            .filter_map(|c| {
-                if credential_configuration_ids
-                    .iter()
-                    .any(|cid| *cid == *c.name())
-                {
-                    return Some(c.additional_fields().to_request());
-                }
-                None
-            })
-            .collect(),
-    };
+    let credential_requests: Vec<CoreProfilesCredentialRequest> = issuer_metadata
+        .credential_configurations_supported()
+        .iter()
+        .filter(|config| {
+            credential_offer
+                .credential_configuration_ids()
+                .contains(config.id())
+        })
+        .map(|config| match config.profile_specific_fields() {
+            CoreProfilesCredentialConfiguration::LdpVc(config) => {
+                let credential_definition =
+                    ldp_vc::authorization_detail::CredentialDefinition::default()
+                        .set_context(config.credential_definition().context().clone())
+                        .set_type(config.credential_definition().r#type().clone());
+                CredentialRequestWithFormat::LdpVc(ldp_vc::CredentialRequestWithFormat::new(
+                    credential_definition,
+                ))
+            }
+            CoreProfilesCredentialConfiguration::JwtVcJsonLd(config) => {
+                let credential_definition =
+                    ldp_vc::authorization_detail::CredentialDefinition::default()
+                        .set_context(config.credential_definition().context().clone())
+                        .set_type(config.credential_definition().r#type().clone());
+                CredentialRequestWithFormat::JwtVcJsonLd(
+                    jwt_vc_json_ld::CredentialRequestWithFormat::new(credential_definition),
+                )
+            }
+            x => unimplemented!("{x:?}"),
+        })
+        .map(|req| CoreProfilesCredentialRequest::WithFormat {
+            inner: req,
+            _credential_identifier: (),
+        })
+        .collect();
 
     let client = client::Client::from_issuer_metadata(
-        issuer_metadata.clone(),
-        authorization_metadata,
         ClientId::new(client_id),
         RedirectUrl::new(redirect_url).unwrap(),
+        issuer_metadata.clone(),
+        authorization_metadata,
     );
 
     let mut session = Oid4vciSession::new(client.into());
@@ -236,24 +188,28 @@ pub async fn oid4vci_initiate(
     let issuer_metadata = match &http_client.0 {
         Either::Left(sync_client) => ICredentialIssuerMetadata::discover(&base_url, sync_client),
         Either::Right(async_client) => {
-            ICredentialIssuerMetadata::discover_async(base_url.to_owned(), async_client).await
+            ICredentialIssuerMetadata::discover_async(&base_url, async_client).await
         }
-    }?;
+    }
+    .map_err(|_| {
+        Oid4vciError::RequestError("failed to discover credential issuer metadata".into())
+    })?;
 
     let authorization_metadata = match &http_client.0 {
-        Either::Left(sync_client) => {
-            AuthorizationMetadata::discover(&issuer_metadata, None, sync_client)
-        }
+        Either::Left(sync_client) => AuthorizationServerMetadata::discover(&base_url, sync_client),
         Either::Right(async_client) => {
-            AuthorizationMetadata::discover_async(&issuer_metadata, None, async_client).await
+            AuthorizationServerMetadata::discover_async(&base_url, async_client).await
         }
-    }?;
+    }
+    .map_err(|_| {
+        Oid4vciError::RequestError("failed to discover authorization server metadata".into())
+    })?;
 
     let client = client::Client::from_issuer_metadata(
-        issuer_metadata.clone(),
-        authorization_metadata,
         ClientId::new(client_id),
         RedirectUrl::new(redirect_url).unwrap(),
+        issuer_metadata.clone(),
+        authorization_metadata,
     );
 
     let mut session = Oid4vciSession::new(client.into());
@@ -268,9 +224,9 @@ pub async fn oid4vci_exchange_token(
     http_client: Arc<IHttpClient>,
 ) -> Result<Option<String>, Oid4vciError> {
     // TODO: refactor with `try {}` once it stabilizes.
-    let authorization_code = (|| -> Result<String, Oid4vciError> {
+    let code = (|| -> Result<PreAuthorizedCode, Oid4vciError> {
         if let Some(pre_auth) = session.get_grants()?.pre_authorized_code() {
-            return Ok(pre_auth.pre_authorized_code().to_owned());
+            return Ok(pre_auth.pre_authorized_code().clone());
         }
 
         Err(Oid4vciError::UnsupportedGrantType)
@@ -279,16 +235,19 @@ pub async fn oid4vci_exchange_token(
     let token_response = match &http_client.0 {
         Either::Left(sync_client) => session
             .get_client()
-            .exchange_code(AuthorizationCode::new(authorization_code))
+            .exchange_pre_authorized_code(code)
+            .set_anonymous_client()
             .request(sync_client),
         Either::Right(async_client) => {
             session
                 .get_client()
-                .exchange_code(AuthorizationCode::new(authorization_code))
+                .exchange_pre_authorized_code(code)
+                .set_anonymous_client()
                 .request_async(async_client)
                 .await
         }
-    }?;
+    }
+    .map_err(|_| Oid4vciError::RequestError("failed to exchange code".into()))?;
 
     let nonce = token_response
         .extra_fields()
@@ -305,16 +264,22 @@ pub async fn oid4vci_exchange_token(
 pub async fn oid4vci_exchange_credential(
     session: Arc<Oid4vciSession>,
     proofs_of_possession: Vec<String>,
+    context_map: Option<HashMap<String, String>>,
     http_client: Arc<IHttpClient>,
 ) -> Result<Vec<CredentialResponse>, Oid4vciError> {
+    log::trace!("oid4vci_exchange_credential");
+
+    log::trace!("session.get_credential_requests");
     let credential_requests = session.get_credential_requests()?.clone();
 
+    log::trace!("credential_requests.is_empty");
     if credential_requests.is_empty() {
         return Err(Oid4vciError::InvalidSession(
             "credential_requests unset".to_string(),
         ));
     }
 
+    log::trace!("compare length proofs_of_possession vs credential_requests");
     if proofs_of_possession.len() != credential_requests.len() {
         return Err(Oid4vciError::InvalidParameter(
             "invalid number of proofs received, must match credential request count".into(),
@@ -322,28 +287,35 @@ pub async fn oid4vci_exchange_credential(
     }
 
     let credential_responses = if credential_requests.len() == 1 {
+        log::trace!("processing single request");
+
+        log::trace!("build request");
         let request = session
             .get_client()
             .request_credential(
                 session.get_token_response()?.access_token().clone(),
                 credential_requests.first().unwrap().to_owned(),
             )
-            .set_proof(Some(Proof::JWT {
+            .set_proof(Some(Proof::Jwt {
                 jwt: proofs_of_possession.first().unwrap().to_owned(),
             }));
 
-        vec![match &http_client.0 {
-            Either::Left(sync_client) => request
-                .request(sync_client)?
-                .additional_profile_fields()
-                .to_owned(),
-            Either::Right(async_client) => request
-                .request_async(async_client)
-                .await?
-                .additional_profile_fields()
-                .to_owned(),
-        }]
+        log::trace!("execute with http client");
+        let response = match &http_client.0 {
+            Either::Left(sync_client) => request.request(sync_client),
+            Either::Right(async_client) => request.request_async(async_client).await,
+        }?;
+
+        log::trace!("match response kind");
+        match response.response_kind() {
+            ResponseEnum::Immediate { credential } => vec![credential.to_owned()],
+            ResponseEnum::ImmediateMany { credentials } => credentials.to_owned(),
+            ResponseEnum::Deferred { .. } => todo!(),
+        }
     } else {
+        log::trace!("processing muliple requests");
+
+        log::trace!("build request");
         let request = session
             .get_client()
             .batch_request_credential(
@@ -353,67 +325,90 @@ pub async fn oid4vci_exchange_credential(
             .set_proofs::<Oid4vciError>(
                 proofs_of_possession
                     .into_iter()
-                    .map(|p| Proof::JWT { jwt: p })
+                    .map(|p| Proof::Jwt { jwt: p })
                     .collect(),
             )?;
 
-        match &http_client.0 {
-            Either::Left(sync_client) => request
-                .request(sync_client)?
-                .credential_responses()
-                .to_owned(),
-            Either::Right(async_client) => request
-                .request_async(async_client)
-                .await?
-                .credential_responses()
-                .to_owned(),
-        }
+        log::trace!("execute with http client");
+        let response = match &http_client.0 {
+            Either::Left(sync_client) => request.request(sync_client)?,
+            Either::Right(async_client) => request.request_async(async_client).await?,
+        };
+
+        log::trace!("map match response kind");
+        response
+            .credential_responses()
+            .iter()
+            .flat_map(|r| match r {
+                ResponseEnum::Immediate { credential } => vec![credential.to_owned()],
+                ResponseEnum::ImmediateMany { credentials } => credentials.to_owned(),
+                ResponseEnum::Deferred { .. } => todo!(),
+            })
+            .collect()
     };
 
+    log::trace!("create vm_resolver");
+    let vm_resolver = AnyDidMethod::default().into_vm_resolver();
+    log::trace!("create verification params");
+    let params = match context_map {
+        Some(context_map) => VerificationParameters::from_resolver(vm_resolver)
+            .with_json_ld_loader(context_loader_from_map(context_map)?),
+        None => VerificationParameters::from_resolver(vm_resolver),
+    };
+
+    log::trace!("verify and convert http response into credential response");
     futures::future::try_join_all(credential_responses.into_iter().map(
-        move |credential_response| async {
-            let vm_resolver = AnyDidMethod::default().into_vm_resolver();
-            let params = VerificationParameters::from_resolver(vm_resolver);
+        |credential_response| async {
+            use oid4vci::core::profiles::CoreProfilesCredentialResponseType::*;
 
             match credential_response {
-                ResponseEnum::Immediate(imm) => match imm {
-                    CoreProfilesResponse::JWTVC(response) => Ok(CredentialResponse {
+                JwtVcJson(response) => {
+                    log::trace!("processing a JwtVcJson");
+                    let rt = tokio::runtime::Runtime::new().unwrap();
+
+                    Ok(CredentialResponse {
                         format: CredentialFormat::JwtVcJson,
-                        payload: response
-                            .credential()
-                            .verify_jwt(&params)
-                            .await
-                            .map_err(|e| e.to_string())
-                            .map_err(Oid4vciError::from)
-                            .map(|_| response.credential().as_bytes().to_vec())?,
-                    }),
-                    CoreProfilesResponse::JWTLDVC(response) => Ok(CredentialResponse {
+                        payload: rt.block_on(async {
+                            response
+                                .verify_jwt(&params)
+                                .await
+                                .map_err(|e| e.to_string())
+                                .map_err(Oid4vciError::from)
+                                .map(|_| response.as_bytes().to_vec())
+                        })?,
+                    })
+                }
+                JwtVcJsonLd(response) => {
+                    log::trace!("processing a JwtVcJsonLd");
+                    Ok(CredentialResponse {
                         format: CredentialFormat::JwtVcJsonLd,
                         payload: any_credential_from_json_str(
-                            &serde_json::to_string(response.credential()).unwrap(),
+                            &serde_json::to_string(&response).unwrap(),
                         )
                         .unwrap()
                         .verify(&params)
                         .await
                         .map_err(|e| e.to_string())
                         .map_err(Oid4vciError::from)
-                        .map(|_| serde_json::to_vec(response.credential()).unwrap())?,
-                    }),
-                    CoreProfilesResponse::LDVC(response) => Ok(CredentialResponse {
-                        format: CredentialFormat::JwtVcJson,
+                        .map(|_| serde_json::to_vec(&response).unwrap())?,
+                    })
+                }
+                LdpVc(response) => {
+                    log::trace!("processing an LdpVc");
+                    Ok(CredentialResponse {
+                        format: CredentialFormat::LdpVc,
                         payload: any_credential_from_json_str(
-                            &serde_json::to_string(response.credential()).unwrap(),
+                            &serde_json::to_string(&response).unwrap(),
                         )
                         .unwrap()
                         .verify(&params)
                         .await
                         .map_err(|e| e.to_string())
                         .map_err(Oid4vciError::from)
-                        .map(|_| serde_json::to_vec(response.credential()).unwrap())?,
-                    }),
-                    CoreProfilesResponse::ISOmDL(_) => todo!(),
-                },
-                ResponseEnum::Deferred { .. } => todo!(),
+                        .map(|_| serde_json::to_vec(&response).unwrap())?,
+                    })
+                }
+                MsoMdoc(_) => todo!(),
             }
         },
     ))

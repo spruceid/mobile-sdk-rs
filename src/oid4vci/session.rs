@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use futures::lock::Mutex;
 use oid4vci::{
     core::{
@@ -7,7 +5,6 @@ use oid4vci::{
         profiles::{self},
     },
     credential_offer::CredentialOfferGrants,
-    profiles::CredentialConfigurationProfile,
     token,
 };
 
@@ -71,7 +68,7 @@ impl Oid4vciSession {
 
     pub fn get_credential_requests(
         &self,
-    ) -> Result<Vec<profiles::CoreProfilesRequest>, Oid4vciError> {
+    ) -> Result<Vec<profiles::CoreProfilesCredentialRequest>, Oid4vciError> {
         self.credential_request
             .try_lock()
             .ok_or(Oid4vciError::LockError("credential_request".into()))?
@@ -84,7 +81,7 @@ impl Oid4vciSession {
 
     pub fn set_credential_request(
         &self,
-        credential_request: profiles::CoreProfilesRequest,
+        credential_request: profiles::CoreProfilesCredentialRequest,
     ) -> Result<(), Oid4vciError> {
         *(self
             .credential_request
@@ -97,7 +94,7 @@ impl Oid4vciSession {
 
     pub fn set_credential_requests(
         &self,
-        credential_requests: Vec<profiles::CoreProfilesRequest>,
+        credential_requests: Vec<profiles::CoreProfilesCredentialRequest>,
     ) -> Result<(), Oid4vciError> {
         *(self
             .credential_request
@@ -141,12 +138,15 @@ macro_rules! wrap_external_type {
 
 wrap_external_type!(client::Client, Client);
 wrap_external_type!(metadata::CredentialIssuerMetadata, CredentialIssuerMetadata);
-wrap_external_type!(Vec<profiles::CoreProfilesRequest>, CredentialRequest);
+wrap_external_type!(
+    Vec<profiles::CoreProfilesCredentialRequest>,
+    CredentialRequest
+);
 wrap_external_type!(token::Response, TokenResponse);
 wrap_external_type!(CredentialOfferGrants, Grants);
 
-impl From<profiles::CoreProfilesRequest> for CredentialRequest {
-    fn from(value: profiles::CoreProfilesRequest) -> Self {
+impl From<profiles::CoreProfilesCredentialRequest> for CredentialRequest {
+    fn from(value: profiles::CoreProfilesCredentialRequest) -> Self {
         CredentialRequest(vec![value])
     }
 }
@@ -155,31 +155,4 @@ impl From<profiles::CoreProfilesRequest> for CredentialRequest {
 pub struct CredentialResponse {
     pub format: CredentialFormat,
     pub payload: Vec<u8>,
-}
-
-#[uniffi::export]
-impl Oid4vciSession {
-    pub fn get_all_credential_requests(&self) -> Result<Vec<Arc<CredentialRequest>>, Oid4vciError> {
-        Ok(self
-            .get_metadata()?
-            .credential_configurations_supported()
-            .iter()
-            .map(|c| Arc::new(c.additional_fields().to_request().into()))
-            .collect())
-    }
-
-    pub fn get_credential_request_by_index(
-        &self,
-        index: u16,
-    ) -> Result<CredentialRequest, Oid4vciError> {
-        Ok(self
-            .get_metadata()?
-            .credential_configurations_supported()
-            .get(index as usize)
-            .ok_or("invalid credential configuration index".to_string())
-            .map_err(Oid4vciError::from)?
-            .additional_fields()
-            .to_request()
-            .into())
-    }
 }

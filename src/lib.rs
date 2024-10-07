@@ -2,9 +2,11 @@ uniffi::setup_scaffolding!();
 
 pub mod common;
 pub mod credential;
+pub mod did;
 pub mod local_store;
 pub mod mdl;
 pub mod oid4vci;
+pub mod proof_of_possession;
 pub mod storage_manager;
 pub mod vdc_collection;
 pub mod verifier;

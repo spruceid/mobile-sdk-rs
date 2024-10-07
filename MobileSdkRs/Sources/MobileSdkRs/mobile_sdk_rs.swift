@@ -2221,6 +2221,8 @@ public func FfiConverterTypeMdoc_lower(_ value: Mdoc) -> UnsafeMutableRawPointer
 
 public protocol Oid4vciProtocol : AnyObject {
     
+    func clearContextMap() throws 
+    
     func exchangeCredential(proofsOfPossession: [String]) async throws  -> [CredentialResponse]
     
     func exchangeToken() async throws  -> String?
@@ -2229,7 +2231,11 @@ public protocol Oid4vciProtocol : AnyObject {
     
     func initiate(baseUrl: String, clientId: String, redirectUrl: String) async throws 
     
+    func initiateLogger() 
+    
     func initiateWithOffer(credentialOffer: String, clientId: String, redirectUrl: String) async throws 
+    
+    func setContextMap(values: [String: String]) throws 
     
 }
 
@@ -2311,6 +2317,12 @@ public static func newWithSyncClient(client: SyncHttpClient) -> Oid4vci {
     
 
     
+open func clearContextMap()throws  {try rustCallWithError(FfiConverterTypeOid4vciError.lift) {
+    uniffi_mobile_sdk_rs_fn_method_oid4vci_clear_context_map(self.uniffiClonePointer(),$0
+    )
+}
+}
+    
 open func exchangeCredential(proofsOfPossession: [String])async throws  -> [CredentialResponse] {
     return
         try  await uniffiRustCallAsync(
@@ -2369,6 +2381,12 @@ open func initiate(baseUrl: String, clientId: String, redirectUrl: String)async 
         )
 }
     
+open func initiateLogger() {try! rustCall() {
+    uniffi_mobile_sdk_rs_fn_method_oid4vci_initiate_logger(self.uniffiClonePointer(),$0
+    )
+}
+}
+    
 open func initiateWithOffer(credentialOffer: String, clientId: String, redirectUrl: String)async throws  {
     return
         try  await uniffiRustCallAsync(
@@ -2384,6 +2402,13 @@ open func initiateWithOffer(credentialOffer: String, clientId: String, redirectU
             liftFunc: { $0 },
             errorHandler: FfiConverterTypeOid4vciError.lift
         )
+}
+    
+open func setContextMap(values: [String: String])throws  {try rustCallWithError(FfiConverterTypeOid4vciError.lift) {
+    uniffi_mobile_sdk_rs_fn_method_oid4vci_set_context_map(self.uniffiClonePointer(),
+        FfiConverterDictionaryStringString.lower(values),$0
+    )
+}
 }
     
 
@@ -2592,10 +2617,6 @@ public func FfiConverterTypeOid4vciMetadata_lower(_ value: Oid4vciMetadata) -> U
 
 public protocol Oid4vciSessionProtocol : AnyObject {
     
-    func getAllCredentialRequests() throws  -> [CredentialRequest]
-    
-    func getCredentialRequestByIndex(index: UInt16) throws  -> CredentialRequest
-    
 }
 
 open class Oid4vciSession:
@@ -2638,21 +2659,6 @@ open class Oid4vciSession:
 
     
 
-    
-open func getAllCredentialRequests()throws  -> [CredentialRequest] {
-    return try  FfiConverterSequenceTypeCredentialRequest.lift(try rustCallWithError(FfiConverterTypeOid4vciError.lift) {
-    uniffi_mobile_sdk_rs_fn_method_oid4vcisession_get_all_credential_requests(self.uniffiClonePointer(),$0
-    )
-})
-}
-    
-open func getCredentialRequestByIndex(index: UInt16)throws  -> CredentialRequest {
-    return try  FfiConverterTypeCredentialRequest.lift(try rustCallWithError(FfiConverterTypeOid4vciError.lift) {
-    uniffi_mobile_sdk_rs_fn_method_oid4vcisession_get_credential_request_by_index(self.uniffiClonePointer(),
-        FfiConverterUInt16.lower(index),$0
-    )
-})
-}
     
 
 }
@@ -4896,6 +4902,137 @@ extension CredentialFormat: Equatable, Hashable {}
 
 
 
+public enum DidError {
+
+    
+    
+    case SerializationError(message: String)
+    
+    case GenerateError(message: String)
+    
+    case ResolutionError(message: String)
+    
+    case MissingVerificationMethod(message: String)
+    
+}
+
+
+public struct FfiConverterTypeDidError: FfiConverterRustBuffer {
+    typealias SwiftType = DidError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DidError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .SerializationError(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 2: return .GenerateError(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 3: return .ResolutionError(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 4: return .MissingVerificationMethod(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: DidError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        case .SerializationError(_ /* message is ignored*/):
+            writeInt(&buf, Int32(1))
+        case .GenerateError(_ /* message is ignored*/):
+            writeInt(&buf, Int32(2))
+        case .ResolutionError(_ /* message is ignored*/):
+            writeInt(&buf, Int32(3))
+        case .MissingVerificationMethod(_ /* message is ignored*/):
+            writeInt(&buf, Int32(4))
+
+        
+        }
+    }
+}
+
+
+extension DidError: Equatable, Hashable {}
+
+extension DidError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
+public enum DidMethod {
+    
+    case jwk
+    case key
+}
+
+
+public struct FfiConverterTypeDidMethod: FfiConverterRustBuffer {
+    typealias SwiftType = DidMethod
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DidMethod {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .jwk
+        
+        case 2: return .key
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: DidMethod, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .jwk:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .key:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+public func FfiConverterTypeDidMethod_lift(_ buf: RustBuffer) throws -> DidMethod {
+    return try FfiConverterTypeDidMethod.lift(buf)
+}
+
+public func FfiConverterTypeDidMethod_lower(_ value: DidMethod) -> RustBuffer {
+    return FfiConverterTypeDidMethod.lower(value)
+}
+
+
+
+extension DidMethod: Equatable, Hashable {}
+
+
+
+
 public enum HttpClientError {
 
     
@@ -5669,6 +5806,12 @@ public enum Oid4vciError {
     
     case LockError(message: String)
     
+    case VpRequestRequired(message: String)
+    
+    case DidError(message: String)
+    
+    case ContextMapError(message: String)
+    
     case Generic(message: String)
     
 }
@@ -5708,7 +5851,19 @@ public struct FfiConverterTypeOid4vciError: FfiConverterRustBuffer {
             message: try FfiConverterString.read(from: &buf)
         )
         
-        case 7: return .Generic(
+        case 7: return .VpRequestRequired(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 8: return .DidError(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 9: return .ContextMapError(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 10: return .Generic(
             message: try FfiConverterString.read(from: &buf)
         )
         
@@ -5735,8 +5890,14 @@ public struct FfiConverterTypeOid4vciError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(5))
         case .LockError(_ /* message is ignored*/):
             writeInt(&buf, Int32(6))
-        case .Generic(_ /* message is ignored*/):
+        case .VpRequestRequired(_ /* message is ignored*/):
             writeInt(&buf, Int32(7))
+        case .DidError(_ /* message is ignored*/):
+            writeInt(&buf, Int32(8))
+        case .ContextMapError(_ /* message is ignored*/):
+            writeInt(&buf, Int32(9))
+        case .Generic(_ /* message is ignored*/):
+            writeInt(&buf, Int32(10))
 
         
         }
@@ -5822,6 +5983,90 @@ public func FfiConverterTypeOutcome_lower(_ value: Outcome) -> RustBuffer {
 extension Outcome: Equatable, Hashable {}
 
 
+
+
+public enum PopError {
+
+    
+    
+    case DidError(message: String)
+    
+    case UrlParseError(message: String)
+    
+    case DidUrlParseError(message: String)
+    
+    case SerializationError(message: String)
+    
+    case ConversionError(message: String)
+    
+}
+
+
+public struct FfiConverterTypePopError: FfiConverterRustBuffer {
+    typealias SwiftType = PopError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> PopError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .DidError(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 2: return .UrlParseError(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 3: return .DidUrlParseError(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 4: return .SerializationError(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 5: return .ConversionError(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: PopError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        case .DidError(_ /* message is ignored*/):
+            writeInt(&buf, Int32(1))
+        case .UrlParseError(_ /* message is ignored*/):
+            writeInt(&buf, Int32(2))
+        case .DidUrlParseError(_ /* message is ignored*/):
+            writeInt(&buf, Int32(3))
+        case .SerializationError(_ /* message is ignored*/):
+            writeInt(&buf, Int32(4))
+        case .ConversionError(_ /* message is ignored*/):
+            writeInt(&buf, Int32(5))
+
+        
+        }
+    }
+}
+
+
+extension PopError: Equatable, Hashable {}
+
+extension PopError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
 
 
 public enum RequestError {
@@ -6823,6 +7068,27 @@ fileprivate struct FfiConverterOptionSequenceString: FfiConverterRustBuffer {
     }
 }
 
+fileprivate struct FfiConverterOptionDictionaryStringString: FfiConverterRustBuffer {
+    typealias SwiftType = [String: String]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterDictionaryStringString.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterDictionaryStringString.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
 fileprivate struct FfiConverterOptionTypeKeyAlias: FfiConverterRustBuffer {
     typealias SwiftType = KeyAlias?
 
@@ -6882,28 +7148,6 @@ fileprivate struct FfiConverterSequenceString: FfiConverterRustBuffer {
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterString.read(from: &buf))
-        }
-        return seq
-    }
-}
-
-fileprivate struct FfiConverterSequenceTypeCredentialRequest: FfiConverterRustBuffer {
-    typealias SwiftType = [CredentialRequest]
-
-    public static func write(_ value: [CredentialRequest], into buf: inout [UInt8]) {
-        let len = Int32(value.count)
-        writeInt(&buf, len)
-        for item in value {
-            FfiConverterTypeCredentialRequest.write(item, into: &buf)
-        }
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [CredentialRequest] {
-        let len: Int32 = try readInt(&buf)
-        var seq = [CredentialRequest]()
-        seq.reserveCapacity(Int(len))
-        for _ in 0 ..< len {
-            seq.append(try FfiConverterTypeCredentialRequest.read(from: &buf))
         }
         return seq
     }
@@ -7587,17 +7831,19 @@ public func generatePopComplete(signingInput: Data, signature: Data)throws  -> S
     )
 })
 }
-public func generatePopPrepare(audience: String, issuer: String, nonce: String?, vm: String, publicJwk: String, durationInSecs: Int64?)throws  -> Data {
-    return try  FfiConverterData.lift(try rustCallWithError(FfiConverterTypeOid4vciError.lift) {
-    uniffi_mobile_sdk_rs_fn_func_generate_pop_prepare(
-        FfiConverterString.lower(audience),
-        FfiConverterString.lower(issuer),
-        FfiConverterOptionString.lower(nonce),
-        FfiConverterString.lower(vm),
-        FfiConverterString.lower(publicJwk),
-        FfiConverterOptionInt64.lower(durationInSecs),$0
-    )
-})
+public func generatePopPrepare(audience: String, nonce: String?, didMethod: DidMethod, publicJwk: String, durationInSecs: Int64?)async throws  -> Data {
+    return
+        try  await uniffiRustCallAsync(
+            rustFutureFunc: {
+                uniffi_mobile_sdk_rs_fn_func_generate_pop_prepare(FfiConverterString.lower(audience),FfiConverterOptionString.lower(nonce),FfiConverterTypeDidMethod.lower(didMethod),FfiConverterString.lower(publicJwk),FfiConverterOptionInt64.lower(durationInSecs)
+                )
+            },
+            pollFunc: ffi_mobile_sdk_rs_rust_future_poll_rust_buffer,
+            completeFunc: ffi_mobile_sdk_rs_rust_future_complete_rust_buffer,
+            freeFunc: ffi_mobile_sdk_rs_rust_future_free_rust_buffer,
+            liftFunc: FfiConverterData.lift,
+            errorHandler: FfiConverterTypePopError.lift
+        )
 }
 public func handleResponse(state: MdlSessionManager, response: Data)throws  -> MdlReaderResponseData {
     return try  FfiConverterTypeMDLReaderResponseData.lift(try rustCallWithError(FfiConverterTypeMDLReaderResponseError.lift) {
@@ -7670,11 +7916,11 @@ public func initializeMdlPresentationFromBytes(mdoc: Mdoc, uuid: Uuid)async thro
             errorHandler: FfiConverterTypeSessionError.lift
         )
 }
-public func oid4vciExchangeCredential(session: Oid4vciSession, proofsOfPossession: [String], httpClient: IHttpClient)async throws  -> [CredentialResponse] {
+public func oid4vciExchangeCredential(session: Oid4vciSession, proofsOfPossession: [String], contextMap: [String: String]?, httpClient: IHttpClient)async throws  -> [CredentialResponse] {
     return
         try  await uniffiRustCallAsync(
             rustFutureFunc: {
-                uniffi_mobile_sdk_rs_fn_func_oid4vci_exchange_credential(FfiConverterTypeOid4vciSession.lower(session),FfiConverterSequenceString.lower(proofsOfPossession),FfiConverterTypeIHttpClient.lower(httpClient)
+                uniffi_mobile_sdk_rs_fn_func_oid4vci_exchange_credential(FfiConverterTypeOid4vciSession.lower(session),FfiConverterSequenceString.lower(proofsOfPossession),FfiConverterOptionDictionaryStringString.lower(contextMap),FfiConverterTypeIHttpClient.lower(httpClient)
                 )
             },
             pollFunc: ffi_mobile_sdk_rs_rust_future_poll_rust_buffer,
@@ -7828,7 +8074,7 @@ private var initializationResult: InitializationResult = {
     if (uniffi_mobile_sdk_rs_checksum_func_generate_pop_complete() != 56778) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_func_generate_pop_prepare() != 18468) {
+    if (uniffi_mobile_sdk_rs_checksum_func_generate_pop_prepare() != 54105) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_func_handle_response() != 43961) {
@@ -7840,7 +8086,7 @@ private var initializationResult: InitializationResult = {
     if (uniffi_mobile_sdk_rs_checksum_func_initialize_mdl_presentation_from_bytes() != 12482) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_exchange_credential() != 13827) {
+    if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_exchange_credential() != 59343) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_func_oid4vci_exchange_token() != 3394) {
@@ -7945,6 +8191,9 @@ private var initializationResult: InitializationResult = {
     if (uniffi_mobile_sdk_rs_checksum_method_mdoc_key_alias() != 39341) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vci_clear_context_map() != 165) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mobile_sdk_rs_checksum_method_oid4vci_exchange_credential() != 17336) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -7957,7 +8206,13 @@ private var initializationResult: InitializationResult = {
     if (uniffi_mobile_sdk_rs_checksum_method_oid4vci_initiate() != 12704) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vci_initiate_logger() != 11448) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_mobile_sdk_rs_checksum_method_oid4vci_initiate_with_offer() != 23294) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_oid4vci_set_context_map() != 64024) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_method_oid4vcimetadata_authorization_servers() != 42340) {
@@ -7979,12 +8234,6 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_method_oid4vcimetadata_to_json() != 52469) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_mobile_sdk_rs_checksum_method_oid4vcisession_get_all_credential_requests() != 32094) {
-        return InitializationResult.apiChecksumMismatch
-    }
-    if (uniffi_mobile_sdk_rs_checksum_method_oid4vcisession_get_credential_request_by_index() != 55077) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_method_parsedcredential_as_json_vc() != 62122) {
