@@ -450,6 +450,7 @@ mod tests {
     // available at localhost:3000.
     //
     // See: https://github.com/spruceid/companion/pull/1
+    #[ignore]
     #[tokio::test]
     async fn test_oid4vp_url() -> Result<(), Box<dyn std::error::Error>> {
         let example_sd_jwt = include_str!("../../tests/examples/sd_vc.jwt");
