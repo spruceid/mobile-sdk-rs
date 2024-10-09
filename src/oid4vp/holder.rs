@@ -22,14 +22,14 @@ use oid4vp::{
         presentation_submission::{DescriptorMap, PresentationSubmission},
         response::{parameters::VpToken, AuthorizationResponse, UnencodedAuthorizationResponse},
     },
-    verifier::request_signer::RequestSigner,
+    // verifier::request_signer::RequestSigner,
     wallet::Wallet as OID4VPWallet,
 };
-use ssi::claims::jws::JwsSigner;
+// use ssi::claims::jws::JwsSigner;
 use ssi::dids::DIDWeb;
 use ssi::dids::VerificationMethodDIDResolver;
 use ssi::prelude::AnyJwkMethod;
-use ssi::JWK;
+// use ssi::JWK;
 use tokio::sync::RwLock;
 use uniffi::deps::{anyhow, log};
 
@@ -51,10 +51,9 @@ pub struct Holder {
     /// A list of trusted DIDs.
     pub(crate) trusted_dids: Vec<String>,
 
-    /// A request signer callback interface to handle
-    /// cryptographic signing with native libraries.
-    pub(crate) request_signer: Option<Arc<dyn RequestSignerInterface>>,
-
+    // /// A request signer callback interface to handle
+    // /// cryptographic signing with native libraries.
+    // pub(crate) request_signer: Option<Arc<dyn RequestSignerInterface>>,
     /// Provide optional credentials to the holder instance.
     pub(crate) provided_credentials: Option<Vec<Arc<Credential>>>,
 
@@ -68,7 +67,7 @@ impl Holder {
     #[uniffi::constructor]
     pub async fn new(
         vdc_collection: Arc<VdcCollection>,
-        request_signer: Arc<dyn RequestSignerInterface>,
+        // request_signer: Arc<dyn RequestSignerInterface>,
         trusted_dids: Vec<String>,
     ) -> Result<Arc<Self>, OID4VPError> {
         let client = oid4vp::core::util::ReqwestClient::new()
@@ -79,7 +78,7 @@ impl Holder {
             vdc_collection: Some(vdc_collection),
             metadata: WalletMetadata::openid4vp_scheme_static(),
             trusted_dids,
-            request_signer: Some(request_signer),
+            // request_signer: Some(request_signer),
             provided_credentials: None,
             authorization_request: RwLock::new(None),
         }))
@@ -93,7 +92,7 @@ impl Holder {
     #[uniffi::constructor]
     pub async fn new_with_credentials(
         provided_credentials: Vec<Arc<Credential>>,
-        request_signer: Arc<dyn RequestSignerInterface>,
+        _request_signer: Arc<dyn RequestSignerInterface>,
         trusted_dids: Vec<String>,
     ) -> Result<Arc<Self>, OID4VPError> {
         let client = oid4vp::core::util::ReqwestClient::new()
@@ -104,7 +103,7 @@ impl Holder {
             vdc_collection: None,
             metadata: WalletMetadata::openid4vp_scheme_static(),
             trusted_dids,
-            request_signer: Some(request_signer),
+            // request_signer: Some(request_signer),
             provided_credentials: Some(provided_credentials),
             authorization_request: RwLock::new(None),
         }))
@@ -122,7 +121,7 @@ impl Holder {
         let request = self
             .validate_request(url)
             .await
-            .map_err(|e| OID4VPError::RequestValidation(e.to_string()))?;
+            .map_err(|e| OID4VPError::RequestValidation(format!("{e:?}")))?;
 
         // Store the authorization request object for later use.
         self.authorization_request
@@ -375,71 +374,71 @@ impl OID4VPWallet for Holder {
     }
 }
 
-#[async_trait::async_trait]
-impl RequestSigner for Holder {
-    type Error = OID4VPError;
+// #[async_trait::async_trait]
+// impl RequestSigner for Holder {
+//     type Error = OID4VPError;
 
-    fn alg(&self) -> Result<String, Self::Error> {
-        Ok(self
-            .jwk()?
-            .algorithm
-            .ok_or(OID4VPError::SigningAlgorithmNotFound(
-                "JWK algorithm not found.".into(),
-            ))?
-            .to_string())
-    }
+//     fn alg(&self) -> Result<String, Self::Error> {
+//         Ok(self
+//             .jwk()?
+//             .algorithm
+//             .ok_or(OID4VPError::SigningAlgorithmNotFound(
+//                 "JWK algorithm not found.".into(),
+//             ))?
+//             .to_string())
+//     }
 
-    fn jwk(&self) -> Result<JWK, Self::Error> {
-        let jwk = self
-            .request_signer
-            .as_ref()
-            .ok_or(OID4VPError::RequestSignerNotFound)?
-            .jwk()?;
-        serde_json::from_str(&jwk).map_err(|e| OID4VPError::JwkParse(e.to_string()))
-    }
+//     fn jwk(&self) -> Result<JWK, Self::Error> {
+//         let jwk = self
+//             .request_signer
+//             .as_ref()
+//             .ok_or(OID4VPError::RequestSignerNotFound)?
+//             .jwk()?;
+//         serde_json::from_str(&jwk).map_err(|e| OID4VPError::JwkParse(e.to_string()))
+//     }
 
-    async fn sign(&self, _payload: &[u8]) -> Vec<u8> {
-        tracing::warn!("WARNING: use `try_sign` method instead.");
+//     async fn sign(&self, _payload: &[u8]) -> Vec<u8> {
+//         tracing::warn!("WARNING: use `try_sign` method instead.");
 
-        Vec::with_capacity(0)
-    }
+//         Vec::with_capacity(0)
+//     }
 
-    async fn try_sign(&self, payload: &[u8]) -> Result<Vec<u8>, Self::Error> {
-        self.request_signer
-            .as_ref()
-            .ok_or(OID4VPError::RequestSignerNotFound)?
-            .try_sign(payload.to_vec())
-            .await
-            .map_err(OID4VPError::from)
-    }
-}
+//     async fn try_sign(&self, payload: &[u8]) -> Result<Vec<u8>, Self::Error> {
+//         self.request_signer
+//             .as_ref()
+//             .ok_or(OID4VPError::RequestSignerNotFound)?
+//             .try_sign(payload.to_vec())
+//             .await
+//             .map_err(OID4VPError::from)
+//     }
+// }
 
-impl JwsSigner for Holder {
-    async fn fetch_info(
-        &self,
-    ) -> Result<ssi::claims::jws::JwsSignerInfo, ssi::claims::SignatureError> {
-        let jwk = self
-            .jwk()
-            .map_err(|e| ssi::claims::SignatureError::Other(e.to_string()))?;
+// impl JwsSigner for Holder {
+//     async fn fetch_info(
+//         &self,
+//     ) -> Result<ssi::claims::jws::JwsSignerInfo, ssi::claims::SignatureError> {
+//         let jwk = self
+//             .jwk()
+//             .map_err(|e| ssi::claims::SignatureError::Other(e.to_string()))?;
 
-        let algorithm = jwk.algorithm.ok_or(ssi::claims::SignatureError::Other(
-            "JWK algorithm not found.".into(),
-        ))?;
+//         let algorithm = jwk.algorithm.ok_or(ssi::claims::SignatureError::Other(
+//             "JWK algorithm not found.".into(),
+//         ))?;
 
-        let key_id = jwk.key_id.clone();
+//         let key_id = jwk.key_id.clone();
 
-        Ok(ssi::claims::jws::JwsSignerInfo { algorithm, key_id })
-    }
+//         Ok(ssi::claims::jws::JwsSignerInfo { algorithm, key_id })
+//     }
 
-    async fn sign_bytes(
-        &self,
-        signing_bytes: &[u8],
-    ) -> Result<Vec<u8>, ssi::claims::SignatureError> {
-        self.try_sign(signing_bytes)
-            .await
-            .map_err(|e| ssi::claims::SignatureError::Other(format!("Failed to sign bytes: {}", e)))
-    }
-}
+//     async fn sign_bytes(
+//         &self,
+//         signing_bytes: &[u8],
+//     ) -> Result<Vec<u8>, ssi::claims::SignatureError> {
+//         self.try_sign(signing_bytes)
+//             .await
+//             .map_err(|e| ssi::claims::SignatureError::Other(format!("Failed to sign bytes: {}", e)))
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
@@ -469,27 +468,25 @@ mod tests {
             .json()
             .await?;
 
-        let id = response.0;
-        // NOTE: even when decoding the url, the port remains percent encoded.
-        // let url = urlencoding::decode(&response.1).expect("failed to url decode the response.");
-        // NOTE: Hard coding the url to debug whether the percent encoding is the issue, which it appears it is not.
-        let url = format!("openid4vp://?client_id=did:web:localhost:3000:oid4vp:client&request_uri=http://localhost:3000/oid4vp/authz/{id}");
-        let url = Url::parse(&url).expect("failed to parse url");
+        let _id = response.0;
+        let url = Url::parse(&response.1).expect("failed to parse url");
 
-        println!("Received URL: {:?}", url);
+        // println!("Received URL: {:?}", url);
 
         // Make a request to the OID4VP URL.
         let holder = Holder::new_with_credentials(
             vec![Arc::new(credential)],
             Arc::new(ExampleRequestSigner::default()),
             // NOTE: should the client ID be added as the trusted did here?
-            vec!["did:web:localhost:3000:oid4vp:client".into()],
+            vec!["did:web:localhost%3A3000:oid4vp:client".into()],
         )
         .await?;
 
         let permission_request = holder.authorization_request(url).await?;
 
         let requested_fields = permission_request.requested_fields();
+
+        println!("Requested Fields: {:?}", requested_fields);
 
         assert!(requested_fields.len() > 0);
 
