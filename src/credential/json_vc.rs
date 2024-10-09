@@ -1,5 +1,8 @@
 use std::sync::Arc;
 
+use oid4vp::core::{
+    credential_format::ClaimFormatDesignation, presentation_definition::PresentationDefinition,
+};
 use serde_json::Value as Json;
 use ssi::{
     claims::vc::{v1::Credential as _, v2::Credential as _},
@@ -116,6 +119,21 @@ impl JsonVc {
             parsed,
             key_alias,
         }))
+    }
+
+    /// Check if the credential satisfies a presentation definition.
+    pub fn check_presentation_definition(&self, definition: &PresentationDefinition) -> bool {
+        // If the credential does not match the definition requested format,
+        // then return false.
+        if !definition
+            .format()
+            .contains_key(&ClaimFormatDesignation::LdpVc)
+        {
+            return false;
+        }
+
+        // Check the JSON-encoded credential against the definition.
+        definition.check_credential_validation(&self.raw)
     }
 }
 

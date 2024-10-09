@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
 use base64::prelude::*;
+use oid4vp::core::{
+    credential_format::ClaimFormatDesignation, presentation_definition::PresentationDefinition,
+};
 use ssi::{
     claims::{
         jwt::IntoDecodedJwt,
@@ -103,7 +106,7 @@ impl JwtVc {
         self.jws.as_bytes().to_vec()
     }
 
-    fn from_compact_jws_bytes(
+    pub(crate) fn from_compact_jws_bytes(
         id: Uuid,
         raw: Vec<u8>,
         key_alias: Option<KeyAlias>,
@@ -151,6 +154,34 @@ impl JwtVc {
     fn convert_to_json_string(base64_encoded_bytes: &[u8]) -> Option<String> {
         String::from_utf8(BASE64_STANDARD_NO_PAD.decode(base64_encoded_bytes).ok()?).ok()
     }
+
+    /// Return the internal `AnyJsonCredential` type
+    pub fn credential(&self) -> AnyJsonCredential {
+        self.credential.clone()
+    }
+
+    /// Check if the credential satisfies a presentation definition.
+    pub fn check_presentation_definition(&self, definition: &PresentationDefinition) -> bool {
+        // If the credential does not match the definition requested format,
+        // then return false.
+        if !definition
+            .format()
+            .contains_key(&ClaimFormatDesignation::JwtVcJson)
+        {
+            return false;
+        }
+
+        let Ok(json) = serde_json::to_value(&self.credential) else {
+            // NOTE: if we cannot convert the credential to a JSON value, then we cannot
+            // check the presentation definition, so we return false.
+            //
+            // TODO: add logging to indicate that the credential could not be converted to JSON.
+            return false;
+        };
+
+        // Check the JSON-encoded credential against the definition.
+        definition.check_credential_validation(&json)
+    }
 }
 
 impl TryFrom<Credential> for Arc<JwtVc> {
@@ -158,6 +189,18 @@ impl TryFrom<Credential> for Arc<JwtVc> {
 
     fn try_from(credential: Credential) -> Result<Self, Self::Error> {
         JwtVc::from_compact_jws_bytes(credential.id, credential.payload, credential.key_alias)
+    }
+}
+
+impl TryFrom<&Credential> for Arc<JwtVc> {
+    type Error = JwtVcInitError;
+
+    fn try_from(credential: &Credential) -> Result<Self, Self::Error> {
+        JwtVc::from_compact_jws_bytes(
+            credential.id,
+            credential.payload.clone(),
+            credential.key_alias.clone(),
+        )
     }
 }
 
