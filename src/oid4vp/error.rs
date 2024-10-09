@@ -1,4 +1,4 @@
-use super::request_signer::RequestSignerError;
+// use super::request_signer::RequestSignerError;
 
 /// The [OID4VPError] enum represents the errors that can occur
 /// when using the oid4vp foreign library.
@@ -46,8 +46,8 @@ pub enum OID4VPError {
     VpTokenCreate(String),
     #[error("JWK Parse Error: {0}")]
     JwkParse(String),
-    #[error(transparent)]
-    RequestSigner(#[from] RequestSignerError),
+    // #[error(transparent)]
+    // RequestSigner(#[from] RequestSignerError),
     #[error("VDC collection is not initialized")]
     VdcCollectionNotInitialized,
     #[error("Failed to find a current authorization request for permission response")]

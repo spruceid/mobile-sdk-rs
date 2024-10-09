@@ -1,6 +1,5 @@
-use super::credential_callback::*;
 use super::error::OID4VPError;
-use super::request_signer::RequestSignerInterface;
+use super::permission_request::*;
 use crate::common::*;
 use crate::credential::*;
 use crate::vdc_collection::VdcCollection;
@@ -92,7 +91,7 @@ impl Holder {
     #[uniffi::constructor]
     pub async fn new_with_credentials(
         provided_credentials: Vec<Arc<Credential>>,
-        _request_signer: Arc<dyn RequestSignerInterface>,
+        // _request_signer: Arc<dyn RequestSignerInterface>,
         trusted_dids: Vec<String>,
     ) -> Result<Arc<Self>, OID4VPError> {
         let client = oid4vp::core::util::ReqwestClient::new()
@@ -138,7 +137,7 @@ impl Holder {
         }
     }
 
-    pub async fn permission_response(
+    pub async fn submit_permission_response(
         &self,
         response: Arc<PermissionResponse>,
     ) -> Result<Option<Url>, OID4VPError> {
@@ -443,7 +442,7 @@ impl OID4VPWallet for Holder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::oid4vp::request_signer::ExampleRequestSigner;
+    // use crate::oid4vp::request_signer::ExampleRequestSigner;
     use sd_jwt::SdJwt;
 
     // NOTE: This test requires the `companion` service to be running and
@@ -477,7 +476,7 @@ mod tests {
         // Make a request to the OID4VP URL.
         let holder = Holder::new_with_credentials(
             vec![Arc::new(credential)],
-            Arc::new(ExampleRequestSigner::default()),
+            // Arc::new(ExampleRequestSigner::default()),
             // NOTE: should the client ID be added as the trusted did here?
             vec!["did:web:localhost%3A3000:oid4vp:client".into()],
         )
@@ -499,9 +498,9 @@ mod tests {
             .pop()
             .expect("failed to retrieve a parsed credential matching the presentation definition");
 
-        let response = permission_request.permission_response(selected_credential);
+        let response = permission_request.create_permission_response(selected_credential);
 
-        let permission_response = holder.permission_response(response).await?;
+        let permission_response = holder.submit_permission_response(response).await?;
 
         assert!(permission_response.is_some());
 

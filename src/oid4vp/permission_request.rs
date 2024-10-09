@@ -20,7 +20,7 @@ pub type InputDescriptorCredentialMapRef = Arc<RwLock<InputDescriptorCredentialM
 pub type SelectedCredentialMapRef = Arc<RwLock<HashMap<String, Vec<Uuid>>>>;
 
 #[derive(uniffi::Error, thiserror::Error, Debug)]
-pub enum CredentialCallbackError {
+pub enum PermissionRequestError {
     /// Permission denied for requested presentation.
     #[error("Permission denied for requested presentation.")]
     PermissionDenied,
@@ -175,7 +175,7 @@ impl PermissionRequest {
     }
 
     /// Construct a new permission response for the given credential.
-    pub fn permission_response(
+    pub fn create_permission_response(
         &self,
         selected_credential: Arc<ParsedCredential>,
     ) -> Arc<PermissionResponse> {
@@ -183,6 +183,11 @@ impl PermissionRequest {
             selected_credential,
             presentation_definition: self.definition.clone(),
         })
+    }
+
+    /// Return the purpose of the presentation request.
+    pub fn purpose(&self) -> Option<String> {
+        self.definition.purpose().map(ToOwned::to_owned)
     }
 }
 
