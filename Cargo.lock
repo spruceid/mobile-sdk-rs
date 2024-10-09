@@ -3608,7 +3608,7 @@ dependencies = [
 [[package]]
 name = "oid4vp"
 version = "0.1.0"
-source = "git+https://github.com/spruceid/oid4vp-rs?rev=4c758e7#4c758e796ef5e359479fd816988b10910a4856df"
+source = "git+https://github.com/spruceid/oid4vp-rs?rev=ae0d51b#ae0d51b35eadaa82f9b8e76496d463643df2984a"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3635,7 +3635,7 @@ dependencies = [
 [[package]]
 name = "oid4vp-frontend"
 version = "0.1.0"
-source = "git+https://github.com/spruceid/oid4vp-rs?rev=4c758e7#4c758e796ef5e359479fd816988b10910a4856df"
+source = "git+https://github.com/spruceid/oid4vp-rs?rev=ae0d51b#ae0d51b35eadaa82f9b8e76496d463643df2984a"
 dependencies = [
  "serde",
  "serde_json",
