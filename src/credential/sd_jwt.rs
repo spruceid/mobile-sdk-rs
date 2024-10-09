@@ -259,7 +259,7 @@ pub enum SdJwtError {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
     use ssi::{
@@ -281,7 +281,7 @@ mod tests {
         assert!(output.contains("\"birthdate\":\"1940-01-01\""));
     }
 
-    async fn generate_sd_jwt() -> SdJwtBuf {
+    pub async fn generate_sd_jwt() -> SdJwtBuf {
         // Define the key (this is a private key; for testing purposes you can use this inline or generate one)
         let jwk: JWK = JWK::generate_ed25519().expect("unable to generate sd-jwt");
 

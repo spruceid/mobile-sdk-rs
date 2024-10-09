@@ -135,7 +135,7 @@ impl Holder {
                 self.permission_request(&request).await
             }
             // TODO: Implement support for other response modes.
-            mode => return Err(OID4VPError::UnsupportedResponseMode(mode.to_string())),
+            mode => Err(OID4VPError::UnsupportedResponseMode(mode.to_string())),
         }
     }
 
@@ -409,6 +409,7 @@ impl RequestSigner for Holder {
             .as_ref()
             .ok_or(OID4VPError::RequestSignerNotFound)?
             .try_sign(payload.to_vec())
+            .await
             .map_err(OID4VPError::from)
     }
 }
@@ -437,5 +438,77 @@ impl JwsSigner for Holder {
         self.try_sign(signing_bytes)
             .await
             .map_err(|e| ssi::claims::SignatureError::Other(format!("Failed to sign bytes: {}", e)))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::oid4vp::request_signer::ExampleRequestSigner;
+    use sd_jwt::SdJwt;
+
+    // NOTE: This test requires the `companion` service to be running and
+    // available at localhost:3000.
+    //
+    // See: https://github.com/spruceid/companion/pull/1
+    #[tokio::test]
+    async fn test_oid4vp_url() -> Result<(), Box<dyn std::error::Error>> {
+        let example_sd_jwt = include_str!("../../tests/examples/sd_vc.jwt");
+        let sd_jwt = SdJwt::new_from_compact_sd_jwt(example_sd_jwt.into())?;
+        let credential: Credential = sd_jwt.try_into()?;
+
+        let initiate_api = "http://localhost:3000/api/oid4vp/initiate";
+
+        // Make a request to the OID4VP initiate API.
+        // provide a url-encoded `format` parameter to specify the format of the presentation.
+        let response: (String, String) = reqwest::Client::new()
+            .post(initiate_api)
+            .form(&[("format", "sd_jwt")])
+            .send()
+            .await?
+            .json()
+            .await?;
+
+        let id = response.0;
+        // NOTE: even when decoding the url, the port remains percent encoded.
+        // let url = urlencoding::decode(&response.1).expect("failed to url decode the response.");
+        // NOTE: Hard coding the url to debug whether the percent encoding is the issue, which it appears it is not.
+        let url = format!("openid4vp://?client_id=did:web:localhost:3000:oid4vp:client&request_uri=http://localhost:3000/oid4vp/authz/{id}");
+        let url = Url::parse(&url).expect("failed to parse url");
+
+        println!("Received URL: {:?}", url);
+
+        // Make a request to the OID4VP URL.
+        let holder = Holder::new_with_credentials(
+            vec![Arc::new(credential)],
+            Arc::new(ExampleRequestSigner::default()),
+            // NOTE: should the client ID be added as the trusted did here?
+            vec!["did:web:localhost:3000:oid4vp:client".into()],
+        )
+        .await?;
+
+        let permission_request = holder.authorization_request(url).await?;
+
+        let requested_fields = permission_request.requested_fields();
+
+        assert!(requested_fields.len() > 0);
+
+        let mut parsed_credentials = permission_request.credentials();
+
+        assert_eq!(parsed_credentials.len(), 1);
+
+        let selected_credential = parsed_credentials
+            .pop()
+            .expect("failed to retrieve a parsed credential matching the presentation definition");
+
+        let response = permission_request.permission_response(selected_credential);
+
+        let permission_response = holder.permission_response(response).await?;
+
+        assert!(permission_response.is_some());
+
+        // TODO: Check the status of the presentation;
+
+        Ok(())
     }
 }
