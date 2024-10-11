@@ -16,7 +16,7 @@ use uuid::Uuid;
 
 use crate::{CredentialType, KeyAlias};
 
-use super::{Credential, VcdmVersion};
+use super::{Credential, CredentialFormat, VcdmVersion};
 
 #[derive(uniffi::Object, Debug, Clone)]
 /// A verifiable credential secured as a JWT.
@@ -164,9 +164,8 @@ impl JwtVc {
     pub fn check_presentation_definition(&self, definition: &PresentationDefinition) -> bool {
         // If the credential does not match the definition requested format,
         // then return false.
-        if !definition
-            .format()
-            .contains_key(&ClaimFormatDesignation::JwtVcJson)
+        if !definition.format().is_empty()
+            && !definition.contains_format(CredentialFormat::JwtVcJson)
         {
             return false;
         }

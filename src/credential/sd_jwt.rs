@@ -51,7 +51,7 @@ impl SdJwt {
     pub fn check_presentation_definition(&self, definition: &PresentationDefinition) -> bool {
         // If the credential does not match the definition requested format,
         // then return false.
-        if !definition.contains_format(CredentialFormat::SdJwt) {
+        if !definition.format().is_empty() && !definition.contains_format(CredentialFormat::SdJwt) {
             println!(
                 "Credential does not match the requested format: {:?}.",
                 definition.format()
