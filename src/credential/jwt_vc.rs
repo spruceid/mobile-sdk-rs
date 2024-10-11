@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use base64::prelude::*;
-use oid4vp::core::{
+use openid4vp::core::{
     credential_format::ClaimFormatDesignation, presentation_definition::PresentationDefinition,
 };
 use ssi::{
@@ -174,7 +174,10 @@ impl JwtVc {
             // NOTE: if we cannot convert the credential to a JSON value, then we cannot
             // check the presentation definition, so we return false.
             //
-            tracing::debug!("failed to convert credential '{}' to json, so continuing to the next credential", self.id());
+            tracing::debug!(
+                "failed to convert credential '{}' to json, so continuing to the next credential",
+                self.id()
+            );
             return false;
         };
 

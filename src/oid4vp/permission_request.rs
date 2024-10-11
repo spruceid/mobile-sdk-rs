@@ -1,4 +1,5 @@
-use oid4vp::core::presentation_definition::PresentationDefinition;
+use openid4vp::core::authorization_request::AuthorizationRequestObject;
+use openid4vp::core::presentation_definition::PresentationDefinition;
 
 use crate::common::*;
 use crate::credential::{Credential, ParsedCredential};
@@ -123,16 +124,19 @@ impl RequestedField {
 pub struct PermissionRequest {
     definition: PresentationDefinition,
     credentials: Vec<Arc<ParsedCredential>>,
+    request: AuthorizationRequestObject,
 }
 
 impl PermissionRequest {
     pub fn new(
         definition: PresentationDefinition,
         credentials: Vec<Arc<ParsedCredential>>,
+        request: AuthorizationRequestObject,
     ) -> Arc<Self> {
         Arc::new(Self {
             definition,
             credentials,
+            request,
         })
     }
 }
@@ -145,20 +149,28 @@ impl PermissionRequest {
         self.credentials.clone()
     }
 
-    /// Return the requested fields for a given credential id.
-    pub fn requested_fields(&self) -> Vec<Arc<RequestedField>> {
+    pub fn all_requested_fields(&self) -> Vec<Arc<RequestedField>> {
+        unimplemented!("all_requested_fields")
+    }
+
+    /// Return the requested fields for a given credential.
+    ///
+    /// NOTE: This will return only the requested fields for a given credential.
+    pub fn requested_fields(&self, credential: Arc<ParsedCredential>) -> Vec<Arc<RequestedField>> {
         self.definition
             .input_descriptors()
             .iter()
             .flat_map(|descriptor| {
                 descriptor.constraints().fields().iter().map(|field| {
                     let purpose = field.purpose().map(ToOwned::to_owned);
+
                     let name = field
                         .name()
                         .map(ToOwned::to_owned)
                         // TODO: Add an "unknown field" if the name is not provided.
                         // Consider skipping or erroring on unknown fields.
                         .unwrap_or_default();
+
                     let required = field.is_required();
                     let retained = field.intent_to_retain();
 
@@ -182,6 +194,7 @@ impl PermissionRequest {
         Arc::new(PermissionResponse {
             selected_credential,
             presentation_definition: self.definition.clone(),
+            authorization_request: self.request.clone(),
         })
     }
 
@@ -201,4 +214,5 @@ impl PermissionRequest {
 pub struct PermissionResponse {
     pub selected_credential: Arc<ParsedCredential>,
     pub presentation_definition: PresentationDefinition,
+    pub authorization_request: AuthorizationRequestObject,
 }

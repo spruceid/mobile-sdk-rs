@@ -15,11 +15,11 @@ pub mod sd_jwt;
 
 use std::sync::Arc;
 
-use crate::{CredentialType, KeyAlias, Uuid};
+use crate::{oid4vp::permission_request::RequestedField, CredentialType, KeyAlias, Uuid};
 use json_vc::{JsonVc, JsonVcInitError};
 use jwt_vc::{JwtVc, JwtVcInitError};
 use mdoc::{Mdoc, MdocEncodingError, MdocInitError};
-use oid4vp::core::{
+use openid4vp::core::{
     credential_format::ClaimFormatDesignation, presentation_definition::PresentationDefinition,
 };
 use sd_jwt::{SdJwt, SdJwtError};
@@ -339,8 +339,26 @@ impl ParsedCredential {
                 sd_jwt.check_presentation_definition(definition)
             }
             ParsedCredentialInner::MsoMdoc(_mdoc) => {
-                unimplemented!("check_presentation_definition not implemented for MsoMdoc")
+                // unimplemented!("check_presentation_definition not implemented for MsoMdoc")
+                false
             }
+        }
+    }
+
+    /// Return the requested fields for the credential, accordinging to the presentation definition.
+    pub fn requested_fields(
+        &self,
+        definition: &PresentationDefinition,
+    ) -> Vec<Arc<RequestedField>> {
+        match &self.inner {
+            // ParsedCredentialInner::JwtVcJson(vc) => vc.requested_fields(definition),
+            // ParsedCredentialInner::JwtVcJsonLd(vc) => vc.requested_fields(definition),
+            // ParsedCredentialInner::LdpVc(vc) => vc.requested_fields(definition),
+            ParsedCredentialInner::SdJwt(sd_jwt) => sd_jwt.requested_fields(definition),
+            // ParsedCredentialInner::MsoMdoc(_mdoc) => {
+            //     vec![]
+            // }
+            _ => vec![],
         }
     }
 }

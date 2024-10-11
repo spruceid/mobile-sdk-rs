@@ -7,10 +7,10 @@ use crate::vdc_collection::VdcCollection;
 use std::sync::Arc;
 
 use futures::StreamExt;
-use oid4vp::core::authorization_request::parameters::ClientIdScheme;
-use oid4vp::core::credential_format::{ClaimFormatDesignation, ClaimFormatPayload};
-use oid4vp::core::presentation_definition::PresentationDefinition;
-use oid4vp::{
+use openid4vp::core::authorization_request::parameters::ClientIdScheme;
+use openid4vp::core::credential_format::{ClaimFormatDesignation, ClaimFormatPayload};
+use openid4vp::core::presentation_definition::PresentationDefinition;
+use openid4vp::{
     core::{
         authorization_request::{
             parameters::ResponseMode,
@@ -21,15 +21,11 @@ use oid4vp::{
         presentation_submission::{DescriptorMap, PresentationSubmission},
         response::{parameters::VpToken, AuthorizationResponse, UnencodedAuthorizationResponse},
     },
-    // verifier::request_signer::RequestSigner,
     wallet::Wallet as OID4VPWallet,
 };
-// use ssi::claims::jws::JwsSigner;
 use ssi::dids::DIDWeb;
 use ssi::dids::VerificationMethodDIDResolver;
 use ssi::prelude::AnyJwkMethod;
-// use ssi::JWK;
-use tokio::sync::RwLock;
 use uniffi::deps::{anyhow, log};
 
 /// A Holder is an entity that possesses one or more Verifiable Credentials.
@@ -45,19 +41,13 @@ pub struct Holder {
     pub(crate) metadata: WalletMetadata,
 
     /// HTTP Request Client
-    pub(crate) client: oid4vp::core::util::ReqwestClient,
+    pub(crate) client: openid4vp::core::util::ReqwestClient,
 
     /// A list of trusted DIDs.
     pub(crate) trusted_dids: Vec<String>,
 
-    // /// A request signer callback interface to handle
-    // /// cryptographic signing with native libraries.
-    // pub(crate) request_signer: Option<Arc<dyn RequestSignerInterface>>,
     /// Provide optional credentials to the holder instance.
     pub(crate) provided_credentials: Option<Vec<Arc<Credential>>>,
-
-    /// Holder a reference to the current authorization request object.
-    pub(crate) authorization_request: RwLock<Option<AuthorizationRequestObject>>,
 }
 
 #[uniffi::export(async_runtime = "tokio")]
@@ -66,10 +56,9 @@ impl Holder {
     #[uniffi::constructor]
     pub async fn new(
         vdc_collection: Arc<VdcCollection>,
-        // request_signer: Arc<dyn RequestSignerInterface>,
         trusted_dids: Vec<String>,
     ) -> Result<Arc<Self>, OID4VPError> {
-        let client = oid4vp::core::util::ReqwestClient::new()
+        let client = openid4vp::core::util::ReqwestClient::new()
             .map_err(|e| OID4VPError::HttpClientInitialization(e.to_string()))?;
 
         Ok(Arc::new(Self {
@@ -77,9 +66,7 @@ impl Holder {
             vdc_collection: Some(vdc_collection),
             metadata: Self::metadata()?,
             trusted_dids,
-            // request_signer: Some(request_signer),
             provided_credentials: None,
-            authorization_request: RwLock::new(None),
         }))
     }
 
@@ -91,10 +78,9 @@ impl Holder {
     #[uniffi::constructor]
     pub async fn new_with_credentials(
         provided_credentials: Vec<Arc<Credential>>,
-        // _request_signer: Arc<dyn RequestSignerInterface>,
         trusted_dids: Vec<String>,
     ) -> Result<Arc<Self>, OID4VPError> {
-        let client = oid4vp::core::util::ReqwestClient::new()
+        let client = openid4vp::core::util::ReqwestClient::new()
             .map_err(|e| OID4VPError::HttpClientInitialization(e.to_string()))?;
 
         Ok(Arc::new(Self {
@@ -103,7 +89,6 @@ impl Holder {
             metadata: Self::metadata()?,
             trusted_dids,
             provided_credentials: Some(provided_credentials),
-            authorization_request: RwLock::new(None),
         }))
     }
 
@@ -121,15 +106,9 @@ impl Holder {
             .await
             .map_err(|e| OID4VPError::RequestValidation(format!("{e:?}")))?;
 
-        // Store the authorization request object for later use.
-        self.authorization_request
-            .write()
-            .await
-            .replace(request.clone());
-
         match request.response_mode() {
             ResponseMode::DirectPost | ResponseMode::DirectPostJwt => {
-                self.permission_request(&request).await
+                self.permission_request(request).await
             }
             // TODO: Implement support for other response modes.
             mode => Err(OID4VPError::UnsupportedResponseMode(mode.to_string())),
@@ -140,13 +119,6 @@ impl Holder {
         &self,
         response: Arc<PermissionResponse>,
     ) -> Result<Option<Url>, OID4VPError> {
-        let request = self
-            .authorization_request
-            .read()
-            .await
-            .clone()
-            .ok_or(OID4VPError::AuthorizationRequestNotFound)?;
-
         // Create a descriptor map for the presentation submission based on the credentials
         // returned from the selection response.
         let Some(input_descriptor_id) = response
@@ -182,12 +154,15 @@ impl Holder {
         .map_err(|e: anyhow::Error| OID4VPError::PresentationSubmissionCreation(e.to_string()))?;
 
         let vp_token = self
-            .create_unencoded_verifiable_presentation(&request, &response.selected_credential)
+            .create_unencoded_verifiable_presentation(
+                &response.authorization_request,
+                &response.selected_credential,
+            )
             .await?;
 
         let response = self
             .submit_response(
-                request.to_owned(),
+                response.authorization_request.clone(),
                 AuthorizationResponse::Unencoded(UnencodedAuthorizationResponse(
                     Default::default(),
                     vp_token,
@@ -196,9 +171,6 @@ impl Holder {
             )
             .await
             .map_err(|e| OID4VPError::ResponseSubmission(e.to_string()))?;
-
-        // Reset the authorization request after the response has been submitted.
-        self.authorization_request.write().await.take();
 
         Ok(response)
     }
@@ -282,7 +254,7 @@ impl Holder {
     // Internal method for returning the `PermissionRequest` for an oid4vp request.
     async fn permission_request(
         &self,
-        request: &AuthorizationRequestObject,
+        request: AuthorizationRequestObject,
     ) -> Result<Arc<PermissionRequest>, OID4VPError> {
         // Resolve the presentation definition.
         let presentation_definition = request
@@ -298,6 +270,7 @@ impl Holder {
         Ok(PermissionRequest::new(
             presentation_definition.clone(),
             credentials.clone(),
+            request,
         ))
     }
 
@@ -346,7 +319,10 @@ impl Holder {
             //     }
             // },
             _ => {
-                unimplemented!("Credential parsing for VP Token is not implemented.")
+                return Err(OID4VPError::VpTokenParse(format!(
+                    "Credential parsing for VP Token is not implemented for {:?}.",
+                    credential,
+                )));
             }
         }
     }
@@ -379,7 +355,7 @@ impl RequestVerifier for Holder {
 }
 
 impl OID4VPWallet for Holder {
-    type HttpClient = oid4vp::core::util::ReqwestClient;
+    type HttpClient = openid4vp::core::util::ReqwestClient;
 
     fn http_client(&self) -> &Self::HttpClient {
         &self.client
@@ -393,7 +369,7 @@ impl OID4VPWallet for Holder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    // use crate::oid4vp::request_signer::ExampleRequestSigner;
+    // use crate::openid4vp::request_signer::ExampleRequestSigner;
     use sd_jwt::SdJwt;
 
     // NOTE: This test requires the `companion` service to be running and
@@ -434,7 +410,7 @@ mod tests {
 
         let permission_request = holder.authorization_request(url).await?;
 
-        let requested_fields = permission_request.requested_fields();
+        let requested_fields = permission_request.all_requested_fields();
 
         assert!(requested_fields.len() > 0);
 

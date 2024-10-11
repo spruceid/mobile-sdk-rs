@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use oid4vp::core::{
+use openid4vp::core::{
     credential_format::ClaimFormatDesignation, presentation_definition::PresentationDefinition,
 };
 use serde_json::Value as Json;

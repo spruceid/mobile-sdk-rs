@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use oid4vp::core::presentation_definition::PresentationDefinition;
+use openid4vp::core::presentation_definition::PresentationDefinition;
 use ssi::{
     claims::{
         sd_jwt::SdJwtBuf,
@@ -11,7 +11,7 @@ use ssi::{
 };
 use uuid::Uuid;
 
-use crate::{CredentialType, KeyAlias};
+use crate::{oid4vp::permission_request::RequestedField, CredentialType, KeyAlias};
 
 use super::{jwt_vc::JwtVc, Credential, CredentialFormat, ParsedCredential, ParsedCredentialInner};
 
@@ -19,7 +19,6 @@ use super::{jwt_vc::JwtVc, Credential, CredentialFormat, ParsedCredential, Parse
 pub struct SdJwt {
     pub(crate) id: Uuid,
     pub(crate) key_alias: Option<KeyAlias>,
-    // pub(crate) revealed_claims: JWTClaims,
     pub(crate) credential: JsonCredential,
     pub(crate) inner: SdJwtBuf,
 }
@@ -70,6 +69,38 @@ impl SdJwt {
 
         // Check the JSON-encoded credential against the definition.
         definition.check_credential_validation(&json)
+    }
+
+    /// Return the requested fields for the SD-JWT credential.
+    pub fn requested_fields(
+        &self,
+        definition: &PresentationDefinition,
+    ) -> Vec<Arc<RequestedField>> {
+        unimplemented!("Requested fields for SD-JWT credential.")
+        // let Ok(json) = serde_json::to_value(&self.credential) else {
+        //     // NOTE: if we cannot convert the credential to a JSON value, then we cannot
+        //     // check the presentation definition, so we return false.
+        //     //
+        //     // TODO: add logging to indicate that the credential could not be converted to JSON.
+        //     return Vec::new();
+        // };
+
+        // let mut selector = jsonpath_lib::selector(json);
+
+        // definition
+        //     .input_descriptors()
+        //     .iter()
+        //     .flat_map(|descriptor| {
+        //         descriptor.constraints().fields().iter().map(|field| {
+        //             let purpose = field.purpose().map(ToOwned::to_owned);
+        //             let required = field.required();
+        //             let retained = field.retained();
+        //             let name = field.name().to_string();
+
+        //             RequestedField::new(name, required, retained, purpose)
+        //         })
+        //     })
+        //     .collect()
     }
 }
 
