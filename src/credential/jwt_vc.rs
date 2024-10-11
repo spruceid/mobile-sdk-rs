@@ -174,7 +174,7 @@ impl JwtVc {
             // NOTE: if we cannot convert the credential to a JSON value, then we cannot
             // check the presentation definition, so we return false.
             //
-            // TODO: add logging to indicate that the credential could not be converted to JSON.
+            tracing::debug!("failed to convert credential '{}' to json, so continuing to the next credential", self.id());
             return false;
         };
 
