@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use futures::StreamExt;
 use oid4vp::core::authorization_request::parameters::ClientIdScheme;
-use oid4vp::core::credential_format::ClaimFormatDesignation;
+use oid4vp::core::credential_format::{ClaimFormatDesignation, ClaimFormatPayload};
 use oid4vp::core::presentation_definition::PresentationDefinition;
 use oid4vp::{
     core::{
@@ -75,7 +75,7 @@ impl Holder {
         Ok(Arc::new(Self {
             client,
             vdc_collection: Some(vdc_collection),
-            metadata: WalletMetadata::openid4vp_scheme_static(),
+            metadata: Self::metadata()?,
             trusted_dids,
             // request_signer: Some(request_signer),
             provided_credentials: None,
@@ -100,9 +100,8 @@ impl Holder {
         Ok(Arc::new(Self {
             client,
             vdc_collection: None,
-            metadata: WalletMetadata::openid4vp_scheme_static(),
+            metadata: Self::metadata()?,
             trusted_dids,
-            // request_signer: Some(request_signer),
             provided_credentials: Some(provided_credentials),
             authorization_request: RwLock::new(None),
         }))
@@ -207,6 +206,26 @@ impl Holder {
 
 // Internal methods for the Holder.
 impl Holder {
+    /// Return the static metadata for the holder.
+    ///
+    /// This method is used to initialize the metadata for the holder.
+    pub(crate) fn metadata() -> Result<WalletMetadata, OID4VPError> {
+        let mut metadata = WalletMetadata::openid4vp_scheme_static();
+
+        // Insert support for the VCDM2 SD JWT format.
+        metadata.vp_formats_supported_mut().0.insert(
+            ClaimFormatDesignation::Other("vcdm2_sd_jwt".into()),
+            ClaimFormatPayload::AlgValuesSupported(vec!["ES256".into()]),
+        );
+
+        metadata
+            // Insert support for the DID client ID scheme.
+            .add_client_id_schemes_supported(ClientIdScheme::Did)
+            .map_err(|e| OID4VPError::MetadataInitialization(format!("{e:?}")))?;
+
+        Ok(metadata)
+    }
+
     /// This will return all the credentials that match the presentation definition.
     async fn search_credentials_vs_presentation_definition(
         &self,
@@ -303,8 +322,6 @@ impl Holder {
     ) -> Result<VpToken, OID4VPError> {
         match &credential.inner {
             ParsedCredentialInner::SdJwt(sd_jwt) => {
-                // TODO: How does the client id get passed into the VP?
-                // Is this looked up from the JWT?
                 Ok(VpToken::Single(sd_jwt.inner.as_bytes().into()))
             }
             // TODO: Implement support for JWT VC.
@@ -373,72 +390,6 @@ impl OID4VPWallet for Holder {
     }
 }
 
-// #[async_trait::async_trait]
-// impl RequestSigner for Holder {
-//     type Error = OID4VPError;
-
-//     fn alg(&self) -> Result<String, Self::Error> {
-//         Ok(self
-//             .jwk()?
-//             .algorithm
-//             .ok_or(OID4VPError::SigningAlgorithmNotFound(
-//                 "JWK algorithm not found.".into(),
-//             ))?
-//             .to_string())
-//     }
-
-//     fn jwk(&self) -> Result<JWK, Self::Error> {
-//         let jwk = self
-//             .request_signer
-//             .as_ref()
-//             .ok_or(OID4VPError::RequestSignerNotFound)?
-//             .jwk()?;
-//         serde_json::from_str(&jwk).map_err(|e| OID4VPError::JwkParse(e.to_string()))
-//     }
-
-//     async fn sign(&self, _payload: &[u8]) -> Vec<u8> {
-//         tracing::warn!("WARNING: use `try_sign` method instead.");
-
-//         Vec::with_capacity(0)
-//     }
-
-//     async fn try_sign(&self, payload: &[u8]) -> Result<Vec<u8>, Self::Error> {
-//         self.request_signer
-//             .as_ref()
-//             .ok_or(OID4VPError::RequestSignerNotFound)?
-//             .try_sign(payload.to_vec())
-//             .await
-//             .map_err(OID4VPError::from)
-//     }
-// }
-
-// impl JwsSigner for Holder {
-//     async fn fetch_info(
-//         &self,
-//     ) -> Result<ssi::claims::jws::JwsSignerInfo, ssi::claims::SignatureError> {
-//         let jwk = self
-//             .jwk()
-//             .map_err(|e| ssi::claims::SignatureError::Other(e.to_string()))?;
-
-//         let algorithm = jwk.algorithm.ok_or(ssi::claims::SignatureError::Other(
-//             "JWK algorithm not found.".into(),
-//         ))?;
-
-//         let key_id = jwk.key_id.clone();
-
-//         Ok(ssi::claims::jws::JwsSignerInfo { algorithm, key_id })
-//     }
-
-//     async fn sign_bytes(
-//         &self,
-//         signing_bytes: &[u8],
-//     ) -> Result<Vec<u8>, ssi::claims::SignatureError> {
-//         self.try_sign(signing_bytes)
-//             .await
-//             .map_err(|e| ssi::claims::SignatureError::Other(format!("Failed to sign bytes: {}", e)))
-//     }
-// }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -471,22 +422,19 @@ mod tests {
         let _id = response.0;
         let url = Url::parse(&response.1).expect("failed to parse url");
 
-        // println!("Received URL: {:?}", url);
-
         // Make a request to the OID4VP URL.
         let holder = Holder::new_with_credentials(
             vec![Arc::new(credential)],
-            // Arc::new(ExampleRequestSigner::default()),
-            // NOTE: should the client ID be added as the trusted did here?
-            vec!["did:web:localhost%3A3000:oid4vp:client".into()],
+            vec![
+                "did:web:localhost%3A3000:oid4vp:client".into(),
+                "did:web:1741-24-113-196-42.ngrok-free.app:oid4vp:client".into(),
+            ],
         )
         .await?;
 
         let permission_request = holder.authorization_request(url).await?;
 
         let requested_fields = permission_request.requested_fields();
-
-        println!("Requested Fields: {:?}", requested_fields);
 
         assert!(requested_fields.len() > 0);
 
@@ -500,11 +448,7 @@ mod tests {
 
         let response = permission_request.create_permission_response(selected_credential);
 
-        let permission_response = holder.submit_permission_response(response).await?;
-
-        assert!(permission_response.is_some());
-
-        // TODO: Check the status of the presentation;
+        holder.submit_permission_response(response).await?;
 
         Ok(())
     }

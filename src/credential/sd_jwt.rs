@@ -1,14 +1,11 @@
 use std::sync::Arc;
 
-use json_syntax::Object;
-use oid4vp::core::{
-    credential_format::ClaimFormatDesignation, presentation_definition::PresentationDefinition,
-};
+use oid4vp::core::presentation_definition::PresentationDefinition;
 use ssi::{
     claims::{
-        jwt::{AnyClaims, JWTClaims},
-        sd_jwt::{RevealedSdJwt, SdJwtBuf},
+        sd_jwt::SdJwtBuf,
         vc::v2::{Credential as _, JsonCredential},
+        vc_jose_cose::SdJwtVc,
     },
     prelude::AnyJsonCredential,
 };
@@ -16,14 +13,14 @@ use uuid::Uuid;
 
 use crate::{CredentialType, KeyAlias};
 
-use super::{jwt_vc::JwtVc, Credential, ParsedCredential, ParsedCredentialInner};
+use super::{jwt_vc::JwtVc, Credential, CredentialFormat, ParsedCredential, ParsedCredentialInner};
 
 #[derive(Debug, uniffi::Object)]
 pub struct SdJwt {
     pub(crate) id: Uuid,
     pub(crate) key_alias: Option<KeyAlias>,
-    pub(crate) revealed_claims: JWTClaims,
-    pub(crate) credential: JsonCredential<Object>,
+    // pub(crate) revealed_claims: JWTClaims,
+    pub(crate) credential: JsonCredential,
     pub(crate) inner: SdJwtBuf,
 }
 
@@ -31,8 +28,7 @@ pub struct SdJwt {
 impl SdJwt {
     /// Decode a SdJwt instance and return the revealed claims as a JSON value.
     pub fn decode_reveal_json(&self) -> Result<serde_json::Value, SdJwtError> {
-        serde_json::to_value(&self.revealed_claims)
-            .map_err(|e| SdJwtError::Serialization(e.to_string()))
+        serde_json::to_value(&self.credential).map_err(|e| SdJwtError::Serialization(e.to_string()))
     }
 
     /// The types of the credential from the VCDM, excluding the base `VerifiableCredential` type.
@@ -41,18 +37,26 @@ impl SdJwt {
     }
 
     /// Returns the SD-JWT credential as an AnyCredential type.
-    pub fn credential(&self) -> AnyJsonCredential {
-        AnyJsonCredential::V2(self.credential.clone())
+    pub fn credential(&self) -> Result<AnyJsonCredential, SdJwtError> {
+        // NOTE: Due to the type constraints on AnyJsonCredential, we're
+        // reserializing the type into a V2 credential.
+        serde_json::to_value(&self.credential)
+            .map_err(|e| SdJwtError::Serialization(e.to_string()))
+            .and_then(|v| {
+                serde_json::from_value(v).map_err(|e| SdJwtError::Serialization(e.to_string()))
+            })
     }
 
     /// Check if the credential satisfies a presentation definition.
     pub fn check_presentation_definition(&self, definition: &PresentationDefinition) -> bool {
         // If the credential does not match the definition requested format,
         // then return false.
-        if !definition
-            .format()
-            .contains_key(&ClaimFormatDesignation::Other("vcdm2_sd_jwt".into()))
-        {
+        if !definition.contains_format(CredentialFormat::SdJwt) {
+            println!(
+                "Credential does not match the requested format: {:?}.",
+                definition.format()
+            );
+
             return false;
         }
 
@@ -122,7 +126,7 @@ impl SdJwt {
 
     /// Decode a SdJwt instance and return the revealed claims as a JSON string.
     pub fn decode_reveal_json_string(&self) -> Result<String, SdJwtError> {
-        serde_json::to_string(&self.revealed_claims)
+        serde_json::to_string(&self.credential)
             .map_err(|e| SdJwtError::Serialization(e.to_string()))
     }
 
@@ -144,7 +148,7 @@ impl SdJwt {
             self.inner.as_bytes().into(),
             self.key_alias.clone(),
         )
-        .map_err(|e| SdJwtError::JwtVcInitError(e.to_string()))
+        .map_err(|e| SdJwtError::SdJwtVcInitError(e.to_string()))
     }
 }
 
@@ -204,29 +208,16 @@ impl TryFrom<SdJwtBuf> for SdJwt {
     type Error = SdJwtError;
 
     fn try_from(value: SdJwtBuf) -> Result<Self, Self::Error> {
-        let revealed_jwt: RevealedSdJwt<AnyClaims> = value
-            .decode_reveal_any()
-            .map_err(|e| SdJwtError::JwtDecoding(e.to_string()))?;
-
-        let revealed_claims = revealed_jwt.claims().to_owned();
-
-        let credential: JsonCredential<Object> = serde_json::from_value(
-            revealed_claims
-                .registered
-                .clone()
-                .remove::<ssi::claims::jwt::VerifiableCredential>()
-                .ok_or(SdJwtError::CredentialClaimMissing)?
-                .0
-                .into(),
-        )
-        .map_err(|e| SdJwtError::Serialization(e.to_string()))?;
+        let SdJwtVc(vc) = SdJwtVc::decode_reveal_any(&value)
+            .map_err(|e| SdJwtError::SdJwtDecoding(e.to_string()))?
+            .into_claims()
+            .private;
 
         Ok(SdJwt {
             id: Uuid::new_v4(),
             key_alias: None,
             inner: value,
-            revealed_claims,
-            credential,
+            credential: vc,
         })
     }
 }
@@ -235,19 +226,19 @@ impl TryFrom<SdJwtBuf> for SdJwt {
 pub fn decode_reveal_sd_jwt(input: String) -> Result<String, SdJwtError> {
     let jwt: SdJwtBuf =
         SdJwtBuf::new(input).map_err(|e| SdJwtError::InvalidSdJwt(e.to_string()))?;
-    let revealed_jwt: RevealedSdJwt<AnyClaims> = jwt
-        .decode_reveal_any()
-        .map_err(|e| SdJwtError::JwtDecoding(e.to_string()))?;
-    let claims: &JWTClaims = revealed_jwt.claims();
-    serde_json::to_string(claims).map_err(|e| SdJwtError::Serialization(e.to_string()))
+    let SdJwtVc(vc) = SdJwtVc::decode_reveal_any(&jwt)
+        .map_err(|e| SdJwtError::SdJwtDecoding(e.to_string()))?
+        .into_claims()
+        .private;
+    serde_json::to_string(&vc).map_err(|e| SdJwtError::Serialization(e.to_string()))
 }
 
 #[derive(Debug, uniffi::Error, thiserror::Error)]
 pub enum SdJwtError {
     #[error("failed to initialize SD-JWT: {0}")]
-    JwtVcInitError(String),
+    SdJwtVcInitError(String),
     #[error("failed to decode SD-JWT as a JWT: {0}")]
-    JwtDecoding(String),
+    SdJwtDecoding(String),
     #[error("invalid SD-JWT: {0}")]
     InvalidSdJwt(String),
     #[error("serialization error: {0}")]
@@ -262,10 +253,7 @@ pub enum SdJwtError {
 pub(crate) mod tests {
     use super::*;
 
-    use ssi::{
-        claims::sd_jwt::{ConcealJwtClaims, SdAlg},
-        json_pointer, JWK,
-    };
+    use ssi::{claims::sd_jwt::SdAlg, json_pointer, JWK};
 
     #[test]
     fn test_decode_static() {
@@ -286,50 +274,44 @@ pub(crate) mod tests {
         let jwk: JWK = JWK::generate_ed25519().expect("unable to generate sd-jwt");
 
         // Create the JWT claims
-        let registeredclaims = serde_json::json!({
-                  "iss": "https://issuer.example.com",
-                  "sub": "1234567890",
-                  "vc": {
-                    "@context": [
-                      "https://www.w3.org/ns/credentials/v2",
-                      "https://purl.imsglobal.org/spec/ob/v3p0/context-3.0.3.json"
-                    ],
-                    "awardedDate": "2024-09-23T18:12:12+0000",
-                    "credentialSubject": {
-                      "identity": [
-                        {
-                          "hashed": false,
-                          "identityHash": "John Smith",
-                          "identityType": "name",
-                          "salt": "not-used",
-                          "type": "IdentityObject"
-                        },
-                        {
-                          "hashed": false,
-                          "identityHash": "john.smith@example.com",
-                          "identityType": "emailAddress",
-                          "salt": "not-used",
-                          "type": "IdentityObject"
-                        }
-                      ],
-                      "achievement": {
-                        "name": "Team Membership",
-                        "type": "Achievement"
-                      }
-                    },
-                    "issuer": {
-                      "id": "did:jwk:eyJhbGciOiJFUzI1NiIsImNydiI6IlAtMjU2Iiwia3R5IjoiRUMiLCJ4IjoibWJUM2dqOWFvOGNuS280M0prcVRPUmNJQVI4MFgwTUFXQWNGYzZvR1JMYyIsInkiOiJiOFVOY0hDMmFHQ3J1STZ0QlRWSVY0dW5ZWEVyS0M4ZDRnRTFGZ0s0Q05JIn0#0",
-                      "name": "Workforce Development Council",
-                      "type": "Profile"
-                    },
-                    "name": "TeamMembership",
-                    "type": ["VerifiableCredential", "OpenBadgeCredential"]
-                  }
-                }
-        );
+        let registeredclaims = serde_json::json!({"@context": [
+            "https://www.w3.org/ns/credentials/v2",
+            "https://purl.imsglobal.org/spec/ob/v3p0/context-3.0.3.json"
+          ],
+          "awardedDate": "2024-09-23T18:12:12+0000",
+          "credentialSubject": {
+            "identity": [
+              {
+                "hashed": false,
+                "identityHash": "John Smith",
+                "identityType": "name",
+                "salt": "not-used",
+                "type": "IdentityObject"
+              },
+              {
+                "hashed": false,
+                "identityHash": "john.smith@example.com",
+                "identityType": "emailAddress",
+                "salt": "not-used",
+                "type": "IdentityObject"
+              }
+            ],
+            "achievement": {
+              "name": "Team Membership",
+              "type": "Achievement"
+            }
+          },
+          "issuer": {
+            "id": "did:jwk:eyJhbGciOiJFUzI1NiIsImNydiI6IlAtMjU2Iiwia3R5IjoiRUMiLCJ4IjoibWJUM2dqOWFvOGNuS280M0prcVRPUmNJQVI4MFgwTUFXQWNGYzZvR1JMYyIsInkiOiJiOFVOY0hDMmFHQ3J1STZ0QlRWSVY0dW5ZWEVyS0M4ZDRnRTFGZ0s0Q05JIn0#0",
+            "name": "Workforce Development Council",
+            "type": "Profile"
+          },
+          "name": "TeamMembership",
+          "type": ["VerifiableCredential", "OpenBadgeCredential"]
+        });
 
-        let claims: JWTClaims = serde_json::from_value(registeredclaims).unwrap();
-        let my_pointer = json_pointer!("/vc");
+        let claims: SdJwtVc = serde_json::from_value(registeredclaims).unwrap();
+        let my_pointer = json_pointer!("/credentialSubject/identity/0");
 
         claims
             .conceal_and_sign(SdAlg::Sha256, &[my_pointer], &jwk)

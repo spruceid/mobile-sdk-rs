@@ -54,6 +54,8 @@ pub enum OID4VPError {
     AuthorizationRequestNotFound,
     #[error("Request signer not found")]
     RequestSignerNotFound,
+    #[error("Failed to initialize metadata: {0}")]
+    MetadataInitialization(String),
 }
 
 // Handle unexpected errors when calling a foreign callback

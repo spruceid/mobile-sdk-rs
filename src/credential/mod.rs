@@ -131,7 +131,9 @@ impl TryFrom<Credential> for AnyJsonCredential {
                     .try_into()
                     .map_err(|e: SdJwtError| CredentialDecodingError::SdJwt(e.to_string()))?;
 
-                Ok(sd_jwt.credential())
+                sd_jwt
+                    .credential()
+                    .map_err(|e| CredentialDecodingError::SdJwt(e.to_string()))
             }
             // TODO: Add more formats here.
             _ => Err(Self::Error::UnsupportedCredentialFormat(
