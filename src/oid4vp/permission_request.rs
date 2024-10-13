@@ -58,7 +58,25 @@ pub struct RequestedField {
     pub(crate) required: bool,
     pub(crate) retained: bool,
     pub(crate) purpose: Option<String>,
-    pub(crate) input_descriptor_id: String,
+    pub(crate) constraint_field_id: Option<String>,
+    // the `raw_field` represents the actual field
+    // being selected by the input descriptor JSON path
+    // selector.
+    pub(crate) raw_fields: Option<serde_json::Value>,
+}
+
+impl From<openid4vp::core::input_descriptor::RequestedField> for RequestedField {
+    fn from(value: openid4vp::core::input_descriptor::RequestedField) -> Self {
+        Self {
+            id: value.id,
+            name: value.name,
+            required: value.required,
+            retained: value.retained,
+            purpose: value.purpose,
+            constraint_field_id: value.constraint_field_id,
+            raw_fields: value.raw_fields,
+        }
+    }
 }
 
 impl RequestedField {
@@ -73,7 +91,8 @@ impl RequestedField {
         required: bool,
         retained: bool,
         purpose: Option<String>,
-        input_descriptor_id: String,
+        constraint_field_id: Option<String>,
+        raw_fields: Option<serde_json::Value>,
     ) -> Arc<Self> {
         Arc::new(Self {
             id: Uuid::new_v4(),
@@ -81,7 +100,8 @@ impl RequestedField {
             required,
             retained,
             purpose,
-            input_descriptor_id,
+            constraint_field_id,
+            raw_fields,
         })
     }
 
@@ -90,9 +110,16 @@ impl RequestedField {
         self.id
     }
 
-    /// Return the input descriptor id.
-    pub fn input_descriptor_id(&self) -> String {
-        self.input_descriptor_id.clone()
+    /// Return the constraint field id the requested field belongs to
+    pub fn constraint_field_id(&self) -> Option<String> {
+        self.constraint_field_id.clone()
+    }
+
+    /// Return the stringified JSON raw fields.
+    pub fn raw_fields(&self) -> Option<String> {
+        self.raw_fields
+            .as_ref()
+            .and_then(|value| serde_json::to_string(value).ok())
     }
 }
 
@@ -149,41 +176,11 @@ impl PermissionRequest {
         self.credentials.clone()
     }
 
-    pub fn all_requested_fields(&self) -> Vec<Arc<RequestedField>> {
-        unimplemented!("all_requested_fields")
-    }
-
     /// Return the requested fields for a given credential.
     ///
     /// NOTE: This will return only the requested fields for a given credential.
-    pub fn requested_fields(&self, credential: Arc<ParsedCredential>) -> Vec<Arc<RequestedField>> {
-        self.definition
-            .input_descriptors()
-            .iter()
-            .flat_map(|descriptor| {
-                descriptor.constraints().fields().iter().map(|field| {
-                    let purpose = field.purpose().map(ToOwned::to_owned);
-
-                    let name = field
-                        .name()
-                        .map(ToOwned::to_owned)
-                        // TODO: Add an "unknown field" if the name is not provided.
-                        // Consider skipping or erroring on unknown fields.
-                        .unwrap_or_default();
-
-                    let required = field.is_required();
-                    let retained = field.intent_to_retain();
-
-                    RequestedField::new(
-                        name,
-                        required,
-                        retained,
-                        purpose,
-                        descriptor.id().to_string(),
-                    )
-                })
-            })
-            .collect::<Vec<Arc<RequestedField>>>()
+    pub fn requested_fields(&self, credential: &Arc<ParsedCredential>) -> Vec<Arc<RequestedField>> {
+        credential.requested_fields(&self.definition)
     }
 
     /// Construct a new permission response for the given credential.

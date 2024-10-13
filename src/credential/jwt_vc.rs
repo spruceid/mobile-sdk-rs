@@ -1,9 +1,10 @@
+use super::{Credential, CredentialFormat, VcdmVersion};
+use crate::{oid4vp::permission_request::RequestedField, CredentialType, KeyAlias};
+
 use std::sync::Arc;
 
 use base64::prelude::*;
-use openid4vp::core::{
-    credential_format::ClaimFormatDesignation, presentation_definition::PresentationDefinition,
-};
+use openid4vp::core::presentation_definition::PresentationDefinition;
 use ssi::{
     claims::{
         jwt::IntoDecodedJwt,
@@ -13,10 +14,6 @@ use ssi::{
     prelude::AnyJsonCredential,
 };
 use uuid::Uuid;
-
-use crate::{CredentialType, KeyAlias};
-
-use super::{Credential, CredentialFormat, VcdmVersion};
 
 #[derive(uniffi::Object, Debug, Clone)]
 /// A verifiable credential secured as a JWT.
@@ -183,6 +180,26 @@ impl JwtVc {
 
         // Check the JSON-encoded credential against the definition.
         definition.check_credential_validation(&json)
+    }
+
+    /// Returns the requested fields given a presentation definition.
+    pub fn requested_fields(
+        &self,
+        definition: &PresentationDefinition,
+    ) -> Vec<Arc<RequestedField>> {
+        let Ok(json) = serde_json::to_value(&self.credential) else {
+            // NOTE: if we cannot convert the credential to a JSON value, then we cannot
+            // check the presentation definition, so we return false.
+            log::debug!("credential could not be converted to JSON: {self:?}");
+            return Vec::new();
+        };
+
+        definition
+            .requested_fields_cred(&json)
+            .into_iter()
+            .map(Into::into)
+            .map(Arc::new)
+            .collect()
     }
 }
 

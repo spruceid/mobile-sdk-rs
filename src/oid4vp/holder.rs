@@ -318,12 +318,10 @@ impl Holder {
             //         .map_err(|e| OID4VPError::VpTokenCreate(e.to_string()))
             //     }
             // },
-            _ => {
-                return Err(OID4VPError::VpTokenParse(format!(
-                    "Credential parsing for VP Token is not implemented for {:?}.",
-                    credential,
-                )));
-            }
+            _ => Err(OID4VPError::VpTokenParse(format!(
+                "Credential parsing for VP Token is not implemented for {:?}.",
+                credential,
+            ))),
         }
     }
 }
@@ -410,10 +408,6 @@ mod tests {
 
         let permission_request = holder.authorization_request(url).await?;
 
-        let requested_fields = permission_request.all_requested_fields();
-
-        assert!(requested_fields.len() > 0);
-
         let mut parsed_credentials = permission_request.credentials();
 
         assert_eq!(parsed_credentials.len(), 1);
@@ -421,6 +415,10 @@ mod tests {
         let selected_credential = parsed_credentials
             .pop()
             .expect("failed to retrieve a parsed credential matching the presentation definition");
+
+        let requested_fields = permission_request.requested_fields(&selected_credential);
+
+        assert!(requested_fields.len() > 0);
 
         let response = permission_request.create_permission_response(selected_credential);
 

@@ -126,7 +126,7 @@ impl TryFrom<Credential> for AnyJsonCredential {
                     .map_err(|e: JwtVcInitError| CredentialDecodingError::JwtVc(e.to_string()))?;
                 Ok(jwt_vc.credential())
             }
-            CredentialFormat::SdJwt => {
+            CredentialFormat::VCDM2SdJwt => {
                 let sd_jwt: Arc<SdJwt> = value
                     .try_into()
                     .map_err(|e: SdJwtError| CredentialDecodingError::SdJwt(e.to_string()))?;
@@ -233,7 +233,7 @@ impl ParsedCredential {
             }),
             ParsedCredentialInner::SdJwt(sd_jwt) => Ok(Credential {
                 id: sd_jwt.id(),
-                format: CredentialFormat::SdJwt,
+                format: CredentialFormat::VCDM2SdJwt,
                 r#type: sd_jwt.r#type(),
                 payload: sd_jwt.inner.as_bytes().into(),
                 key_alias: sd_jwt.key_alias(),
@@ -263,7 +263,7 @@ impl ParsedCredential {
             ParsedCredentialInner::MsoMdoc(_) => CredentialFormat::MsoMdoc,
             ParsedCredentialInner::JwtVcJson(_) => CredentialFormat::JwtVcJson,
             ParsedCredentialInner::JwtVcJsonLd(_) => CredentialFormat::JwtVcJsonLd,
-            ParsedCredentialInner::SdJwt(_) => CredentialFormat::SdJwt,
+            ParsedCredentialInner::SdJwt(_) => CredentialFormat::VCDM2SdJwt,
             ParsedCredentialInner::LdpVc(_) => CredentialFormat::LdpVc,
         }
     }
@@ -351,14 +351,13 @@ impl ParsedCredential {
         definition: &PresentationDefinition,
     ) -> Vec<Arc<RequestedField>> {
         match &self.inner {
-            // ParsedCredentialInner::JwtVcJson(vc) => vc.requested_fields(definition),
-            // ParsedCredentialInner::JwtVcJsonLd(vc) => vc.requested_fields(definition),
-            // ParsedCredentialInner::LdpVc(vc) => vc.requested_fields(definition),
             ParsedCredentialInner::SdJwt(sd_jwt) => sd_jwt.requested_fields(definition),
-            // ParsedCredentialInner::MsoMdoc(_mdoc) => {
-            //     vec![]
-            // }
-            _ => vec![],
+            ParsedCredentialInner::JwtVcJson(vc) => vc.requested_fields(definition),
+            ParsedCredentialInner::JwtVcJsonLd(vc) => vc.requested_fields(definition),
+            ParsedCredentialInner::LdpVc(vc) => vc.requested_fields(definition),
+            ParsedCredentialInner::MsoMdoc(_mdoc) => {
+                unimplemented!("Mdoc requested fields not implemented")
+            }
         }
     }
 }
@@ -383,7 +382,7 @@ impl TryFrom<Credential> for Arc<ParsedCredential> {
                     .try_into()
                     .map_err(|e: JwtVcInitError| CredentialDecodingError::JwtVc(e.to_string()))?,
             )),
-            CredentialFormat::SdJwt => Ok(ParsedCredential::new_sd_jwt(
+            CredentialFormat::VCDM2SdJwt => Ok(ParsedCredential::new_sd_jwt(
                 credential
                     .try_into()
                     .map_err(|e: SdJwtError| CredentialDecodingError::SdJwt(e.to_string()))?,
@@ -452,7 +451,7 @@ pub enum CredentialFormat {
     JwtVcJsonLd,
     LdpVc,
     #[serde(rename = "vcdm2_sd_jwt")]
-    SdJwt,
+    VCDM2SdJwt,
     #[serde(untagged)]
     Other(String), // For ease of expansion.
 }
@@ -462,7 +461,7 @@ impl From<CredentialFormat> for ClaimFormatDesignation {
         match value {
             CredentialFormat::MsoMdoc => ClaimFormatDesignation::MsoMDoc,
             CredentialFormat::JwtVcJson => ClaimFormatDesignation::JwtVcJson,
-            CredentialFormat::SdJwt | CredentialFormat::JwtVcJsonLd => {
+            CredentialFormat::VCDM2SdJwt | CredentialFormat::JwtVcJsonLd => {
                 ClaimFormatDesignation::Other(value.to_string())
             }
             CredentialFormat::LdpVc => ClaimFormatDesignation::LdpVc,
@@ -478,7 +477,7 @@ impl std::fmt::Display for CredentialFormat {
             CredentialFormat::JwtVcJson => write!(f, "jwt_vc_json"),
             CredentialFormat::JwtVcJsonLd => write!(f, "jwt_vc_json-ld"),
             CredentialFormat::LdpVc => write!(f, "ldp_vc"),
-            CredentialFormat::SdJwt => write!(f, "vcdm2_sd_jwt"),
+            CredentialFormat::VCDM2SdJwt => write!(f, "vcdm2_sd_jwt"),
             CredentialFormat::Other(s) => write!(f, "{s}"),
         }
     }
@@ -493,7 +492,7 @@ mod test {
     #[case::jwt_vc_json(r#""jwt_vc_json""#, CredentialFormat::JwtVcJson)]
     #[case::jwt_vc_json_ld(r#""jwt_vc_json-ld""#, CredentialFormat::JwtVcJsonLd)]
     #[case::ldp_vc(r#""ldp_vc""#, CredentialFormat::LdpVc)]
-    #[case::ldp_vc(r#""vcdm2_sd_jwt""#, CredentialFormat::SdJwt)]
+    #[case::ldp_vc(r#""vcdm2_sd_jwt""#, CredentialFormat::VCDM2SdJwt)]
     #[case::other(r#""something_else""#, CredentialFormat::Other("something_else".into()))]
     fn credential_format_roundtrips(#[case] expected: String, #[case] value: CredentialFormat) {
         let serialized = serde_json::to_string(&value).unwrap();

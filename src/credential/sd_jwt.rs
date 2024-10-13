@@ -1,3 +1,6 @@
+use super::{jwt_vc::JwtVc, Credential, CredentialFormat, ParsedCredential, ParsedCredentialInner};
+use crate::{oid4vp::permission_request::RequestedField, CredentialType, KeyAlias};
+
 use std::sync::Arc;
 
 use openid4vp::core::presentation_definition::PresentationDefinition;
@@ -9,11 +12,8 @@ use ssi::{
     },
     prelude::AnyJsonCredential,
 };
+use uniffi::deps::log;
 use uuid::Uuid;
-
-use crate::{oid4vp::permission_request::RequestedField, CredentialType, KeyAlias};
-
-use super::{jwt_vc::JwtVc, Credential, CredentialFormat, ParsedCredential, ParsedCredentialInner};
 
 #[derive(Debug, uniffi::Object)]
 pub struct SdJwt {
@@ -50,7 +50,9 @@ impl SdJwt {
     pub fn check_presentation_definition(&self, definition: &PresentationDefinition) -> bool {
         // If the credential does not match the definition requested format,
         // then return false.
-        if !definition.format().is_empty() && !definition.contains_format(CredentialFormat::SdJwt) {
+        if !definition.format().is_empty()
+            && !definition.contains_format(CredentialFormat::VCDM2SdJwt)
+        {
             println!(
                 "Credential does not match the requested format: {:?}.",
                 definition.format()
@@ -76,31 +78,19 @@ impl SdJwt {
         &self,
         definition: &PresentationDefinition,
     ) -> Vec<Arc<RequestedField>> {
-        unimplemented!("Requested fields for SD-JWT credential.")
-        // let Ok(json) = serde_json::to_value(&self.credential) else {
-        //     // NOTE: if we cannot convert the credential to a JSON value, then we cannot
-        //     // check the presentation definition, so we return false.
-        //     //
-        //     // TODO: add logging to indicate that the credential could not be converted to JSON.
-        //     return Vec::new();
-        // };
+        let Ok(json) = serde_json::to_value(&self.credential) else {
+            // NOTE: if we cannot convert the credential to a JSON value, then we cannot
+            // check the presentation definition, so we return false.
+            log::debug!("credential could not be converted to JSON: {self:?}");
+            return Vec::new();
+        };
 
-        // let mut selector = jsonpath_lib::selector(json);
-
-        // definition
-        //     .input_descriptors()
-        //     .iter()
-        //     .flat_map(|descriptor| {
-        //         descriptor.constraints().fields().iter().map(|field| {
-        //             let purpose = field.purpose().map(ToOwned::to_owned);
-        //             let required = field.required();
-        //             let retained = field.retained();
-        //             let name = field.name().to_string();
-
-        //             RequestedField::new(name, required, retained, purpose)
-        //         })
-        //     })
-        //     .collect()
+        definition
+            .requested_fields_cred(&json)
+            .into_iter()
+            .map(Into::into)
+            .map(Arc::new)
+            .collect()
     }
 }
 
