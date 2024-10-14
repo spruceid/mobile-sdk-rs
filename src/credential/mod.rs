@@ -1,3 +1,13 @@
+use std::sync::Arc;
+
+use serde::{Deserialize, Serialize};
+
+use json_vc::{JsonVc, JsonVcEncodingError, JsonVcInitError};
+use jwt_vc::{JwtVc, JwtVcInitError};
+use mdoc::{Mdoc, MdocEncodingError, MdocInitError};
+
+use crate::{CredentialType, JsonValue, KeyAlias, Uuid};
+
 pub mod json_vc;
 pub mod jwt_vc;
 pub mod mdoc;
@@ -167,6 +177,83 @@ impl ParsedCredential {
         }
     }
 
+    /// Executes JsonPath queries against the Credential and returns the
+    /// matches from the first non-empty query.
+    ///
+    /// Example:
+    /// ```
+    /// let vc = serde_json::to_string(&serde_json::json!({
+    ///     "@context": [ "https://www.w3.org/2018/credentials/v1" ],
+    ///     "type": [ "VerifiableCredential" ],
+    ///     "issuer": {
+    ///         "id": "did:example:1234",
+    ///         "name": "Example Inc.",
+    ///         "image": "https://example.com/logo.png",
+    ///         "url": "https://example.com",
+    ///     },
+    ///     "credentialSubject": {
+    ///         "id": "did:example:5678",
+    ///         "pairs": [
+    ///             { "foo": "bar" },
+    ///             { "foo": "baz" },
+    ///         ],
+    ///     },
+    /// }))
+    /// .unwrap();
+    ///
+    /// let json_vc = JsonVc::new_from_json(vc).unwrap();
+    /// let credential = ParsedCredential::new_ldp_vc(json_vc);
+    ///
+    /// let image = credential
+    ///     .field(vec!["$.issuer.logo".into(), "$.issuer.image".into()])
+    ///     .unwrap();
+    /// // Some([JsonValue::String("https://example.com/logo.png")])
+    /// assert!(image.is_some());
+    /// let image = image.unwrap();
+    /// assert!(image.len() == 1);
+    /// matches!(image[0], JsonValue::String(ref s) if s == "https://example.com/logo.png");
+    ///
+    /// let foo = credential
+    ///     .field(vec!["$.credentialSubject.pairs[*].foo".into()])
+    ///     .unwrap();
+    /// // Some([JsonValue::String("bar"), JsonValue::String("baz")])
+    /// assert!(foo.is_some());
+    /// let foo = foo.unwrap();
+    /// assert!(foo.len() == 2);
+    /// matches!(foo[0], JsonValue::String(ref s) if s == "bar");
+    /// matches!(foo[1], JsonValue::String(ref s) if s == "baz");
+    ///
+    /// let missing = credential.field(vec!["$.missing".into()]).unwrap();
+    /// // None
+    /// assert!(missing.is_none());
+    /// ```
+    pub fn jsonpath_select(
+        &self,
+        paths: Vec<String>,
+    ) -> Result<Option<Vec<JsonValue>>, JsonPathSelectError> {
+        let json = match &self.inner {
+            ParsedCredentialInner::MsoMdoc(_arc) => todo!(),
+            ParsedCredentialInner::JwtVcJson(arc) | ParsedCredentialInner::JwtVcJsonLd(arc) => {
+                serde_json::from_str(&arc.credential_as_json_encoded_utf8_string())
+                    .map_err(|_| JsonPathSelectError::JsonStringDecoding)?
+            }
+            ParsedCredentialInner::LdpVc(arc) => {
+                serde_json::from_str(&arc.credential_as_json_encoded_utf8_string())
+                    .map_err(|_| JsonPathSelectError::JsonStringDecoding)?
+            }
+        };
+
+        let mut selector = jsonpath_lib::selector(&json);
+        for p in paths {
+            if let Ok(elem) = selector(&p) {
+                if !elem.is_empty() {
+                    return Ok(Some(elem.into_iter().map(|e| e.into()).collect()));
+                }
+            }
+        }
+        Ok(None)
+    }
+
     /// Get the key alias for this credential.
     pub fn key_alias(&self) -> Option<KeyAlias> {
         match &self.inner {
@@ -320,6 +407,14 @@ pub enum CredentialPresentationError {
     JsonPath(String),
 }
 
+#[derive(Debug, uniffi::Error, thiserror::Error)]
+pub enum JsonPathSelectError {
+    #[error(transparent)]
+    CredentialDecodingError(#[from] CredentialDecodingError),
+    #[error("failed to decode JSON from a UTF-8 string")]
+    JsonStringDecoding,
+}
+
 /// The format of the credential.
 #[derive(uniffi::Enum, PartialEq, Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "snake_case")]
@@ -378,5 +473,55 @@ mod test {
         let roundtripped: CredentialFormat = serde_json::from_str(&serialized).unwrap();
 
         assert_eq!(CredentialFormat::MsoMdoc, roundtripped);
+    }
+
+    #[test]
+    fn credential_field_selector() {
+        let vc = serde_json::to_string(&serde_json::json!({
+            "@context": [ "https://www.w3.org/2018/credentials/v1" ],
+            "type": [ "VerifiableCredential" ],
+            "issuer": {
+                "id": "did:example:1234",
+                "name": "Example Inc.",
+                "image": "https://example.com/logo.png",
+                "url": "https://example.com",
+            },
+            "credentialSubject": {
+                "id": "did:example:5678",
+                "pairs": [
+                    { "foo": "bar" },
+                    { "foo": "baz" },
+                ],
+            },
+        }))
+        .unwrap();
+
+        let json_vc = JsonVc::new_from_json(vc).unwrap();
+        let credential = ParsedCredential::new_ldp_vc(json_vc);
+
+        let image = credential
+            .jsonpath_select(vec!["$.issuer.logo".into(), "$.issuer.image".into()])
+            .unwrap();
+        // Some([JsonValue::String("https://example.com/logo.png")])
+        assert!(image.is_some());
+        let image = image.unwrap();
+        assert!(image.len() == 1);
+        matches!(image[0], JsonValue::String(ref s) if s == "https://example.com/logo.png");
+
+        let foo = credential
+            .jsonpath_select(vec!["$.credentialSubject.pairs[*].foo".into()])
+            .unwrap();
+        // Some([JsonValue::String("bar"), JsonValue::String("baz")])
+        assert!(foo.is_some());
+        let foo = foo.unwrap();
+        assert!(foo.len() == 2);
+        matches!(foo[0], JsonValue::String(ref s) if s == "bar");
+        matches!(foo[1], JsonValue::String(ref s) if s == "baz");
+
+        let missing = credential
+            .jsonpath_select(vec!["$.missing".into()])
+            .unwrap();
+        // None
+        assert!(missing.is_none());
     }
 }

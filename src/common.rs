@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::UniffiCustomTypeConverter;
 
 use serde::{Deserialize, Serialize};
@@ -85,3 +87,50 @@ uniffi::custom_newtype!(Value, Vec<u8>);
 
 #[derive(Debug, PartialEq)]
 pub struct Value(pub Vec<u8>);
+
+#[derive(Serialize, Deserialize, Debug, Clone, uniffi::Enum)]
+pub enum JsonValue {
+    Object(HashMap<String, JsonValue>),
+    Array(Vec<JsonValue>),
+    String(String),
+    Boolean(bool),
+    Null,
+}
+
+impl From<&serde_json::Value> for JsonValue {
+    fn from(value: &serde_json::Value) -> Self {
+        match value {
+            serde_json::Value::Null => Self::Null,
+            serde_json::Value::Bool(b) => Self::Boolean(b.to_owned()),
+            serde_json::Value::Number(n) => Self::String(n.to_string()),
+            serde_json::Value::String(s) => Self::String(s.to_owned()),
+            serde_json::Value::Array(a) => {
+                Self::Array(a.iter().map(|i| i.into()).collect::<Vec<Self>>())
+            }
+            serde_json::Value::Object(o) => Self::Object(
+                o.iter()
+                    .map(|e| (e.0.to_owned(), e.1.into()))
+                    .collect::<HashMap<String, Self>>(),
+            ),
+        }
+    }
+}
+
+impl From<serde_json::Value> for JsonValue {
+    fn from(value: serde_json::Value) -> Self {
+        match value {
+            serde_json::Value::Null => Self::Null,
+            serde_json::Value::Bool(b) => Self::Boolean(b),
+            serde_json::Value::Number(n) => Self::String(n.to_string()),
+            serde_json::Value::String(s) => Self::String(s),
+            serde_json::Value::Array(a) => {
+                Self::Array(a.into_iter().map(|i| i.into()).collect::<Vec<Self>>())
+            }
+            serde_json::Value::Object(o) => Self::Object(
+                o.into_iter()
+                    .map(|e| (e.0.to_owned(), e.1.into()))
+                    .collect::<HashMap<String, Self>>(),
+            ),
+        }
+    }
+}

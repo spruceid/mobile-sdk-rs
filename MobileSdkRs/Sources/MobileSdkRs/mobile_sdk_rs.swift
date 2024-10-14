@@ -2947,6 +2947,62 @@ public protocol ParsedCredentialProtocol : AnyObject {
     func intoGenericForm() throws  -> Credential
     
     /**
+     * Executes JsonPath queries against the Credential and returns the
+     * matches from the first non-empty query.
+     *
+     * Example:
+     * ```
+     * let vc = serde_json::to_string(&serde_json::json!({
+     * "@context": [ "https://www.w3.org/2018/credentials/v1" ],
+     * "id": "urn:uuid:711eac32-8e24-4416-84c8-510d1067eb12",
+     * "type": [ "VerifiableCredential" ],
+     * "issuer": {
+     * "id": "did:example:1234",
+     * "name": "Example Inc.",
+     * "image": "https://example.com/logo.png",
+     * "url": "https://example.com/logo.png",
+     * },
+     * "credentialSubject": {
+     * "id": "did:example:5678",
+     * "pairs": [
+     * { "foo": "bar" },
+     * { "foo": "baz" },
+     * ],
+     * },
+     * }))
+     * .unwrap();
+     *
+     * let json_vc = JsonVc::new_from_json(vc).unwrap();
+     * let credential = ParsedCredential::new_ldp_vc(json_vc);
+     *
+     * let image = credential
+     * .field(vec!["$.issuer.logo".into(), "$.issuer.image".into()])
+     * .unwrap();
+     * // Some([JsonValue::String("https://example.com/logo.png")])
+     * assert!(image.is_some());
+     * let image = image.unwrap();
+     * assert!(image.len() == 1);
+     * matches!(image[0], JsonValue::String(ref s) if s == "https://example.com/logo.png");
+     *
+     * let foo = credential
+     * .field(vec!["$.credentialSubject.pairs[*].foo".into()])
+     * .unwrap();
+     * // Some([JsonValue::String("bar"), JsonValue::String("baz")])
+     * assert!(foo.is_some());
+     * let foo = foo.unwrap();
+     * assert!(foo.len() == 2);
+     * matches!(foo[0], JsonValue::String(ref s) if s == "bar");
+     * matches!(foo[1], JsonValue::String(ref s) if s == "baz");
+     *
+     * let missing = credential.field(vec!["$.missing".into()]).unwrap();
+     * // None
+     * assert!(missing.is_none());
+     * ```
+
+     */
+    func jsonpathSelect(paths: [String]) throws  -> [JsonValue]?
+    
+    /**
      * Get the key alias for this credential.
      */
     func keyAlias()  -> KeyAlias?
@@ -3134,6 +3190,68 @@ open func id() -> Uuid {
 open func intoGenericForm()throws  -> Credential {
     return try  FfiConverterTypeCredential.lift(try rustCallWithError(FfiConverterTypeCredentialEncodingError.lift) {
     uniffi_mobile_sdk_rs_fn_method_parsedcredential_into_generic_form(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+    /**
+     * Executes JsonPath queries against the Credential and returns the
+     * matches from the first non-empty query.
+     *
+     * Example:
+     * ```
+     * let vc = serde_json::to_string(&serde_json::json!({
+     * "@context": [ "https://www.w3.org/2018/credentials/v1" ],
+     * "id": "urn:uuid:711eac32-8e24-4416-84c8-510d1067eb12",
+     * "type": [ "VerifiableCredential" ],
+     * "issuer": {
+     * "id": "did:example:1234",
+     * "name": "Example Inc.",
+     * "image": "https://example.com/logo.png",
+     * "url": "https://example.com/logo.png",
+     * },
+     * "credentialSubject": {
+     * "id": "did:example:5678",
+     * "pairs": [
+     * { "foo": "bar" },
+     * { "foo": "baz" },
+     * ],
+     * },
+     * }))
+     * .unwrap();
+     *
+     * let json_vc = JsonVc::new_from_json(vc).unwrap();
+     * let credential = ParsedCredential::new_ldp_vc(json_vc);
+     *
+     * let image = credential
+     * .field(vec!["$.issuer.logo".into(), "$.issuer.image".into()])
+     * .unwrap();
+     * // Some([JsonValue::String("https://example.com/logo.png")])
+     * assert!(image.is_some());
+     * let image = image.unwrap();
+     * assert!(image.len() == 1);
+     * matches!(image[0], JsonValue::String(ref s) if s == "https://example.com/logo.png");
+     *
+     * let foo = credential
+     * .field(vec!["$.credentialSubject.pairs[*].foo".into()])
+     * .unwrap();
+     * // Some([JsonValue::String("bar"), JsonValue::String("baz")])
+     * assert!(foo.is_some());
+     * let foo = foo.unwrap();
+     * assert!(foo.len() == 2);
+     * matches!(foo[0], JsonValue::String(ref s) if s == "bar");
+     * matches!(foo[1], JsonValue::String(ref s) if s == "baz");
+     *
+     * let missing = credential.field(vec!["$.missing".into()]).unwrap();
+     * // None
+     * assert!(missing.is_none());
+     * ```
+
+     */
+open func jsonpathSelect(paths: [String])throws  -> [JsonValue]? {
+    return try  FfiConverterOptionSequenceTypeJsonValue.lift(try rustCallWithError(FfiConverterTypeJsonPathSelectError.lift) {
+    uniffi_mobile_sdk_rs_fn_method_parsedcredential_jsonpath_select(self.uniffiClonePointer(),
+        FfiConverterSequenceString.lower(paths),$0
     )
 })
 }
@@ -5949,6 +6067,152 @@ extension HttpClientError: Foundation.LocalizedError {
 }
 
 
+public enum JsonPathSelectError {
+
+    
+    
+    case CredentialDecodingError(CredentialDecodingError
+    )
+    case JsonStringDecoding
+}
+
+
+public struct FfiConverterTypeJsonPathSelectError: FfiConverterRustBuffer {
+    typealias SwiftType = JsonPathSelectError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> JsonPathSelectError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .CredentialDecodingError(
+            try FfiConverterTypeCredentialDecodingError.read(from: &buf)
+            )
+        case 2: return .JsonStringDecoding
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: JsonPathSelectError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case let .CredentialDecodingError(v1):
+            writeInt(&buf, Int32(1))
+            FfiConverterTypeCredentialDecodingError.write(v1, into: &buf)
+            
+        
+        case .JsonStringDecoding:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+extension JsonPathSelectError: Equatable, Hashable {}
+
+extension JsonPathSelectError: Foundation.LocalizedError {
+    public var errorDescription: String? {
+        String(reflecting: self)
+    }
+}
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
+public enum JsonValue {
+    
+    case object([String: JsonValue]
+    )
+    case array([JsonValue]
+    )
+    case string(String
+    )
+    case boolean(Bool
+    )
+    case null
+}
+
+
+public struct FfiConverterTypeJsonValue: FfiConverterRustBuffer {
+    typealias SwiftType = JsonValue
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> JsonValue {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .object(try FfiConverterDictionaryStringTypeJsonValue.read(from: &buf)
+        )
+        
+        case 2: return .array(try FfiConverterSequenceTypeJsonValue.read(from: &buf)
+        )
+        
+        case 3: return .string(try FfiConverterString.read(from: &buf)
+        )
+        
+        case 4: return .boolean(try FfiConverterBool.read(from: &buf)
+        )
+        
+        case 5: return .null
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: JsonValue, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case let .object(v1):
+            writeInt(&buf, Int32(1))
+            FfiConverterDictionaryStringTypeJsonValue.write(v1, into: &buf)
+            
+        
+        case let .array(v1):
+            writeInt(&buf, Int32(2))
+            FfiConverterSequenceTypeJsonValue.write(v1, into: &buf)
+            
+        
+        case let .string(v1):
+            writeInt(&buf, Int32(3))
+            FfiConverterString.write(v1, into: &buf)
+            
+        
+        case let .boolean(v1):
+            writeInt(&buf, Int32(4))
+            FfiConverterBool.write(v1, into: &buf)
+            
+        
+        case .null:
+            writeInt(&buf, Int32(5))
+        
+        }
+    }
+}
+
+
+public func FfiConverterTypeJsonValue_lift(_ buf: RustBuffer) throws -> JsonValue {
+    return try FfiConverterTypeJsonValue.lift(buf)
+}
+
+public func FfiConverterTypeJsonValue_lower(_ value: JsonValue) -> RustBuffer {
+    return FfiConverterTypeJsonValue.lower(value)
+}
+
+
+
+extension JsonValue: Equatable, Hashable {}
+
+
+
+
 public enum JsonVcEncodingError {
 
     
@@ -8326,6 +8590,27 @@ fileprivate struct FfiConverterOptionSequenceString: FfiConverterRustBuffer {
     }
 }
 
+fileprivate struct FfiConverterOptionSequenceTypeJsonValue: FfiConverterRustBuffer {
+    typealias SwiftType = [JsonValue]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceTypeJsonValue.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceTypeJsonValue.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
 fileprivate struct FfiConverterOptionDictionaryStringString: FfiConverterRustBuffer {
     typealias SwiftType = [String: String]?
 
@@ -8542,6 +8827,28 @@ fileprivate struct FfiConverterSequenceTypeItemsRequest: FfiConverterRustBuffer 
     }
 }
 
+fileprivate struct FfiConverterSequenceTypeJsonValue: FfiConverterRustBuffer {
+    typealias SwiftType = [JsonValue]
+
+    public static func write(_ value: [JsonValue], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeJsonValue.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [JsonValue] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [JsonValue]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeJsonValue.read(from: &buf))
+        }
+        return seq
+    }
+}
+
 fileprivate struct FfiConverterSequenceTypeMDocItem: FfiConverterRustBuffer {
     typealias SwiftType = [MDocItem]
 
@@ -8671,6 +8978,29 @@ fileprivate struct FfiConverterDictionaryStringTypeClaimValue: FfiConverterRustB
         for _ in 0..<len {
             let key = try FfiConverterString.read(from: &buf)
             let value = try FfiConverterTypeClaimValue.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
+    }
+}
+
+fileprivate struct FfiConverterDictionaryStringTypeJsonValue: FfiConverterRustBuffer {
+    public static func write(_ value: [String: JsonValue], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterString.write(key, into: &buf)
+            FfiConverterTypeJsonValue.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [String: JsonValue] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [String: JsonValue]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0..<len {
+            let key = try FfiConverterString.read(from: &buf)
+            let value = try FfiConverterTypeJsonValue.read(from: &buf)
             dict[key] = value
         }
         return dict
@@ -9607,6 +9937,9 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_method_parsedcredential_into_generic_form() != 30318) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_mobile_sdk_rs_checksum_method_parsedcredential_jsonpath_select() != 47830) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_method_parsedcredential_key_alias() != 52023) {

@@ -30,7 +30,8 @@ either = "1.13"
 futures = "0.3"
 futures-util = "0.3.31"
 hex = "0.4.3"
-json-syntax = "0.12.5"
+json-syntax = { version = "0.12.5", features = ["serde_json"] }
+jsonpath_lib = "0.3.0"
 log = { version = "0.4", features = ["std", "serde"] }
 miniz_oxide = "0.7.2"
 num-bigint = "0.4.4"
