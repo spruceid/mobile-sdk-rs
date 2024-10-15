@@ -81,7 +81,7 @@ impl Holder {
     /// instead of searching for credentials in the VDC collection.
     #[uniffi::constructor]
     pub async fn new_with_credentials(
-        provided_credentials: Vec<Arc<Credential>>,
+        provided_credentials: Vec<Arc<ParsedCredential>>,
         trusted_dids: Vec<String>,
     ) -> Result<Arc<Self>, OID4VPError> {
         let client = openid4vp::core::util::ReqwestClient::new()
@@ -214,14 +214,20 @@ impl Holder {
                     let credential_ids = vdc_collection.all_entries().await?;
 
                     futures_util::stream::iter(credential_ids)
-                        .filter_map(|id| async move { vdc_collection.get(id).await.ok().flatten() })
-                        .collect::<Vec<Arc<Credential>>>()
+                        .filter_map(|id| async move {
+                            vdc_collection
+                                .get(id)
+                                .await
+                                .ok()
+                                .flatten()
+                                .and_then(|cred| cred.try_into_parsed().ok())
+                        })
+                        .collect::<Vec<Arc<ParsedCredential>>>()
                         .await
                 }
             },
         }
         .into_iter()
-        .filter_map(|cred| cred.try_into_parsed().ok())
         .filter_map(
             |cred| match cred.check_presentation_definition(definition) {
                 true => Some(cred),
@@ -413,7 +419,7 @@ mod tests {
     async fn test_oid4vp_url() -> Result<(), Box<dyn std::error::Error>> {
         let example_sd_jwt = include_str!("../../tests/examples/sd_vc.jwt");
         let sd_jwt = SdJwt::new_from_compact_sd_jwt(example_sd_jwt.into())?;
-        let credential: Credential = sd_jwt.try_into()?;
+        let credential = ParsedCredential::new_sd_jwt(sd_jwt);
 
         let initiate_api = "http://localhost:3000/api/oid4vp/initiate";
 
@@ -432,7 +438,7 @@ mod tests {
 
         // Make a request to the OID4VP URL.
         let holder = Holder::new_with_credentials(
-            vec![Arc::new(credential)],
+            vec![credential],
             vec![
                 "did:web:localhost%3A3000:oid4vp:client".into(),
                 "did:web:1741-24-113-196-42.ngrok-free.app:oid4vp:client".into(),
