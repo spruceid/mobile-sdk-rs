@@ -51,7 +51,7 @@ pub struct Holder {
     pub(crate) trusted_dids: Vec<String>,
 
     /// Provide optional credentials to the holder instance.
-    pub(crate) provided_credentials: Option<Vec<Arc<Credential>>>,
+    pub(crate) provided_credentials: Option<Vec<Arc<ParsedCredential>>>,
 }
 
 #[uniffi::export(async_runtime = "tokio")]
