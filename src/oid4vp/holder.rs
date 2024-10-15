@@ -10,6 +10,7 @@ use futures::StreamExt;
 use openid4vp::core::authorization_request::parameters::ClientIdScheme;
 use openid4vp::core::credential_format::{ClaimFormatDesignation, ClaimFormatPayload};
 use openid4vp::core::presentation_definition::PresentationDefinition;
+use openid4vp::core::response::parameters::VpTokenItem;
 use openid4vp::{
     core::{
         authorization_request::{
@@ -23,8 +24,11 @@ use openid4vp::{
     },
     wallet::Wallet as OID4VPWallet,
 };
+use ssi::claims::vc::{self, syntax::IdOr};
 use ssi::dids::DIDWeb;
 use ssi::dids::VerificationMethodDIDResolver;
+use ssi::json_ld::iref::UriBuf;
+use ssi::prelude::AnyJsonCredential;
 use ssi::prelude::AnyJwkMethod;
 use uniffi::deps::{anyhow, log};
 
@@ -149,9 +153,7 @@ impl Holder {
             // NOTE: we're only supporting a single descriptor map for now.
             // TODO: support multiple descriptor maps.
             vec![descriptor_map],
-        )
-        .try_into()
-        .map_err(|e: anyhow::Error| OID4VPError::PresentationSubmissionCreation(e.to_string()))?;
+        );
 
         let vp_token = self
             .create_unencoded_verifiable_presentation(
@@ -290,34 +292,66 @@ impl Holder {
 
     async fn verifiable_presentation_did(
         &self,
-        _request: &AuthorizationRequestObject,
+        request: &AuthorizationRequestObject,
         credential: &Arc<ParsedCredential>,
     ) -> Result<VpToken, OID4VPError> {
         match &credential.inner {
             ParsedCredentialInner::SdJwt(sd_jwt) => {
-                Ok(VpToken::Single(sd_jwt.inner.as_bytes().into()))
+                let compact: &str = sd_jwt.inner.as_ref();
+                Ok(VpTokenItem::from(compact.to_string()).into())
             }
-            // TODO: Implement support for JWT VC.
-            // ParsedCredentialInner::JwtVcJson(vc) => match vc.credential() {
-            //     AnyJsonCredential::V1(v1) => {}
-            //     AnyJsonCredential::V2(v2) => {
-            //         let id =
-            //             UriBuf::new(format!("urn:uuid:{}", Uuid::new_v4()).as_bytes().to_vec())
-            //                 .ok();
+            ParsedCredentialInner::JwtVcJson(vc) => match vc.credential() {
+                AnyJsonCredential::V1(v1) => {
+                    let id =
+                        UriBuf::new(format!("urn:uuid:{}", Uuid::new_v4()).as_bytes().to_vec())
+                            .ok();
 
-            //         let id_or =
-            //             UriBuf::new(request.client_id().0.as_bytes().to_vec()).map_err(|e| {
-            //                 OID4VPError::VpTokenCreate(format!("Error creating URI: {}", e))
-            //             })?;
+                    let id_or =
+                        UriBuf::new(request.client_id().0.as_bytes().to_vec()).map_err(|e| {
+                            OID4VPError::VpTokenCreate(format!("Error creating URI: {:?}", e))
+                        })?;
 
-            //         VpToken::try_from(vc::v2::syntax::JsonPresentation::new(
-            //             id,
-            //             vec![IdOr::Id(id_or)],
-            //             vec![vc.credential()],
-            //         ))
-            //         .map_err(|e| OID4VPError::VpTokenCreate(e.to_string()))
-            //     }
-            // },
+                    let presentation =
+                        vc::v1::syntax::JsonPresentation::new(id, Some(id_or), vec![v1]);
+
+                    // NOTE: There is some conflict between `NonEmptyObject` and `Object` inner
+                    // types for the JsonPresentation types that restricts the direct use of the VpTokenItem
+                    // `From<T>` conversations. This is not ideal, but as a short-term solution, using a conversion to `Object`
+                    // to `VpTokenItem`. In the future, this may require changes to the `ssi` library.
+                    let serde_json::Value::Object(obj) = serde_json::to_value(presentation)
+                        // SAFETY: by definition a VCDM1.1 presentation is a JSON object.
+                        .unwrap()
+                    else {
+                        // SAFETY: by definition a VCDM1.1 presentation is a JSON object.
+                        unreachable!()
+                    };
+
+                    Ok(VpTokenItem::JsonObject(obj).into())
+                }
+                AnyJsonCredential::V2(v2) => {
+                    let id =
+                        UriBuf::new(format!("urn:uuid:{}", Uuid::new_v4()).as_bytes().to_vec())
+                            .ok();
+
+                    let id_or =
+                        UriBuf::new(request.client_id().0.as_bytes().to_vec()).map_err(|e| {
+                            OID4VPError::VpTokenCreate(format!("Error creating URI: {:?}", e))
+                        })?;
+
+                    let presentation =
+                        vc::v2::syntax::JsonPresentation::new(id, vec![IdOr::Id(id_or)], vec![v2]);
+
+                    let serde_json::Value::Object(obj) = serde_json::to_value(presentation)
+                        // SAFETY: by definition a VCDM1.1 presentation is a JSON object.
+                        .unwrap()
+                    else {
+                        // SAFETY: by definition a VCDM1.1 presentation is a JSON object.
+                        unreachable!()
+                    };
+
+                    Ok(VpTokenItem::JsonObject(obj).into())
+                }
+            },
             _ => Err(OID4VPError::VpTokenParse(format!(
                 "Credential parsing for VP Token is not implemented for {:?}.",
                 credential,
@@ -424,6 +458,11 @@ mod tests {
 
         holder.submit_permission_response(response).await?;
 
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_vehicle_title() -> Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }
 }
