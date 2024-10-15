@@ -3384,9 +3384,11 @@ public protocol PermissionRequestProtocol : AnyObject {
     func purpose()  -> String?
     
     /**
-     * Return the requested fields for a given credential id.
+     * Return the requested fields for a given credential.
+     *
+     * NOTE: This will return only the requested fields for a given credential.
      */
-    func requestedFields()  -> [RequestedField]
+    func requestedFields(credential: ParsedCredential)  -> [RequestedField]
     
 }
 
@@ -3464,11 +3466,14 @@ open func purpose() -> String? {
 }
     
     /**
-     * Return the requested fields for a given credential id.
+     * Return the requested fields for a given credential.
+     *
+     * NOTE: This will return only the requested fields for a given credential.
      */
-open func requestedFields() -> [RequestedField] {
+open func requestedFields(credential: ParsedCredential) -> [RequestedField] {
     return try!  FfiConverterSequenceTypeRequestedField.lift(try! rustCall() {
-    uniffi_mobile_sdk_rs_fn_method_permissionrequest_requested_fields(self.uniffiClonePointer(),$0
+    uniffi_mobile_sdk_rs_fn_method_permissionrequest_requested_fields(self.uniffiClonePointer(),
+        FfiConverterTypeParsedCredential.lower(credential),$0
     )
 })
 }
@@ -5811,7 +5816,7 @@ public enum CredentialFormat {
     case jwtVcJson
     case jwtVcJsonLd
     case ldpVc
-    case sdJwt
+    case vcdm2SdJwt
     case other(String
     )
 }
@@ -5832,7 +5837,7 @@ public struct FfiConverterTypeCredentialFormat: FfiConverterRustBuffer {
         
         case 4: return .ldpVc
         
-        case 5: return .sdJwt
+        case 5: return .vcdm2SdJwt
         
         case 6: return .other(try FfiConverterString.read(from: &buf)
         )
@@ -5861,7 +5866,7 @@ public struct FfiConverterTypeCredentialFormat: FfiConverterRustBuffer {
             writeInt(&buf, Int32(4))
         
         
-        case .sdJwt:
+        case .vcdm2SdJwt:
             writeInt(&buf, Int32(5))
         
         
@@ -6891,6 +6896,8 @@ public enum Oid4vpError {
     case VdcCollectionNotInitialized
     case AuthorizationRequestNotFound
     case RequestSignerNotFound
+    case MetadataInitialization(String
+    )
 }
 
 
@@ -6968,6 +6975,9 @@ public struct FfiConverterTypeOID4VPError: FfiConverterRustBuffer {
         case 22: return .VdcCollectionNotInitialized
         case 23: return .AuthorizationRequestNotFound
         case 24: return .RequestSignerNotFound
+        case 25: return .MetadataInitialization(
+            try FfiConverterString.read(from: &buf)
+            )
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -7095,6 +7105,11 @@ public struct FfiConverterTypeOID4VPError: FfiConverterRustBuffer {
         case .RequestSignerNotFound:
             writeInt(&buf, Int32(24))
         
+        
+        case let .MetadataInitialization(v1):
+            writeInt(&buf, Int32(25))
+            FfiConverterString.write(v1, into: &buf)
+            
         }
     }
 }
@@ -7619,9 +7634,9 @@ public enum SdJwtError {
 
     
     
-    case JwtVcInitError(String
+    case SdJwtVcInitError(String
     )
-    case JwtDecoding(String
+    case SdJwtDecoding(String
     )
     case InvalidSdJwt(String
     )
@@ -7643,10 +7658,10 @@ public struct FfiConverterTypeSdJwtError: FfiConverterRustBuffer {
         
 
         
-        case 1: return .JwtVcInitError(
+        case 1: return .SdJwtVcInitError(
             try FfiConverterString.read(from: &buf)
             )
-        case 2: return .JwtDecoding(
+        case 2: return .SdJwtDecoding(
             try FfiConverterString.read(from: &buf)
             )
         case 3: return .InvalidSdJwt(
@@ -7671,12 +7686,12 @@ public struct FfiConverterTypeSdJwtError: FfiConverterRustBuffer {
 
         
         
-        case let .JwtVcInitError(v1):
+        case let .SdJwtVcInitError(v1):
             writeInt(&buf, Int32(1))
             FfiConverterString.write(v1, into: &buf)
             
         
-        case let .JwtDecoding(v1):
+        case let .SdJwtDecoding(v1):
             writeInt(&buf, Int32(2))
             FfiConverterString.write(v1, into: &buf)
             
@@ -9882,7 +9897,7 @@ private var initializationResult: InitializationResult = {
     if (uniffi_mobile_sdk_rs_checksum_method_permissionrequest_purpose() != 28780) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_permissionrequest_requested_fields() != 34432) {
+    if (uniffi_mobile_sdk_rs_checksum_method_permissionrequest_requested_fields() != 48174) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_method_requestedfield_name() != 28018) {
