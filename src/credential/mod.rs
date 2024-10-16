@@ -325,6 +325,14 @@ impl ParsedCredential {
             _ => None,
         }
     }
+
+    /// Return the credential as an SD-JWT, if it is of that format.
+    pub fn as_sd_jwt(&self) -> Option<Arc<SdJwt>> {
+        match &self.inner {
+            ParsedCredentialInner::SdJwt(sd_jwt) => Some(sd_jwt.clone()),
+            _ => None,
+        }
+    }
 }
 
 // Intneral Parsed Credential methods
