@@ -1,13 +1,3 @@
-// use std::sync::Arc;
-
-// use serde::{Deserialize, Serialize};
-
-// use json_vc::{JsonVc, JsonVcEncodingError, JsonVcInitError};
-// use jwt_vc::{JwtVc, JwtVcInitError};
-// use mdoc::{Mdoc, MdocEncodingError, MdocInitError};
-
-// use crate::{CredentialType, KeyAlias, Uuid};
-
 pub mod json_vc;
 pub mod jwt_vc;
 pub mod mdoc;
@@ -16,7 +6,7 @@ pub mod sd_jwt;
 use std::sync::Arc;
 
 use crate::{oid4vp::permission_request::RequestedField, CredentialType, KeyAlias, Uuid};
-use json_vc::{JsonVc, JsonVcInitError};
+use json_vc::{JsonVc, JsonVcEncodingError, JsonVcInitError};
 use jwt_vc::{JwtVc, JwtVcInitError};
 use mdoc::{Mdoc, MdocEncodingError, MdocInitError};
 use openid4vp::core::{
@@ -91,23 +81,12 @@ impl Credential {
 
     /// Returns the credential as a `Mdoc` credential.
     pub fn try_into_mdoc(&self) -> Result<Arc<Mdoc>, CredentialDecodingError> {
-        self.to_owned()
-            .try_into()
-            .map_err(|e: MdocInitError| CredentialDecodingError::MsoMdoc(e.to_string()))
+        Ok(self.to_owned().try_into()?)
     }
 
     /// Returns the credential as a `JwtVc` credential.
     pub fn try_into_jwt_vc(&self) -> Result<Arc<JwtVc>, CredentialDecodingError> {
-        self.to_owned()
-            .try_into()
-            .map_err(|e: JwtVcInitError| CredentialDecodingError::JwtVc(e.to_string()))
-    }
-
-    /// Return the credential as an AnyJsonCredential type.
-    pub fn try_into_any_json_credential(
-        &self,
-    ) -> Result<AnyJsonCredential, CredentialDecodingError> {
-        self.to_owned().try_into()
+        Ok(self.to_owned().try_into()?)
     }
 }
 
@@ -121,19 +100,15 @@ impl TryFrom<Credential> for AnyJsonCredential {
             //
             // There may be a better solution for this.
             CredentialFormat::JwtVcJson => {
-                let jwt_vc: Arc<JwtVc> = value
-                    .try_into()
-                    .map_err(|e: JwtVcInitError| CredentialDecodingError::JwtVc(e.to_string()))?;
+                let jwt_vc: Arc<JwtVc> = value.try_into()?;
                 Ok(jwt_vc.credential())
             }
             CredentialFormat::VCDM2SdJwt => {
-                let sd_jwt: Arc<SdJwt> = value
-                    .try_into()
-                    .map_err(|e: SdJwtError| CredentialDecodingError::SdJwt(e.to_string()))?;
+                let sd_jwt: Arc<SdJwt> = value.try_into()?;
 
                 sd_jwt
                     .credential()
-                    .map_err(|e| CredentialDecodingError::SdJwt(e.to_string()))
+                    .map_err(|e| CredentialDecodingError::SdJwt(e))
             }
             // TODO: Add more formats here.
             _ => Err(Self::Error::UnsupportedCredentialFormat(
@@ -220,10 +195,7 @@ impl ParsedCredential {
     /// Convert a parsed credential into the generic form for storage.
     pub fn into_generic_form(&self) -> Result<Credential, CredentialEncodingError> {
         match &self.inner {
-            ParsedCredentialInner::MsoMdoc(mdoc) => Ok(mdoc
-                .clone()
-                .try_into()
-                .map_err(|e: MdocEncodingError| CredentialEncodingError::MsoMdoc(e.to_string()))?),
+            ParsedCredentialInner::MsoMdoc(mdoc) => Ok(mdoc.clone().try_into()?),
             ParsedCredentialInner::JwtVcJson(vc) => Ok(Credential {
                 id: vc.id(),
                 format: CredentialFormat::JwtVcJson,
@@ -249,9 +221,7 @@ impl ParsedCredential {
                 id: vc.id(),
                 format: CredentialFormat::LdpVc,
                 r#type: vc.r#type(),
-                payload: vc
-                    .to_json_bytes()
-                    .map_err(|e| CredentialEncodingError::JsonVc(e.to_string()))?,
+                payload: vc.to_json_bytes()?,
                 key_alias: vc.key_alias(),
             }),
         }
@@ -346,10 +316,7 @@ impl ParsedCredential {
             ParsedCredentialInner::SdJwt(sd_jwt) => {
                 sd_jwt.check_presentation_definition(definition)
             }
-            ParsedCredentialInner::MsoMdoc(_mdoc) => {
-                // unimplemented!("check_presentation_definition not implemented for MsoMdoc")
-                false
-            }
+            ParsedCredentialInner::MsoMdoc(_mdoc) => false,
         }
     }
 
@@ -375,31 +342,17 @@ impl TryFrom<Credential> for Arc<ParsedCredential> {
 
     fn try_from(credential: Credential) -> Result<Self, Self::Error> {
         match credential.format {
-            CredentialFormat::MsoMdoc => Ok(ParsedCredential::new_mso_mdoc(
-                credential
-                    .try_into()
-                    .map_err(|e: MdocInitError| CredentialDecodingError::MsoMdoc(e.to_string()))?,
-            )),
-            CredentialFormat::JwtVcJson => Ok(ParsedCredential::new_jwt_vc_json(
-                credential
-                    .try_into()
-                    .map_err(|e: JwtVcInitError| CredentialDecodingError::JwtVc(e.to_string()))?,
-            )),
-            CredentialFormat::JwtVcJsonLd => Ok(ParsedCredential::new_jwt_vc_json_ld(
-                credential
-                    .try_into()
-                    .map_err(|e: JwtVcInitError| CredentialDecodingError::JwtVc(e.to_string()))?,
-            )),
-            CredentialFormat::VCDM2SdJwt => Ok(ParsedCredential::new_sd_jwt(
-                credential
-                    .try_into()
-                    .map_err(|e: SdJwtError| CredentialDecodingError::SdJwt(e.to_string()))?,
-            )),
-            CredentialFormat::LdpVc => Ok(ParsedCredential::new_ldp_vc(
-                credential
-                    .try_into()
-                    .map_err(|e: JsonVcInitError| CredentialDecodingError::JsonVc(e.to_string()))?,
-            )),
+            CredentialFormat::MsoMdoc => Ok(ParsedCredential::new_mso_mdoc(credential.try_into()?)),
+            CredentialFormat::JwtVcJson => {
+                Ok(ParsedCredential::new_jwt_vc_json(credential.try_into()?))
+            }
+            CredentialFormat::JwtVcJsonLd => {
+                Ok(ParsedCredential::new_jwt_vc_json_ld(credential.try_into()?))
+            }
+            CredentialFormat::VCDM2SdJwt => {
+                Ok(ParsedCredential::new_sd_jwt(credential.try_into()?))
+            }
+            CredentialFormat::LdpVc => Ok(ParsedCredential::new_ldp_vc(credential.try_into()?)),
             _ => Err(CredentialDecodingError::UnsupportedCredentialFormat(
                 credential.format.to_string(),
             )),
@@ -416,24 +369,24 @@ pub enum VcdmVersion {
 #[derive(Debug, uniffi::Error, thiserror::Error)]
 pub enum CredentialEncodingError {
     #[error("MsoDoc encoding error: {0}")]
-    MsoMdoc(String),
+    MsoMdoc(#[from] MdocEncodingError),
     #[error("JsonVc encoding error: {0}")]
-    JsonVc(String),
+    JsonVc(#[from] JsonVcEncodingError),
     #[error("SD-JWT encoding error: {0}")]
-    SdJwt(String),
+    SdJwt(#[from] SdJwtError),
 }
 
 #[derive(Debug, uniffi::Error, thiserror::Error)]
 pub enum CredentialDecodingError {
     #[error("MsoDoc decoding error: {0}")]
-    MsoMdoc(String),
+    MsoMdoc(#[from] MdocInitError),
     #[error("JsonVc decoding error: {0}")]
-    JsonVc(String),
+    JsonVc(#[from] JsonVcInitError),
     #[error("JWT VC decoding error: {0}")]
-    JwtVc(String),
+    JwtVc(#[from] JwtVcInitError),
     #[error("SD JWT VC decoding error: {0}")]
-    SdJwt(String),
-    #[error("this credential format is not yet supported: {0}")]
+    SdJwt(#[from] SdJwtError),
+    #[error("Credential format is not yet supported for type: {0}")]
     UnsupportedCredentialFormat(String),
     #[error("Serialization error: {0}")]
     Serialization(String),

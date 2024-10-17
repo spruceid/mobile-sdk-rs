@@ -27,7 +27,8 @@ pub struct SdJwt {
 impl SdJwt {
     /// Decode a SdJwt instance and return the revealed claims as a JSON value.
     pub fn decode_reveal_json(&self) -> Result<serde_json::Value, SdJwtError> {
-        serde_json::to_value(&self.credential).map_err(|e| SdJwtError::Serialization(e.to_string()))
+        serde_json::to_value(&self.credential)
+            .map_err(|e| SdJwtError::Serialization(format!("{e:?}")))
     }
 
     /// The types of the credential from the VCDM, excluding the base `VerifiableCredential` type.
@@ -40,9 +41,9 @@ impl SdJwt {
         // NOTE: Due to the type constraints on AnyJsonCredential, we're
         // reserializing the type into a V2 credential.
         serde_json::to_value(&self.credential)
-            .map_err(|e| SdJwtError::Serialization(e.to_string()))
+            .map_err(|e| SdJwtError::Serialization(format!("{e:?}")))
             .and_then(|v| {
-                serde_json::from_value(v).map_err(|e| SdJwtError::Serialization(e.to_string()))
+                serde_json::from_value(v).map_err(|e| SdJwtError::Serialization(format!("{e:?}")))
             })
     }
 
@@ -100,7 +101,7 @@ impl SdJwt {
     #[uniffi::constructor]
     pub fn new_from_compact_sd_jwt(input: String) -> Result<Arc<Self>, SdJwtError> {
         let inner: SdJwtBuf =
-            SdJwtBuf::new(input).map_err(|e| SdJwtError::InvalidSdJwt(e.to_string()))?;
+            SdJwtBuf::new(input).map_err(|e| SdJwtError::InvalidSdJwt(format!("{e:?}")))?;
 
         let mut sd_jwt = SdJwt::try_from(inner)?;
         sd_jwt.key_alias = None;
@@ -115,18 +116,12 @@ impl SdJwt {
         key_alias: KeyAlias,
     ) -> Result<Arc<Self>, SdJwtError> {
         let inner: SdJwtBuf =
-            SdJwtBuf::new(input).map_err(|e| SdJwtError::InvalidSdJwt(e.to_string()))?;
+            SdJwtBuf::new(input).map_err(|e| SdJwtError::InvalidSdJwt(format!("{e:?}")))?;
 
         let mut sd_jwt = SdJwt::try_from(inner)?;
         sd_jwt.key_alias = Some(key_alias);
 
         Ok(Arc::new(sd_jwt))
-    }
-
-    /// Create an instance of a SdJwt from a generic credential type.
-    #[uniffi::constructor]
-    pub fn new_from_credential(credential: &Credential) -> Result<Arc<Self>, SdJwtError> {
-        Self::try_from(credential).map(Arc::new)
     }
 
     /// Return the ID for the SdJwt instance.
@@ -148,18 +143,7 @@ impl SdJwt {
     /// Decode a SdJwt instance and return the revealed claims as a JSON string.
     pub fn decode_reveal_json_string(&self) -> Result<String, SdJwtError> {
         serde_json::to_string(&self.credential)
-            .map_err(|e| SdJwtError::Serialization(e.to_string()))
-    }
-
-    /// Access the revealed SD-JWT disclosures as an vector of UTF-8 encoded strings.
-    pub fn disclosures(&self) -> Vec<String> {
-        self.inner
-            .as_sd_jwt()
-            .disclosures()
-            // TODO: Is there a better type to map to versus string?
-            // e.g., should we return a JSON object here?
-            .map(|disclosure| disclosure.as_str().to_string())
-            .collect()
+            .map_err(|e| SdJwtError::Serialization(format!("{e:?}")))
     }
 
     /// Return the SdJwt as a JwtVc instance.
@@ -169,7 +153,7 @@ impl SdJwt {
             self.inner.as_bytes().into(),
             self.key_alias.clone(),
         )
-        .map_err(|e| SdJwtError::SdJwtVcInitError(e.to_string()))
+        .map_err(|e| SdJwtError::SdJwtVcInitError(format!("{e:?}")))
     }
 }
 
@@ -187,7 +171,7 @@ impl TryFrom<SdJwt> for Credential {
     fn try_from(value: SdJwt) -> Result<Self, Self::Error> {
         ParsedCredential::from(value)
             .into_generic_form()
-            .map_err(|e| SdJwtError::CredentialEncoding(e.to_string()))
+            .map_err(|e| SdJwtError::CredentialEncoding(format!("{e:?}")))
     }
 }
 
@@ -197,7 +181,7 @@ impl TryFrom<Arc<SdJwt>> for Credential {
     fn try_from(value: Arc<SdJwt>) -> Result<Self, Self::Error> {
         ParsedCredential::new_sd_jwt(value)
             .into_generic_form()
-            .map_err(|e| SdJwtError::CredentialEncoding(e.to_string()))
+            .map_err(|e| SdJwtError::CredentialEncoding(format!("{e:?}")))
     }
 }
 
@@ -230,7 +214,7 @@ impl TryFrom<SdJwtBuf> for SdJwt {
 
     fn try_from(value: SdJwtBuf) -> Result<Self, Self::Error> {
         let SdJwtVc(vc) = SdJwtVc::decode_reveal_any(&value)
-            .map_err(|e| SdJwtError::SdJwtDecoding(e.to_string()))?
+            .map_err(|e| SdJwtError::SdJwtDecoding(format!("{e:?}")))?
             .into_claims()
             .private;
 
@@ -246,12 +230,12 @@ impl TryFrom<SdJwtBuf> for SdJwt {
 #[uniffi::export]
 pub fn decode_reveal_sd_jwt(input: String) -> Result<String, SdJwtError> {
     let jwt: SdJwtBuf =
-        SdJwtBuf::new(input).map_err(|e| SdJwtError::InvalidSdJwt(e.to_string()))?;
+        SdJwtBuf::new(input).map_err(|e| SdJwtError::InvalidSdJwt(format!("{e:?}")))?;
     let SdJwtVc(vc) = SdJwtVc::decode_reveal_any(&jwt)
-        .map_err(|e| SdJwtError::SdJwtDecoding(e.to_string()))?
+        .map_err(|e| SdJwtError::SdJwtDecoding(format!("{e:?}")))?
         .into_claims()
         .private;
-    serde_json::to_string(&vc).map_err(|e| SdJwtError::Serialization(e.to_string()))
+    serde_json::to_string(&vc).map_err(|e| SdJwtError::Serialization(format!("{e:?}")))
 }
 
 #[derive(Debug, uniffi::Error, thiserror::Error)]

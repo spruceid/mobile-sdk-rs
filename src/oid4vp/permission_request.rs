@@ -212,4 +212,6 @@ pub struct PermissionResponse {
     pub selected_credential: Arc<ParsedCredential>,
     pub presentation_definition: PresentationDefinition,
     pub authorization_request: AuthorizationRequestObject,
+    // TODO: provide an optional internal mapping of `JsonPointer`s
+    // for selective disclosure that are selected as part of the requested fields.
 }
