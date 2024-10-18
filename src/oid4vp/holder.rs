@@ -237,7 +237,7 @@ impl Holder {
     ) -> DescriptorMap {
         DescriptorMap::new(
             input_descriptor_id,
-            credential.format().into(),
+            credential.format().to_string().as_str(),
             "$.verifiableCredential".into(),
         )
     }

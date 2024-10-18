@@ -162,7 +162,7 @@ impl JwtVc {
         // If the credential does not match the definition requested format,
         // then return false.
         if !definition.format().is_empty()
-            && !definition.contains_format(CredentialFormat::JwtVcJson)
+            && !definition.contains_format(CredentialFormat::JwtVcJson.to_string().as_str())
         {
             return false;
         }

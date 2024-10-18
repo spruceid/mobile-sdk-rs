@@ -52,7 +52,7 @@ impl SdJwt {
         // If the credential does not match the definition requested format,
         // then return false.
         if !definition.format().is_empty()
-            && !definition.contains_format(CredentialFormat::VCDM2SdJwt)
+            && !definition.contains_format(CredentialFormat::VCDM2SdJwt.to_string().as_str())
         {
             println!(
                 "Credential does not match the requested format: {:?}.",

@@ -122,7 +122,9 @@ impl JsonVc {
     pub fn check_presentation_definition(&self, definition: &PresentationDefinition) -> bool {
         // If the credential does not match the definition requested format,
         // then return false.
-        if !definition.format().is_empty() && !definition.contains_format(CredentialFormat::LdpVc) {
+        if !definition.format().is_empty()
+            && !definition.contains_format(CredentialFormat::LdpVc.to_string().as_str())
+        {
             return false;
         }
 

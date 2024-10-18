@@ -9,9 +9,7 @@ use crate::{oid4vp::permission_request::RequestedField, CredentialType, KeyAlias
 use json_vc::{JsonVc, JsonVcEncodingError, JsonVcInitError};
 use jwt_vc::{JwtVc, JwtVcInitError};
 use mdoc::{Mdoc, MdocEncodingError, MdocInitError};
-use openid4vp::core::{
-    credential_format::ClaimFormatDesignation, presentation_definition::PresentationDefinition,
-};
+use openid4vp::core::presentation_definition::PresentationDefinition;
 use sd_jwt::{SdJwt, SdJwtError};
 use serde::{Deserialize, Serialize};
 
@@ -376,20 +374,6 @@ pub enum CredentialFormat {
     VCDM2SdJwt,
     #[serde(untagged)]
     Other(String), // For ease of expansion.
-}
-
-impl From<CredentialFormat> for ClaimFormatDesignation {
-    fn from(value: CredentialFormat) -> Self {
-        match value {
-            CredentialFormat::MsoMdoc => ClaimFormatDesignation::MsoMDoc,
-            CredentialFormat::JwtVcJson => ClaimFormatDesignation::JwtVcJson,
-            CredentialFormat::VCDM2SdJwt | CredentialFormat::JwtVcJsonLd => {
-                ClaimFormatDesignation::Other(value.to_string())
-            }
-            CredentialFormat::LdpVc => ClaimFormatDesignation::LdpVc,
-            CredentialFormat::Other(s) => ClaimFormatDesignation::Other(s.to_owned()),
-        }
-    }
 }
 
 impl std::fmt::Display for CredentialFormat {
