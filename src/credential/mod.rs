@@ -106,9 +106,7 @@ impl TryFrom<Credential> for AnyJsonCredential {
             CredentialFormat::VCDM2SdJwt => {
                 let sd_jwt: Arc<SdJwt> = value.try_into()?;
 
-                sd_jwt
-                    .credential()
-                    .map_err(|e| CredentialDecodingError::SdJwt(e))
+                sd_jwt.credential().map_err(CredentialDecodingError::SdJwt)
             }
             // TODO: Add more formats here.
             _ => Err(Self::Error::UnsupportedCredentialFormat(
