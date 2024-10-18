@@ -77,16 +77,6 @@ impl Credential {
     pub fn try_into_parsed(&self) -> Result<Arc<ParsedCredential>, CredentialDecodingError> {
         self.to_owned().try_into()
     }
-
-    /// Returns the credential as a `Mdoc` credential.
-    pub fn try_into_mdoc(&self) -> Result<Arc<Mdoc>, CredentialDecodingError> {
-        Ok(self.to_owned().try_into()?)
-    }
-
-    /// Returns the credential as a `JwtVc` credential.
-    pub fn try_into_jwt_vc(&self) -> Result<Arc<JwtVc>, CredentialDecodingError> {
-        Ok(self.to_owned().try_into()?)
-    }
 }
 
 /// A credential that has been parsed as a known variant.

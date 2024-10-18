@@ -61,11 +61,9 @@ pub async fn initialize_mdl_presentation(
             value: "No credential with that ID in the VDC collection.".to_string(),
         })?;
 
-    let mdoc: Arc<Mdoc> = document
-        .try_into_mdoc()
-        .map_err(|e| SessionError::Generic {
-            value: format!("Error retrieving MDoc from storage: {e:}"),
-        })?;
+    let mdoc: Arc<Mdoc> = document.try_into().map_err(|e| SessionError::Generic {
+        value: format!("Error retrieving MDoc from storage: {e:}"),
+    })?;
     let drms = DeviceRetrievalMethods::new(DeviceRetrievalMethod::BLE(BleOptions {
         peripheral_server_mode: None,
         central_client_mode: Some(CentralClientMode { uuid }),
