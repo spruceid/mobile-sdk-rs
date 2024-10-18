@@ -26,16 +26,21 @@ do {
     let vdc = VdcCollection(engine: storage)
     let mdocPayload = try String(contentsOf: URL(fileURLWithPath: "../../../tests/res/mdoc.b64"))
     let mdocBytes = Data(base64Encoded: mdocPayload)
-    let uuid = UUID.init()
+    let uuid = UUID()
     try await vdc.add(
-        credential: Credential(
-            id: uuid.uuidString, format: CredentialFormat.msoMdoc,
-            type: CredentialType("org.iso.18013.5.1.mDL"), payload: mdocBytes!, keyAlias: "alias"))
+        credential: Credential.init(
+            id: uuid.uuidString,
+            format: CredentialFormat.msoMdoc,
+            type: CredentialType("org.iso.18013.5.1.mDL"),
+            payload: mdocBytes!,
+            keyAlias: "alias"
+        ))
     let mdlSession = try await initializeMdlPresentation(
-        mdocId: uuid.uuidString, uuid: UUID.init().uuidString, storageManager: storage)
+        mdocId: uuid.uuidString, uuid: UUID().uuidString, storageManager: storage
+    )
     assert(
         try! mdlSession.terminateSession()
-            == Data([0xa1, 0x66, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x14]))
+            == Data([0xA1, 0x66, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x14]))
 } catch {
-    assert(false, "\(error)")
+    assertionFailure("\(error)")
 }

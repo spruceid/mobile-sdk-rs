@@ -11,3 +11,4 @@ kotlin/mobilesdkrs/src/main/jniLibs/*
 kotlin/local.properties
 .direnv
 .envrc
+**.idea
