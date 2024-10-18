@@ -130,11 +130,10 @@ api("com.spruceid.mobile.sdk.rs:mobilesdkrs:x.y.z-SNAPSHOT")
 
 ### Swift
 
-To test local intgration with `mobile-sdk-swift`, update the `Package.swift` file target to use a local binary target. For example:
+To test local intgration with `mobile-sdk-swift`, update the `Package.swift` file target to use a local `path` binary target. For example:
 
 ```swift
 targets: [
-    //.binaryTarget(name: "RustFramework", url: "https://github.com/spruceid/mobile-sdk-rs/releases/download/0.0.36/RustFramework.xcframework.zip", checksum: "df587ab46f3604df744a9394c229be40e9a65102429ff1b0379dfeb6ca7fdc3c"),
     .binaryTarget(name: "RustFramework", path: "./MobileSdkRs/RustFramework.xcframework"),
     .target(
         name: "SpruceIDMobileSdkRs",
@@ -145,6 +144,12 @@ targets: [
     ),
 ]
 ```
+
+> NOTE: For production release, it will be important to replace the binary target with an actual release artifact or revision tag, for example:
+> ```
+> .binaryTarget(name: "RustFramework", url: "https://github.com/spruceid/mobile-sdk-rs/releases/download/0.0.36/RustFramework.xcframework.zip", checksum: "df587ab46f3604df744a9394c229be40e9a65102429ff1b0379dfeb6ca7fdc3c")
+> ```
+
 
 And update the `packages` property in `project.yml` file in `mobile-sdk-swift` to use the local path to `mobile-sdk-rs`, for example:
 
