@@ -1,4 +1,4 @@
-use super::{jwt_vc::JwtVc, Credential, CredentialFormat, ParsedCredential, ParsedCredentialInner};
+use super::{Credential, CredentialFormat, ParsedCredential, ParsedCredentialInner};
 use crate::{oid4vp::permission_request::RequestedField, CredentialType, KeyAlias};
 
 use std::sync::Arc;
@@ -25,8 +25,8 @@ pub struct SdJwt {
 
 // Internal utility methods for decoding a SdJwt.
 impl SdJwt {
-    /// Decode a SdJwt instance and return the revealed claims as a JSON value.
-    pub fn decode_reveal_json(&self) -> Result<serde_json::Value, SdJwtError> {
+    /// Return the revealed claims as a JSON value.
+    pub fn revealed_claims_as_json(&self) -> Result<serde_json::Value, SdJwtError> {
         serde_json::to_value(&self.credential)
             .map_err(|e| SdJwtError::Serialization(format!("{e:?}")))
     }
@@ -140,20 +140,10 @@ impl SdJwt {
         CredentialType(self.types().join("+"))
     }
 
-    /// Decode a SdJwt instance and return the revealed claims as a JSON string.
-    pub fn decode_reveal_json_string(&self) -> Result<String, SdJwtError> {
+    /// Return the revealed claims as a UTF-8 encoded JSON string.
+    pub fn revealed_claims_as_json_string(&self) -> Result<String, SdJwtError> {
         serde_json::to_string(&self.credential)
             .map_err(|e| SdJwtError::Serialization(format!("{e:?}")))
-    }
-
-    /// Return the SdJwt as a JwtVc instance.
-    pub fn as_jwt_vc(self: Arc<Self>) -> Result<Arc<JwtVc>, SdJwtError> {
-        JwtVc::from_compact_jws_bytes(
-            self.id,
-            self.inner.as_bytes().into(),
-            self.key_alias.clone(),
-        )
-        .map_err(|e| SdJwtError::SdJwtVcInitError(format!("{e:?}")))
     }
 }
 
