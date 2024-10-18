@@ -237,7 +237,7 @@ impl Holder {
     ) -> DescriptorMap {
         DescriptorMap::new(
             input_descriptor_id,
-            ClaimFormatDesignation::from(credential.format()),
+            credential.format().into(),
             "$.verifiableCredential".into(),
         )
     }

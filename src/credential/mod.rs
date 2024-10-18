@@ -14,7 +14,6 @@ use openid4vp::core::{
 };
 use sd_jwt::{SdJwt, SdJwtError};
 use serde::{Deserialize, Serialize};
-use ssi::prelude::AnyJsonCredential;
 
 /// An unparsed credential, retrieved from storage.
 #[derive(Debug, Clone, Serialize, Deserialize, uniffi::Object)]
@@ -87,32 +86,6 @@ impl Credential {
     /// Returns the credential as a `JwtVc` credential.
     pub fn try_into_jwt_vc(&self) -> Result<Arc<JwtVc>, CredentialDecodingError> {
         Ok(self.to_owned().try_into()?)
-    }
-}
-
-impl TryFrom<Credential> for AnyJsonCredential {
-    type Error = CredentialDecodingError;
-
-    fn try_from(value: Credential) -> Result<Self, Self::Error> {
-        match value.format {
-            // NOTE: Re-using the Arc<JwtVc> type for SdJwtJson format
-            // for converting into the AnyJsonCredential type.
-            //
-            // There may be a better solution for this.
-            CredentialFormat::JwtVcJson => {
-                let jwt_vc: Arc<JwtVc> = value.try_into()?;
-                Ok(jwt_vc.credential())
-            }
-            CredentialFormat::VCDM2SdJwt => {
-                let sd_jwt: Arc<SdJwt> = value.try_into()?;
-
-                sd_jwt.credential().map_err(CredentialDecodingError::SdJwt)
-            }
-            // TODO: Add more formats here.
-            _ => Err(Self::Error::UnsupportedCredentialFormat(
-                value.format.to_string(),
-            )),
-        }
     }
 }
 
