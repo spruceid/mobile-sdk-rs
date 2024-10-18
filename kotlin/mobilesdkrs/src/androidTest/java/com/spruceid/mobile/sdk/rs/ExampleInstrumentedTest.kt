@@ -17,6 +17,6 @@ import org.junit.Assert.*
 class UniffiInstrumentedTest {
     @Test
     fun uniffiFunction() {
-        // assertEquals(helloFfi(), "Hello from Rust!")
+        // Add your FFI function test here.
     }
 }
