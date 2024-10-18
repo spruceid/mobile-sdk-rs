@@ -16,60 +16,60 @@ use sd_jwt::{SdJwt, SdJwtError};
 use serde::{Deserialize, Serialize};
 
 /// An unparsed credential, retrieved from storage.
-#[derive(Debug, Clone, Serialize, Deserialize, uniffi::Object)]
+#[derive(Debug, Clone, Serialize, Deserialize, uniffi::Record)]
 pub struct Credential {
     /// The local ID of this credential.
-    pub(crate) id: Uuid,
+    pub id: Uuid,
     /// The format of this credential.
-    pub(crate) format: CredentialFormat,
+    pub format: CredentialFormat,
     /// The type of this credential.
-    pub(crate) r#type: CredentialType,
+    pub r#type: CredentialType,
     /// The raw payload of this credential. The encoding depends on the format.
-    pub(crate) payload: Vec<u8>,
+    pub payload: Vec<u8>,
     /// The alias of the key that is authorized to present this credential.
-    pub(crate) key_alias: Option<KeyAlias>,
+    pub key_alias: Option<KeyAlias>,
 }
 
-#[uniffi::export]
-impl Credential {
-    /// Create a new credential.
-    #[uniffi::constructor]
-    pub fn new(
-        id: Uuid,
-        format: CredentialFormat,
-        r#type: CredentialType,
-        payload: Vec<u8>,
-        key_alias: Option<KeyAlias>,
-    ) -> Arc<Self> {
-        Arc::new(Self {
-            id,
-            format,
-            r#type,
-            payload,
-            key_alias,
-        })
-    }
+// #[uniffi::export]
+// impl Credential {
+//     /// Create a new credential.
+//     #[uniffi::constructor]
+//     pub fn new(
+//         id: Uuid,
+//         format: CredentialFormat,
+//         r#type: CredentialType,
+//         payload: Vec<u8>,
+//         key_alias: Option<KeyAlias>,
+//     ) -> Arc<Self> {
+//         Arc::new(Self {
+//             id,
+//             format,
+//             r#type,
+//             payload,
+//             key_alias,
+//         })
+//     }
 
-    /// Return the ID of the credential.
-    pub fn id(&self) -> Uuid {
-        self.id
-    }
+//     /// Return the ID of the credential.
+//     pub fn id(&self) -> Uuid {
+//         self.id
+//     }
 
-    /// Return the format of the credential.
-    pub fn format(&self) -> CredentialFormat {
-        self.format.clone()
-    }
+//     /// Return the format of the credential.
+//     pub fn format(&self) -> CredentialFormat {
+//         self.format.clone()
+//     }
 
-    /// Return the type of the credential.
-    pub fn r#type(&self) -> CredentialType {
-        self.r#type.clone()
-    }
+//     /// Return the type of the credential.
+//     pub fn r#type(&self) -> CredentialType {
+//         self.r#type.clone()
+//     }
 
-    /// Return the raw payload of the credential.
-    pub fn payload(&self) -> Vec<u8> {
-        self.payload.clone()
-    }
-}
+//     /// Return the raw payload of the credential.
+//     pub fn payload(&self) -> Vec<u8> {
+//         self.payload.clone()
+//     }
+// }
 
 // Internal helper methods.
 impl Credential {
@@ -153,7 +153,7 @@ impl ParsedCredential {
     #[uniffi::constructor]
     /// Parse a credential from the generic form retrieved from storage.
     pub fn parse_from_credential(
-        credential: Arc<Credential>,
+        credential: Credential,
     ) -> Result<Arc<Self>, CredentialDecodingError> {
         // NOTE: due to the Arc<Credential> type needed in the constructor,
         // given the uniffi::Object trait, we need to have an inner reference

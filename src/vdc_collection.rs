@@ -70,7 +70,7 @@ impl VdcCollection {
     }
 
     /// Get a credential from the store.
-    pub async fn get(&self, id: Uuid) -> Result<Option<Arc<Credential>>, VdcCollectionError> {
+    pub async fn get(&self, id: Uuid) -> Result<Option<Credential>, VdcCollectionError> {
         let raw = match self.storage.get(Self::id_to_key(id)).await {
             Ok(Some(x)) => x,
             Ok(None) => return Ok(None),
@@ -78,7 +78,7 @@ impl VdcCollection {
         };
 
         match serde_cbor::de::from_slice(&raw.0) {
-            Ok(Some(x)) => Ok(Some(Arc::new(x))),
+            Ok(Some(x)) => Ok(Some(x)),
             _ => Err(VdcCollectionError::DeserializeFailed),
         }
     }
@@ -108,7 +108,7 @@ impl VdcCollection {
         let all_entries = self.all_entries().await?;
         Ok(stream::iter(all_entries)
             .filter_map(|id| async move { self.get(id).await.ok().flatten() })
-            .collect::<Vec<Arc<Credential>>>()
+            .collect::<Vec<Credential>>()
             .await
             .iter()
             .filter(|cred| &cred.r#type == ctype)
