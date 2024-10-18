@@ -32,6 +32,18 @@ security firm before the v1.0 release.
 Use the [`release` Github Action](https://github.com/spruceid/mobile-sdk-rs/actions/workflows/release.yml)
 which is a manually triggered action.
 
+## Pre-requisites
+
+Ensure you have the following rust build targets installed:
+
+```bash
+rustup target install \
+    armv7-linux-androideabi \
+    aarch64-linux-android \
+    i686-linux-android \
+    x86_64-linux-android
+```
+
 ## Build
 
 ### Kotlin

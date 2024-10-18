@@ -8,6 +8,18 @@ uniffi::custom_newtype!(CredentialType, String);
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct CredentialType(pub String);
 
+impl From<String> for CredentialType {
+    fn from(s: String) -> Self {
+        Self(s)
+    }
+}
+
+impl From<CredentialType> for String {
+    fn from(cred_type: CredentialType) -> Self {
+        cred_type.0
+    }
+}
+
 uniffi::custom_newtype!(KeyAlias, String);
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct KeyAlias(pub String);
