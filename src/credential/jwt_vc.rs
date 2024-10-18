@@ -195,7 +195,7 @@ impl JwtVc {
         };
 
         definition
-            .requested_fields_cred(&json)
+            .requested_fields(&json)
             .into_iter()
             .map(Into::into)
             .map(Arc::new)
