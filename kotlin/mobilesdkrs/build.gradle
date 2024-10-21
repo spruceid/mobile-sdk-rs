@@ -119,15 +119,15 @@ publishing {
         mavenLocal()
     }
     publications {
-        // debug(MavenPublication) {
-        //     groupId = 'com.spruceid.mobile.sdk.rs'
-        //     artifactId = "mobilesdkrs"
-        //     version = System.getenv("VERSION")
+        debug(MavenPublication) {
+            groupId = 'com.spruceid.mobile.sdk.rs'
+            artifactId = "mobilesdkrs"
+            version = System.getenv("VERSION")
 
-        //     afterEvaluate {
-        //         from components.release
-        //     }
-        // }
+            afterEvaluate {
+                from components.release
+            }
+        }
         release(MavenPublication) {
             groupId = 'com.spruceid.mobile.sdk.rs'
             artifactId = "mobilesdkrs"
