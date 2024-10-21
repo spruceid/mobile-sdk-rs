@@ -26,10 +26,9 @@ impl Default for LocalStore {
     }
 }
 
-#[async_trait::async_trait]
 impl StorageManagerInterface for LocalStore {
     /// Add a key/value pair to storage.
-    async fn add(&self, key: Key, value: Value) -> Result<(), StorageManagerError> {
+    fn add(&self, key: Key, value: Value) -> Result<(), StorageManagerError> {
         let mut store = self.store.lock().unwrap();
 
         store.insert(key, value);
@@ -38,7 +37,7 @@ impl StorageManagerInterface for LocalStore {
     }
 
     /// Retrieve the value associated with a key.
-    async fn get(&self, key: Key) -> Result<Option<Value>, StorageManagerError> {
+    fn get(&self, key: Key) -> Result<Option<Value>, StorageManagerError> {
         let store = self.store.lock().unwrap();
 
         match store.get(&key) {
@@ -48,14 +47,14 @@ impl StorageManagerInterface for LocalStore {
     }
 
     /// List the available key/value pairs.
-    async fn list(&self) -> Result<Vec<Key>, StorageManagerError> {
+    fn list(&self) -> Result<Vec<Key>, StorageManagerError> {
         let store = self.store.lock().unwrap();
 
         Ok(store.keys().map(|x| x.to_owned()).collect())
     }
 
     /// Delete a given key/value pair from storage.
-    async fn remove(&self, key: Key) -> Result<(), StorageManagerError> {
+    fn remove(&self, key: Key) -> Result<(), StorageManagerError> {
         let mut store = self.store.lock().unwrap();
 
         _ = store.remove(&key);

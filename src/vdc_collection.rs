@@ -3,8 +3,6 @@ use std::sync::Arc;
 use crate::common::*;
 use crate::credential::Credential;
 use crate::storage_manager::*;
-use futures::stream;
-use futures::StreamExt;
 
 use thiserror::Error;
 use tracing::info;
@@ -52,25 +50,21 @@ impl VdcCollection {
     }
 
     /// Add a credential to the set.
-    pub async fn add(&self, credential: &Credential) -> Result<(), VdcCollectionError> {
+    pub fn add(&self, credential: &Credential) -> Result<(), VdcCollectionError> {
         let val = match serde_cbor::to_vec(&credential) {
             Ok(x) => x,
             Err(_) => return Err(VdcCollectionError::SerializeFailed),
         };
 
-        match self
-            .storage
-            .add(Self::id_to_key(credential.id), Value(val))
-            .await
-        {
+        match self.storage.add(Self::id_to_key(credential.id), Value(val)) {
             Ok(()) => Ok(()),
             Err(e) => Err(VdcCollectionError::StoreFailed(e)),
         }
     }
 
     /// Get a credential from the store.
-    pub async fn get(&self, id: Uuid) -> Result<Option<Credential>, VdcCollectionError> {
-        let raw = match self.storage.get(Self::id_to_key(id)).await {
+    pub fn get(&self, id: Uuid) -> Result<Option<Credential>, VdcCollectionError> {
+        let raw = match self.storage.get(Self::id_to_key(id)) {
             Ok(Some(x)) => x,
             Ok(None) => return Ok(None),
             Err(e) => return Err(VdcCollectionError::LoadFailed(e)),
@@ -83,32 +77,31 @@ impl VdcCollection {
     }
 
     /// Remove a credential from the store.
-    pub async fn delete(&self, id: Uuid) -> Result<(), VdcCollectionError> {
-        match self.storage.remove(Self::id_to_key(id)).await {
+    pub fn delete(&self, id: Uuid) -> Result<(), VdcCollectionError> {
+        match self.storage.remove(Self::id_to_key(id)) {
             Ok(_) => Ok(()),
             Err(e) => Err(VdcCollectionError::DeleteFailed(e)),
         }
     }
 
     /// Get a list of all the credentials.
-    pub async fn all_entries(&self) -> Result<Vec<Uuid>, VdcCollectionError> {
+    pub fn all_entries(&self) -> Result<Vec<Uuid>, VdcCollectionError> {
         self.storage
             .list()
-            .await
             .map(|list| list.iter().filter_map(Self::key_to_id).collect())
             .map_err(VdcCollectionError::LoadFailed)
     }
 
     /// Get a list of all the credentials that match a specified type.
-    pub async fn all_entries_by_type(
+    pub fn all_entries_by_type(
         &self,
         ctype: &CredentialType,
     ) -> Result<Vec<Uuid>, VdcCollectionError> {
-        let all_entries = self.all_entries().await?;
-        Ok(stream::iter(all_entries)
-            .filter_map(|id| async move { self.get(id).await.ok().flatten() })
+        let all_entries = self.all_entries()?;
+        Ok(all_entries
+            .into_iter()
+            .filter_map(|id| self.get(id).ok().flatten())
             .collect::<Vec<Credential>>()
-            .await
             .iter()
             .filter(|cred| &cred.r#type == ctype)
             .map(|cred| cred.id)
@@ -116,20 +109,17 @@ impl VdcCollection {
     }
 
     /// Dump the contents of the credential set to the logger.
-    pub async fn dump(&self) {
-        //let span = info_span!("All Credentials");
-        //span.in_scope(async ||
-        match self.all_entries().await {
+    pub fn dump(&self) {
+        match self.all_entries() {
             Ok(list) => {
                 for key in list {
-                    if let Ok(x) = self.get(key).await {
+                    if let Ok(x) = self.get(key) {
                         info!("{:?}", x);
                     }
                 }
             }
             Err(e) => info!("Unable to get list: {:?}", e),
         }
-        //);
     }
 }
 
@@ -160,8 +150,8 @@ mod tests {
     async fn test_vdc() {
         let smi: Arc<dyn StorageManagerInterface> = Arc::new(LocalStore::new());
         let vdc = VdcCollection::new(smi);
-        for id in vdc.all_entries().await.unwrap() {
-            vdc.delete(id).await.unwrap();
+        for id in vdc.all_entries().unwrap() {
+            vdc.delete(id).unwrap();
         }
         let payload_1: Vec<u8> = "Some random collection of bytes. ⚛".into();
         let payload_2: Vec<u8> = "Some other random collection of bytes. 📯".into();
@@ -192,42 +182,33 @@ mod tests {
         };
 
         vdc.add(&credential_1)
-            .await
             .expect("Unable to add the first value.");
 
         vdc.add(&credential_2)
-            .await
             .expect("Unable to add the second value.");
 
         vdc.add(&credential_3)
-            .await
             .expect("Unable to add the third value.");
 
         vdc.get(credential_2.id)
-            .await
             .expect("Failed to get the second value");
         vdc.get(credential_1.id)
-            .await
             .expect("Failed to get the first value");
         vdc.get(credential_3.id)
-            .await
             .expect("Failed to get the third value");
 
-        assert!(vdc.all_entries().await.unwrap().len() == 3);
+        assert!(vdc.all_entries().unwrap().len() == 3);
 
         vdc.delete(credential_2.id)
-            .await
             .expect("Failed to delete the second value.");
 
-        assert!(vdc.all_entries().await.unwrap().len() == 2);
+        assert!(vdc.all_entries().unwrap().len() == 2);
 
         vdc.delete(credential_1.id)
-            .await
             .expect("Failed to delete the first value.");
         vdc.delete(credential_3.id)
-            .await
             .expect("Failed to delete the third value.");
 
-        assert!(vdc.all_entries().await.unwrap().len() == 0);
+        assert!(vdc.all_entries().unwrap().len() == 0);
     }
 }

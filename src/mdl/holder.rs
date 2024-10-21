@@ -44,7 +44,7 @@ use isomdl::{
 /// String containing the BLE ident.
 ///
 #[uniffi::export]
-pub async fn initialize_mdl_presentation(
+pub fn initialize_mdl_presentation(
     mdoc_id: Uuid,
     uuid: Uuid,
     storage_manager: Arc<dyn StorageManagerInterface>,
@@ -53,7 +53,6 @@ pub async fn initialize_mdl_presentation(
 
     let document = vdc_collection
         .get(mdoc_id)
-        .await
         .map_err(|_| SessionError::Generic {
             value: "Error in VDC Collection".to_string(),
         })?
@@ -110,7 +109,7 @@ pub async fn initialize_mdl_presentation(
 /// String containing the BLE ident.
 ///
 #[uniffi::export]
-pub async fn initialize_mdl_presentation_from_bytes(
+pub fn initialize_mdl_presentation_from_bytes(
     mdoc: Arc<Mdoc>,
     uuid: Uuid,
 ) -> Result<MdlPresentationSession, SessionError> {
@@ -387,12 +386,10 @@ mod tests {
                 payload: mdoc_bytes,
                 key_alias: Some(KeyAlias("Testing".to_string())),
             })
-            .await
             .unwrap();
 
-        let presentation_session = initialize_mdl_presentation(mdoc, Uuid::new_v4(), smi.clone())
-            .await
-            .unwrap();
+        let presentation_session =
+            initialize_mdl_presentation(mdoc, Uuid::new_v4(), smi.clone()).unwrap();
         let namespaces: device_request::Namespaces = [(
             "org.iso.18013.5.1".to_string(),
             [
@@ -441,7 +438,7 @@ mod tests {
             .submit_response(signature.to_der().to_vec())
             .unwrap();
         let res = reader_session_manager.handle_response(&response);
-        vdc_collection.delete(mdoc).await.unwrap();
+        vdc_collection.delete(mdoc).unwrap();
         assert_eq!(res.errors, BTreeMap::new());
     }
 
@@ -466,12 +463,10 @@ mod tests {
                 payload: mdoc_bytes,
                 key_alias: Some(KeyAlias("Testing".to_string())),
             })
-            .await
             .unwrap();
 
-        let presentation_session = initialize_mdl_presentation(mdoc, Uuid::new_v4(), smi.clone())
-            .await
-            .unwrap();
+        let presentation_session =
+            initialize_mdl_presentation(mdoc, Uuid::new_v4(), smi.clone()).unwrap();
         let namespaces = [(
             "org.iso.18013.5.1".to_string(),
             [
@@ -515,6 +510,6 @@ mod tests {
             .unwrap();
         let _ = crate::reader::handle_response(reader_session_data.state, response).unwrap();
 
-        vdc_collection.delete(mdoc).await.unwrap();
+        vdc_collection.delete(mdoc).unwrap();
     }
 }
