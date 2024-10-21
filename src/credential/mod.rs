@@ -28,47 +28,6 @@ pub struct Credential {
     pub key_alias: Option<KeyAlias>,
 }
 
-// #[uniffi::export]
-// impl Credential {
-//     /// Create a new credential.
-//     #[uniffi::constructor]
-//     pub fn new(
-//         id: Uuid,
-//         format: CredentialFormat,
-//         r#type: CredentialType,
-//         payload: Vec<u8>,
-//         key_alias: Option<KeyAlias>,
-//     ) -> Arc<Self> {
-//         Arc::new(Self {
-//             id,
-//             format,
-//             r#type,
-//             payload,
-//             key_alias,
-//         })
-//     }
-
-//     /// Return the ID of the credential.
-//     pub fn id(&self) -> Uuid {
-//         self.id
-//     }
-
-//     /// Return the format of the credential.
-//     pub fn format(&self) -> CredentialFormat {
-//         self.format.clone()
-//     }
-
-//     /// Return the type of the credential.
-//     pub fn r#type(&self) -> CredentialType {
-//         self.r#type.clone()
-//     }
-
-//     /// Return the raw payload of the credential.
-//     pub fn payload(&self) -> Vec<u8> {
-//         self.payload.clone()
-//     }
-// }
-
 // Internal helper methods.
 impl Credential {
     /// Convert the parsed credential into a specialized JSON credential.
