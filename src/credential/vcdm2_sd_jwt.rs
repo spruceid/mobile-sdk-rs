@@ -16,7 +16,7 @@ use uniffi::deps::log;
 use uuid::Uuid;
 
 #[derive(Debug, uniffi::Object)]
-pub struct SdJwt {
+pub struct VCDM2SdJwt {
     pub(crate) id: Uuid,
     pub(crate) key_alias: Option<KeyAlias>,
     pub(crate) credential: JsonCredential,
@@ -24,7 +24,7 @@ pub struct SdJwt {
 }
 
 // Internal utility methods for decoding a SdJwt.
-impl SdJwt {
+impl VCDM2SdJwt {
     /// Return the revealed claims as a JSON value.
     pub fn revealed_claims_as_json(&self) -> Result<serde_json::Value, SdJwtError> {
         serde_json::to_value(&self.credential)
@@ -96,14 +96,14 @@ impl SdJwt {
 }
 
 #[uniffi::export]
-impl SdJwt {
+impl VCDM2SdJwt {
     /// Create a new SdJwt instance from a compact SD-JWS string.
     #[uniffi::constructor]
     pub fn new_from_compact_sd_jwt(input: String) -> Result<Arc<Self>, SdJwtError> {
         let inner: SdJwtBuf =
             SdJwtBuf::new(input).map_err(|e| SdJwtError::InvalidSdJwt(format!("{e:?}")))?;
 
-        let mut sd_jwt = SdJwt::try_from(inner)?;
+        let mut sd_jwt = VCDM2SdJwt::try_from(inner)?;
         sd_jwt.key_alias = None;
 
         Ok(Arc::new(sd_jwt))
@@ -118,7 +118,7 @@ impl SdJwt {
         let inner: SdJwtBuf =
             SdJwtBuf::new(input).map_err(|e| SdJwtError::InvalidSdJwt(format!("{e:?}")))?;
 
-        let mut sd_jwt = SdJwt::try_from(inner)?;
+        let mut sd_jwt = VCDM2SdJwt::try_from(inner)?;
         sd_jwt.key_alias = Some(key_alias);
 
         Ok(Arc::new(sd_jwt))
@@ -147,42 +147,42 @@ impl SdJwt {
     }
 }
 
-impl From<SdJwt> for ParsedCredential {
-    fn from(value: SdJwt) -> Self {
+impl From<VCDM2SdJwt> for ParsedCredential {
+    fn from(value: VCDM2SdJwt) -> Self {
         ParsedCredential {
-            inner: ParsedCredentialInner::SdJwt(Arc::new(value)),
+            inner: ParsedCredentialInner::VCDM2SdJwt(Arc::new(value)),
         }
     }
 }
 
-impl TryFrom<SdJwt> for Credential {
+impl TryFrom<VCDM2SdJwt> for Credential {
     type Error = SdJwtError;
 
-    fn try_from(value: SdJwt) -> Result<Self, Self::Error> {
+    fn try_from(value: VCDM2SdJwt) -> Result<Self, Self::Error> {
         ParsedCredential::from(value)
             .into_generic_form()
             .map_err(|e| SdJwtError::CredentialEncoding(format!("{e:?}")))
     }
 }
 
-impl TryFrom<Arc<SdJwt>> for Credential {
+impl TryFrom<Arc<VCDM2SdJwt>> for Credential {
     type Error = SdJwtError;
 
-    fn try_from(value: Arc<SdJwt>) -> Result<Self, Self::Error> {
+    fn try_from(value: Arc<VCDM2SdJwt>) -> Result<Self, Self::Error> {
         ParsedCredential::new_sd_jwt(value)
             .into_generic_form()
             .map_err(|e| SdJwtError::CredentialEncoding(format!("{e:?}")))
     }
 }
 
-impl TryFrom<&Credential> for SdJwt {
+impl TryFrom<&Credential> for VCDM2SdJwt {
     type Error = SdJwtError;
 
-    fn try_from(value: &Credential) -> Result<SdJwt, SdJwtError> {
+    fn try_from(value: &Credential) -> Result<VCDM2SdJwt, SdJwtError> {
         let inner = SdJwtBuf::new(value.payload.clone())
             .map_err(|_| SdJwtError::InvalidSdJwt(Default::default()))?;
 
-        let mut sd_jwt = SdJwt::try_from(inner)?;
+        let mut sd_jwt = VCDM2SdJwt::try_from(inner)?;
         // Set the ID and key alias from the credential.
         sd_jwt.id = value.id;
         sd_jwt.key_alias = value.key_alias.clone();
@@ -191,15 +191,15 @@ impl TryFrom<&Credential> for SdJwt {
     }
 }
 
-impl TryFrom<Credential> for Arc<SdJwt> {
+impl TryFrom<Credential> for Arc<VCDM2SdJwt> {
     type Error = SdJwtError;
 
-    fn try_from(value: Credential) -> Result<Arc<SdJwt>, SdJwtError> {
-        Ok(Arc::new(SdJwt::try_from(&value)?))
+    fn try_from(value: Credential) -> Result<Arc<VCDM2SdJwt>, SdJwtError> {
+        Ok(Arc::new(VCDM2SdJwt::try_from(&value)?))
     }
 }
 
-impl TryFrom<SdJwtBuf> for SdJwt {
+impl TryFrom<SdJwtBuf> for VCDM2SdJwt {
     type Error = SdJwtError;
 
     fn try_from(value: SdJwtBuf) -> Result<Self, Self::Error> {
@@ -208,7 +208,7 @@ impl TryFrom<SdJwtBuf> for SdJwt {
             .into_claims()
             .private;
 
-        Ok(SdJwt {
+        Ok(VCDM2SdJwt {
             id: Uuid::new_v4(),
             key_alias: None,
             inner: value,
@@ -318,7 +318,7 @@ pub(crate) mod tests {
     async fn test_sd_jwt() -> Result<(), SdJwtError> {
         let input = generate_sd_jwt().await;
 
-        assert!(SdJwt::new_from_compact_sd_jwt(input.to_string()).is_ok());
+        assert!(VCDM2SdJwt::new_from_compact_sd_jwt(input.to_string()).is_ok());
 
         Ok(())
     }

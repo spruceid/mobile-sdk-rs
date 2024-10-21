@@ -1,7 +1,7 @@
 pub mod json_vc;
 pub mod jwt_vc;
 pub mod mdoc;
-pub mod sd_jwt;
+pub mod vcdm2_sd_jwt;
 
 use std::sync::Arc;
 
@@ -10,8 +10,8 @@ use json_vc::{JsonVc, JsonVcEncodingError, JsonVcInitError};
 use jwt_vc::{JwtVc, JwtVcInitError};
 use mdoc::{Mdoc, MdocEncodingError, MdocInitError};
 use openid4vp::core::presentation_definition::PresentationDefinition;
-use sd_jwt::{SdJwt, SdJwtError};
 use serde::{Deserialize, Serialize};
+use vcdm2_sd_jwt::{SdJwtError, VCDM2SdJwt};
 
 /// An unparsed credential, retrieved from storage.
 #[derive(Debug, Clone, Serialize, Deserialize, uniffi::Record)]
@@ -48,7 +48,7 @@ pub(crate) enum ParsedCredentialInner {
     MsoMdoc(Arc<Mdoc>),
     JwtVcJson(Arc<JwtVc>),
     JwtVcJsonLd(Arc<JwtVc>),
-    SdJwt(Arc<SdJwt>),
+    VCDM2SdJwt(Arc<VCDM2SdJwt>),
     LdpVc(Arc<JsonVc>),
     // More to come, for example:
     // SdJwt(...),
@@ -91,9 +91,9 @@ impl ParsedCredential {
 
     #[uniffi::constructor]
     /// Construct a new `sd_jwt_vc` credential.
-    pub fn new_sd_jwt(sd_jwt_vc: Arc<SdJwt>) -> Arc<Self> {
+    pub fn new_sd_jwt(sd_jwt_vc: Arc<VCDM2SdJwt>) -> Arc<Self> {
         Arc::new(Self {
-            inner: ParsedCredentialInner::SdJwt(sd_jwt_vc),
+            inner: ParsedCredentialInner::VCDM2SdJwt(sd_jwt_vc),
         })
     }
 
@@ -121,7 +121,7 @@ impl ParsedCredential {
                 payload: vc.to_compact_jws_bytes(),
                 key_alias: vc.key_alias(),
             }),
-            ParsedCredentialInner::SdJwt(sd_jwt) => Ok(Credential {
+            ParsedCredentialInner::VCDM2SdJwt(sd_jwt) => Ok(Credential {
                 id: sd_jwt.id(),
                 format: CredentialFormat::VCDM2SdJwt,
                 r#type: sd_jwt.r#type(),
@@ -151,7 +151,7 @@ impl ParsedCredential {
             ParsedCredentialInner::MsoMdoc(_) => CredentialFormat::MsoMdoc,
             ParsedCredentialInner::JwtVcJson(_) => CredentialFormat::JwtVcJson,
             ParsedCredentialInner::JwtVcJsonLd(_) => CredentialFormat::JwtVcJsonLd,
-            ParsedCredentialInner::SdJwt(_) => CredentialFormat::VCDM2SdJwt,
+            ParsedCredentialInner::VCDM2SdJwt(_) => CredentialFormat::VCDM2SdJwt,
             ParsedCredentialInner::LdpVc(_) => CredentialFormat::LdpVc,
         }
     }
@@ -163,7 +163,7 @@ impl ParsedCredential {
             ParsedCredentialInner::JwtVcJson(arc) => arc.id(),
             ParsedCredentialInner::JwtVcJsonLd(arc) => arc.id(),
             ParsedCredentialInner::LdpVc(arc) => arc.id(),
-            ParsedCredentialInner::SdJwt(arc) => arc.id(),
+            ParsedCredentialInner::VCDM2SdJwt(arc) => arc.id(),
         }
     }
 
@@ -174,7 +174,7 @@ impl ParsedCredential {
             ParsedCredentialInner::JwtVcJson(arc) => arc.key_alias(),
             ParsedCredentialInner::JwtVcJsonLd(arc) => arc.key_alias(),
             ParsedCredentialInner::LdpVc(arc) => arc.key_alias(),
-            ParsedCredentialInner::SdJwt(arc) => arc.key_alias(),
+            ParsedCredentialInner::VCDM2SdJwt(arc) => arc.key_alias(),
         }
     }
 
@@ -185,7 +185,7 @@ impl ParsedCredential {
             ParsedCredentialInner::JwtVcJson(arc) => arc.r#type(),
             ParsedCredentialInner::JwtVcJsonLd(arc) => arc.r#type(),
             ParsedCredentialInner::LdpVc(arc) => arc.r#type(),
-            ParsedCredentialInner::SdJwt(arc) => arc.r#type(),
+            ParsedCredentialInner::VCDM2SdJwt(arc) => arc.r#type(),
         }
     }
 
@@ -215,9 +215,9 @@ impl ParsedCredential {
     }
 
     /// Return the credential as an SD-JWT, if it is of that format.
-    pub fn as_sd_jwt(&self) -> Option<Arc<SdJwt>> {
+    pub fn as_sd_jwt(&self) -> Option<Arc<VCDM2SdJwt>> {
         match &self.inner {
-            ParsedCredentialInner::SdJwt(sd_jwt) => Some(sd_jwt.clone()),
+            ParsedCredentialInner::VCDM2SdJwt(sd_jwt) => Some(sd_jwt.clone()),
             _ => None,
         }
     }
@@ -231,7 +231,7 @@ impl ParsedCredential {
             ParsedCredentialInner::JwtVcJson(vc) => vc.check_presentation_definition(definition),
             ParsedCredentialInner::JwtVcJsonLd(vc) => vc.check_presentation_definition(definition),
             ParsedCredentialInner::LdpVc(vc) => vc.check_presentation_definition(definition),
-            ParsedCredentialInner::SdJwt(sd_jwt) => {
+            ParsedCredentialInner::VCDM2SdJwt(sd_jwt) => {
                 sd_jwt.check_presentation_definition(definition)
             }
             ParsedCredentialInner::MsoMdoc(_mdoc) => false,
@@ -244,7 +244,7 @@ impl ParsedCredential {
         definition: &PresentationDefinition,
     ) -> Vec<Arc<RequestedField>> {
         match &self.inner {
-            ParsedCredentialInner::SdJwt(sd_jwt) => sd_jwt.requested_fields(definition),
+            ParsedCredentialInner::VCDM2SdJwt(sd_jwt) => sd_jwt.requested_fields(definition),
             ParsedCredentialInner::JwtVcJson(vc) => vc.requested_fields(definition),
             ParsedCredentialInner::JwtVcJsonLd(vc) => vc.requested_fields(definition),
             ParsedCredentialInner::LdpVc(vc) => vc.requested_fields(definition),

@@ -270,7 +270,7 @@ impl Holder {
         credential: &Arc<ParsedCredential>,
     ) -> Result<VpToken, OID4VPError> {
         match &credential.inner {
-            ParsedCredentialInner::SdJwt(sd_jwt) => {
+            ParsedCredentialInner::VCDM2SdJwt(sd_jwt) => {
                 // TODO: need to provide the "filtered" (disclosed) fields of the
                 // credential to be encoded into the VpToken.
                 //
@@ -328,8 +328,7 @@ impl OID4VPWallet for Holder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    // use crate::openid4vp::request_signer::ExampleRequestSigner;
-    use sd_jwt::SdJwt;
+    use vcdm2_sd_jwt::VCDM2SdJwt;
 
     // NOTE: This test requires the `companion` service to be running and
     // available at localhost:3000.
@@ -339,7 +338,7 @@ mod tests {
     #[tokio::test]
     async fn test_oid4vp_url() -> Result<(), Box<dyn std::error::Error>> {
         let example_sd_jwt = include_str!("../../tests/examples/sd_vc.jwt");
-        let sd_jwt = SdJwt::new_from_compact_sd_jwt(example_sd_jwt.into())?;
+        let sd_jwt = VCDM2SdJwt::new_from_compact_sd_jwt(example_sd_jwt.into())?;
         let credential = ParsedCredential::new_sd_jwt(sd_jwt);
 
         let initiate_api = "http://localhost:3000/api/oid4vp/initiate";
