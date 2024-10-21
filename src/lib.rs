@@ -5,6 +5,7 @@ pub mod credential;
 pub mod did;
 pub mod local_store;
 pub mod mdl;
+pub mod metadata_manager;
 pub mod oid4vci;
 pub mod oid4vp;
 pub mod proof_of_possession;
