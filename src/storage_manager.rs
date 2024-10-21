@@ -42,7 +42,6 @@ pub enum StorageManagerError {
 /// We use the older callback_interface to keep the required version level of our Android API
 /// low.
 #[uniffi::export(with_foreign)]
-#[async_trait::async_trait]
 pub trait StorageManagerInterface: Send + Sync + Debug {
     /// Function: add
     ///
@@ -52,18 +51,18 @@ pub trait StorageManagerInterface: Send + Sync + Debug {
     /// Arguments:
     /// key - The key to add
     /// value - The value to add under the key.
-    async fn add(&self, key: Key, value: Value) -> Result<(), StorageManagerError>;
+    fn add(&self, key: Key, value: Value) -> Result<(), StorageManagerError>;
 
     /// Function: get
     ///
     /// Callback function pointer to native (kotlin/swift) code for
     /// getting a key.
-    async fn get(&self, key: Key) -> Result<Option<Value>, StorageManagerError>;
+    fn get(&self, key: Key) -> Result<Option<Value>, StorageManagerError>;
 
     /// Function: list
     ///
     /// Callback function pointer for listing available keys.
-    async fn list(&self) -> Result<Vec<Key>, StorageManagerError>;
+    fn list(&self) -> Result<Vec<Key>, StorageManagerError>;
 
     /// Function: remove
     ///
@@ -71,5 +70,5 @@ pub trait StorageManagerInterface: Send + Sync + Debug {
     /// removing a key.  This referenced function MUST be idempotent.  In
     /// particular, it must treat removing a non-existent key as a normal and
     /// expected circumstance, simply returning () and not an error.
-    async fn remove(&self, key: Key) -> Result<(), StorageManagerError>;
+    fn remove(&self, key: Key) -> Result<(), StorageManagerError>;
 }

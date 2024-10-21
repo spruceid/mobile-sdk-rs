@@ -3439,7 +3439,7 @@ dependencies = [
 [[package]]
 name = "oid4vci"
 version = "0.1.0"
-source = "git+https://github.com/spruceid/oid4vci-rs?rev=8b9acf5#8b9acf54708f361b05e3abe55b333187286702e6"
+source = "git+https://github.com/spruceid/oid4vci-rs?rev=d95fe3a#d95fe3aa1ffe59156803ab39c024e8c506c9eee1"
 dependencies = [
  "anyhow",
  "async-signature",
