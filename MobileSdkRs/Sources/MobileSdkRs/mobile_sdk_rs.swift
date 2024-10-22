@@ -6890,6 +6890,10 @@ public enum Oid4vciError {
     
     case VpRequestRequired(message: String)
     
+    case ProofValidationError(message: String)
+    
+    case DecodeError(message: String)
+    
     case DidError(message: String)
     
     case ContextMapError(message: String)
@@ -6937,15 +6941,23 @@ public struct FfiConverterTypeOid4vciError: FfiConverterRustBuffer {
             message: try FfiConverterString.read(from: &buf)
         )
         
-        case 8: return .DidError(
+        case 8: return .ProofValidationError(
             message: try FfiConverterString.read(from: &buf)
         )
         
-        case 9: return .ContextMapError(
+        case 9: return .DecodeError(
             message: try FfiConverterString.read(from: &buf)
         )
         
-        case 10: return .Generic(
+        case 10: return .DidError(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 11: return .ContextMapError(
+            message: try FfiConverterString.read(from: &buf)
+        )
+        
+        case 12: return .Generic(
             message: try FfiConverterString.read(from: &buf)
         )
         
@@ -6974,12 +6986,16 @@ public struct FfiConverterTypeOid4vciError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(6))
         case .VpRequestRequired(_ /* message is ignored*/):
             writeInt(&buf, Int32(7))
-        case .DidError(_ /* message is ignored*/):
+        case .ProofValidationError(_ /* message is ignored*/):
             writeInt(&buf, Int32(8))
-        case .ContextMapError(_ /* message is ignored*/):
+        case .DecodeError(_ /* message is ignored*/):
             writeInt(&buf, Int32(9))
-        case .Generic(_ /* message is ignored*/):
+        case .DidError(_ /* message is ignored*/):
             writeInt(&buf, Int32(10))
+        case .ContextMapError(_ /* message is ignored*/):
+            writeInt(&buf, Int32(11))
+        case .Generic(_ /* message is ignored*/):
+            writeInt(&buf, Int32(12))
 
         
         }
