@@ -20,6 +20,10 @@ use uuid::Uuid;
 pub struct JwtVc {
     id: Uuid,
     jws: JwsString,
+    // TODO: Replace with v1 JsonCredential type because
+    // it will ONLY be used for presentation, and not
+    // VCDM 2.0.
+    // USE => credential: ssi::claims::vc::v1::JsonCredential,
     credential: AnyJsonCredential,
     credential_string: String,
     header_json_string: String,
@@ -59,6 +63,8 @@ impl JwtVc {
     pub fn vcdm_version(&self) -> VcdmVersion {
         match &self.credential {
             ssi::claims::vc::AnySpecializedJsonCredential::V1(_) => VcdmVersion::V1,
+            // NOTE: JwtVC type is ONLY v1 and not possible for v2.
+            // This method should only return VCDM v1.
             ssi::claims::vc::AnySpecializedJsonCredential::V2(_) => VcdmVersion::V2,
         }
     }

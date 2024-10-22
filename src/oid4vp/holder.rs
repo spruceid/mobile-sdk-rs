@@ -279,8 +279,14 @@ impl Holder {
                 //
                 // Currently, this is encoding the entire revealed SD-JWT,
                 // without the selection of individual disclosed fields.
+                //
+                // We need to selectively disclosed fields.
                 let compact: &str = sd_jwt.inner.as_ref();
-                Ok(VpTokenItem::from(compact.to_string()).into())
+                Ok(VpTokenItem::String(compact.to_string()).into())
+            }
+            ParsedCredentialInner::LdpVc(_ldp_vc) => {
+                // Handling this with the VCDM 1.1 or 2.0 credential format.
+                unimplemented!("LDP VC not yet supported")
             }
             ParsedCredentialInner::JwtVcJson(vc) => match vc.credential() {
                 AnyJsonCredential::V1(v1) => {
@@ -288,6 +294,8 @@ impl Holder {
                         UriBuf::new(format!("urn:uuid:{}", Uuid::new_v4()).as_bytes().to_vec())
                             .ok();
 
+                    // NOTE: client id is not the holder id, and the holder ID is optional, but
+                    // should be used here instead.
                     let id_or =
                         UriBuf::new(request.client_id().0.as_bytes().to_vec()).map_err(|e| {
                             OID4VPError::VpTokenCreate(format!("Error creating URI: {:?}", e))
@@ -295,6 +303,9 @@ impl Holder {
 
                     let presentation =
                         vc::v1::syntax::JsonPresentation::new(id, Some(id_or), vec![v1]);
+
+                    // TODO: Transform the presentation into a JWT. This transformation works only
+                    // with VCDM 1.1.
 
                     // NOTE: There is some conflict between `NonEmptyObject` and `Object` inner
                     // types for the JsonPresentation types that restricts the direct use of the VpTokenItem
@@ -310,7 +321,11 @@ impl Holder {
 
                     Ok(VpTokenItem::JsonObject(obj).into())
                 }
+                // TODO: How to handle VCDM 2.0 presentation exchange?
                 AnyJsonCredential::V2(v2) => {
+                    // Return an error if a VCDM 2.0 credential is used for presentation exchange.
+                    // JwtVc is not compatible with VCDM 2.0.
+
                     let id =
                         UriBuf::new(format!("urn:uuid:{}", Uuid::new_v4()).as_bytes().to_vec())
                             .ok();
