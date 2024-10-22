@@ -1,6 +1,10 @@
+use super::{Credential, CredentialFormat, VcdmVersion};
+use crate::{oid4vp::permission_request::RequestedField, CredentialType, KeyAlias};
+
 use std::sync::Arc;
 
 use base64::prelude::*;
+use openid4vp::core::presentation_definition::PresentationDefinition;
 use ssi::{
     claims::{
         jwt::IntoDecodedJwt,
@@ -10,10 +14,6 @@ use ssi::{
     prelude::AnyJsonCredential,
 };
 use uuid::Uuid;
-
-use crate::{CredentialType, KeyAlias};
-
-use super::{Credential, VcdmVersion};
 
 #[derive(uniffi::Object, Debug, Clone)]
 /// A verifiable credential secured as a JWT.
@@ -103,7 +103,7 @@ impl JwtVc {
         self.jws.as_bytes().to_vec()
     }
 
-    fn from_compact_jws_bytes(
+    pub(crate) fn from_compact_jws_bytes(
         id: Uuid,
         raw: Vec<u8>,
         key_alias: Option<KeyAlias>,
@@ -151,6 +151,56 @@ impl JwtVc {
     fn convert_to_json_string(base64_encoded_bytes: &[u8]) -> Option<String> {
         String::from_utf8(BASE64_STANDARD_NO_PAD.decode(base64_encoded_bytes).ok()?).ok()
     }
+
+    /// Return the internal `AnyJsonCredential` type
+    pub fn credential(&self) -> AnyJsonCredential {
+        self.credential.clone()
+    }
+
+    /// Check if the credential satisfies a presentation definition.
+    pub fn check_presentation_definition(&self, definition: &PresentationDefinition) -> bool {
+        // If the credential does not match the definition requested format,
+        // then return false.
+        if !definition.format().is_empty()
+            && !definition.contains_format(CredentialFormat::JwtVcJson.to_string().as_str())
+        {
+            return false;
+        }
+
+        let Ok(json) = serde_json::to_value(&self.credential) else {
+            // NOTE: if we cannot convert the credential to a JSON value, then we cannot
+            // check the presentation definition, so we return false.
+            //
+            tracing::debug!(
+                "failed to convert credential '{}' to json, so continuing to the next credential",
+                self.id()
+            );
+            return false;
+        };
+
+        // Check the JSON-encoded credential against the definition.
+        definition.check_credential_validation(&json)
+    }
+
+    /// Returns the requested fields given a presentation definition.
+    pub fn requested_fields(
+        &self,
+        definition: &PresentationDefinition,
+    ) -> Vec<Arc<RequestedField>> {
+        let Ok(json) = serde_json::to_value(&self.credential) else {
+            // NOTE: if we cannot convert the credential to a JSON value, then we cannot
+            // check the presentation definition, so we return false.
+            log::debug!("credential could not be converted to JSON: {self:?}");
+            return Vec::new();
+        };
+
+        definition
+            .requested_fields(&json)
+            .into_iter()
+            .map(Into::into)
+            .map(Arc::new)
+            .collect()
+    }
 }
 
 impl TryFrom<Credential> for Arc<JwtVc> {
@@ -158,6 +208,18 @@ impl TryFrom<Credential> for Arc<JwtVc> {
 
     fn try_from(credential: Credential) -> Result<Self, Self::Error> {
         JwtVc::from_compact_jws_bytes(credential.id, credential.payload, credential.key_alias)
+    }
+}
+
+impl TryFrom<&Credential> for Arc<JwtVc> {
+    type Error = JwtVcInitError;
+
+    fn try_from(credential: &Credential) -> Result<Self, Self::Error> {
+        JwtVc::from_compact_jws_bytes(
+            credential.id,
+            credential.payload.clone(),
+            credential.key_alias.clone(),
+        )
     }
 }
 
