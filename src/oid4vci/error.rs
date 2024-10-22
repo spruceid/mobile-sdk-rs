@@ -1,5 +1,7 @@
 use oid4vci::credential::RequestError;
-use ssi::json_ld::FromContextMapError;
+use ssi::{
+    claims::data_integrity::DecodeError, claims::ProofValidationError, json_ld::FromContextMapError,
+};
 
 use crate::did::DidError;
 
@@ -11,23 +13,29 @@ pub enum Oid4vciError {
     #[error("Serde error")]
     SerdeJsonError(String),
 
-    #[error("HTTP request error: {0}")]
+    #[error("HTTP request error: {_0}")]
     RequestError(String),
 
     #[error("Unsupported grant type")]
     UnsupportedGrantType,
 
-    #[error("Invalid session: {0}")]
+    #[error("Invalid session: {_0}")]
     InvalidSession(String),
 
-    #[error("Invalid parameter: {0}")]
+    #[error("Invalid parameter: {_0}")]
     InvalidParameter(String),
 
-    #[error("Failed to acquire lock for {0}")]
+    #[error("Failed to acquire lock for {_0}")]
     LockError(String),
 
     #[error("{vp_request}")]
     VpRequestRequired { vp_request: serde_json::Value },
+
+    #[error("ProofValidationError: {_0}")]
+    ProofValidationError(#[from] ProofValidationError),
+
+    #[error("DecodeError: {_0}")]
+    DecodeError(#[from] DecodeError),
 
     #[error("{_0}")]
     DidError(#[from] DidError),
@@ -35,7 +43,7 @@ pub enum Oid4vciError {
     #[error("{_0}")]
     ContextMapError(#[from] FromContextMapError),
 
-    #[error("{0}")]
+    #[error("{_0}")]
     Generic(String),
 }
 
