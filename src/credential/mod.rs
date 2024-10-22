@@ -1,13 +1,3 @@
-use std::sync::Arc;
-
-use serde::{Deserialize, Serialize};
-
-use json_vc::{JsonVc, JsonVcEncodingError, JsonVcInitError};
-use jwt_vc::{JwtVc, JwtVcInitError};
-use mdoc::{Mdoc, MdocEncodingError, MdocInitError};
-
-use crate::{CredentialType, JsonValue, KeyAlias, Uuid};
-
 pub mod json_vc;
 pub mod jwt_vc;
 pub mod mdoc;
@@ -15,7 +5,9 @@ pub mod vcdm2_sd_jwt;
 
 use std::sync::Arc;
 
-use crate::{oid4vp::permission_request::RequestedField, CredentialType, KeyAlias, Uuid};
+use crate::{
+    oid4vp::permission_request::RequestedField, CredentialType, JsonValue, KeyAlias, Uuid,
+};
 use json_vc::{JsonVc, JsonVcEncodingError, JsonVcInitError};
 use jwt_vc::{JwtVc, JwtVcInitError};
 use mdoc::{Mdoc, MdocEncodingError, MdocInitError};
@@ -233,15 +225,17 @@ impl ParsedCredential {
     ) -> Result<Option<Vec<JsonValue>>, JsonPathSelectError> {
         let json = match &self.inner {
             ParsedCredentialInner::MsoMdoc(_arc) => todo!(),
+            ParsedCredentialInner::VCDM2SdJwt(arc) => {
+                serde_json::from_str(&arc.revealed_claims_as_json_string()?)
+            }
             ParsedCredentialInner::JwtVcJson(arc) | ParsedCredentialInner::JwtVcJsonLd(arc) => {
                 serde_json::from_str(&arc.credential_as_json_encoded_utf8_string())
-                    .map_err(|_| JsonPathSelectError::JsonStringDecoding)?
             }
             ParsedCredentialInner::LdpVc(arc) => {
                 serde_json::from_str(&arc.credential_as_json_encoded_utf8_string())
-                    .map_err(|_| JsonPathSelectError::JsonStringDecoding)?
             }
-        };
+        }
+        .map_err(|_| JsonPathSelectError::JsonStringDecoding)?;
 
         let mut selector = jsonpath_lib::selector(&json);
         for p in paths {
@@ -413,6 +407,8 @@ pub enum JsonPathSelectError {
     CredentialDecodingError(#[from] CredentialDecodingError),
     #[error("failed to decode JSON from a UTF-8 string")]
     JsonStringDecoding,
+    #[error(transparent)]
+    SdJwtError(#[from] SdJwtError),
 }
 
 /// The format of the credential.

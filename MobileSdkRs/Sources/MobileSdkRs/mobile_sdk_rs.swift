@@ -2954,13 +2954,12 @@ public protocol ParsedCredentialProtocol : AnyObject {
      * ```
      * let vc = serde_json::to_string(&serde_json::json!({
      * "@context": [ "https://www.w3.org/2018/credentials/v1" ],
-     * "id": "urn:uuid:711eac32-8e24-4416-84c8-510d1067eb12",
      * "type": [ "VerifiableCredential" ],
      * "issuer": {
      * "id": "did:example:1234",
      * "name": "Example Inc.",
      * "image": "https://example.com/logo.png",
-     * "url": "https://example.com/logo.png",
+     * "url": "https://example.com",
      * },
      * "credentialSubject": {
      * "id": "did:example:5678",
@@ -2998,7 +2997,6 @@ public protocol ParsedCredentialProtocol : AnyObject {
      * // None
      * assert!(missing.is_none());
      * ```
-
      */
     func jsonpathSelect(paths: [String]) throws  -> [JsonValue]?
     
@@ -3202,13 +3200,12 @@ open func intoGenericForm()throws  -> Credential {
      * ```
      * let vc = serde_json::to_string(&serde_json::json!({
      * "@context": [ "https://www.w3.org/2018/credentials/v1" ],
-     * "id": "urn:uuid:711eac32-8e24-4416-84c8-510d1067eb12",
      * "type": [ "VerifiableCredential" ],
      * "issuer": {
      * "id": "did:example:1234",
      * "name": "Example Inc.",
      * "image": "https://example.com/logo.png",
-     * "url": "https://example.com/logo.png",
+     * "url": "https://example.com",
      * },
      * "credentialSubject": {
      * "id": "did:example:5678",
@@ -3246,7 +3243,6 @@ open func intoGenericForm()throws  -> Credential {
      * // None
      * assert!(missing.is_none());
      * ```
-
      */
 open func jsonpathSelect(paths: [String])throws  -> [JsonValue]? {
     return try  FfiConverterOptionSequenceTypeJsonValue.lift(try rustCallWithError(FfiConverterTypeJsonPathSelectError.lift) {
@@ -6074,6 +6070,8 @@ public enum JsonPathSelectError {
     case CredentialDecodingError(CredentialDecodingError
     )
     case JsonStringDecoding
+    case SdJwtError(SdJwtError
+    )
 }
 
 
@@ -6091,6 +6089,9 @@ public struct FfiConverterTypeJsonPathSelectError: FfiConverterRustBuffer {
             try FfiConverterTypeCredentialDecodingError.read(from: &buf)
             )
         case 2: return .JsonStringDecoding
+        case 3: return .SdJwtError(
+            try FfiConverterTypeSdJwtError.read(from: &buf)
+            )
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -6111,6 +6112,11 @@ public struct FfiConverterTypeJsonPathSelectError: FfiConverterRustBuffer {
         case .JsonStringDecoding:
             writeInt(&buf, Int32(2))
         
+        
+        case let .SdJwtError(v1):
+            writeInt(&buf, Int32(3))
+            FfiConverterTypeSdJwtError.write(v1, into: &buf)
+            
         }
     }
 }
@@ -9939,7 +9945,7 @@ private var initializationResult: InitializationResult = {
     if (uniffi_mobile_sdk_rs_checksum_method_parsedcredential_into_generic_form() != 30318) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_mobile_sdk_rs_checksum_method_parsedcredential_jsonpath_select() != 47830) {
+    if (uniffi_mobile_sdk_rs_checksum_method_parsedcredential_jsonpath_select() != 38547) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_mobile_sdk_rs_checksum_method_parsedcredential_key_alias() != 52023) {
