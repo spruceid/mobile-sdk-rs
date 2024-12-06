@@ -5,9 +5,9 @@ use std::{
 
 use isomdl::{
     definitions::{
-        device_request,
-        helpers::{non_empty_map, NonEmptyMap},
-        validated_response,
+        device_request, 
+        helpers::{non_empty_map, NonEmptyMap}, 
+        validated_response, 
         x509::{
             self,
             trust_anchor::{RuleSetType, TrustAnchor, TrustAnchorRegistry, ValidationRuleSet},
@@ -33,12 +33,20 @@ impl std::fmt::Debug for MDLSessionManager {
     }
 }
 
+// Added by Warren Gallagher at AffinitiQuest
+#[derive(uniffi::Enum)]
+pub enum MDLSessionMode {
+    CentralClientMode,
+    PeripheralServerMode
+}
+
 #[derive(uniffi::Record)]
 pub struct MDLReaderSessionData {
     pub state: Arc<MDLSessionManager>,
     uuid: Uuid,
     pub request: Vec<u8>,
     ble_ident: Vec<u8>,
+    pub mode: MDLSessionMode, // Added by Warren Gallagher at AffinitiQuest
 }
 
 #[uniffi::export]
@@ -102,6 +110,7 @@ pub fn establish_session(
         request,
         ble_ident: ble_ident.to_vec(),
         uuid: *uuid,
+        mode: MDLSessionMode::CentralClientMode,
     })
 }
 
