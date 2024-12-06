@@ -1,11 +1,11 @@
 Pod::Spec.new do |spec|
   spec.name         = "SpruceIDMobileSdkRs"
-  spec.version      = "0.3.0"
+  spec.version      = "0.0.2"
   spec.summary      = "Rust-generated Swift Mobile SDK."
   spec.description  = <<-DESC
                    Rust layer for the Swift Mobile SDK.
                    DESC
-  spec.homepage     = "https://github.com/spruceid/mobile-sdk-rs"
+  spec.homepage     = "https://github.com/AffinitiQuest/mobile-sdk-rs"
   spec.license      = { :type => "MIT & Apache License, Version 2.0", :text => <<-LICENSE
                           Refer to LICENSE-MIT and LICENSE-APACHE in the repository.
                         LICENSE
@@ -17,7 +17,7 @@ Pod::Spec.new do |spec|
   spec.ios.deployment_target  = '14.0'
 
   spec.static_framework = true
-  spec.source        = { :git => "https://github.com/spruceid/mobile-sdk-rs.git", :tag => "#{spec.version}" }
+  spec.source        = { :git => "https://github.com/AffinitiQuest/mobile-sdk-rs.git", :tag => "#{spec.version}" }
   spec.source_files  = "MobileSdkRs/Sources/MobileSdkRs/*.swift"
   spec.frameworks = 'Foundation'
 
