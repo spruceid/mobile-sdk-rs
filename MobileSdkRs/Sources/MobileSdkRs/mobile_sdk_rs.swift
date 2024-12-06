@@ -5622,14 +5622,16 @@ public struct MdlReaderSessionData {
     public var uuid: Uuid
     public var request: Data
     public var bleIdent: Data
+    public var mode: MdlSessionMode
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(state: MdlSessionManager, uuid: Uuid, request: Data, bleIdent: Data) {
+    public init(state: MdlSessionManager, uuid: Uuid, request: Data, bleIdent: Data, mode: MdlSessionMode) {
         self.state = state
         self.uuid = uuid
         self.request = request
         self.bleIdent = bleIdent
+        self.mode = mode
     }
 }
 
@@ -5642,7 +5644,8 @@ public struct FfiConverterTypeMDLReaderSessionData: FfiConverterRustBuffer {
                 state: FfiConverterTypeMDLSessionManager.read(from: &buf), 
                 uuid: FfiConverterTypeUuid.read(from: &buf), 
                 request: FfiConverterData.read(from: &buf), 
-                bleIdent: FfiConverterData.read(from: &buf)
+                bleIdent: FfiConverterData.read(from: &buf), 
+                mode: FfiConverterTypeMDLSessionMode.read(from: &buf)
         )
     }
 
@@ -5651,6 +5654,7 @@ public struct FfiConverterTypeMDLReaderSessionData: FfiConverterRustBuffer {
         FfiConverterTypeUuid.write(value.uuid, into: &buf)
         FfiConverterData.write(value.request, into: &buf)
         FfiConverterData.write(value.bleIdent, into: &buf)
+        FfiConverterTypeMDLSessionMode.write(value.mode, into: &buf)
     }
 }
 
@@ -6818,6 +6822,61 @@ extension MdlReaderSessionError: Foundation.LocalizedError {
         String(reflecting: self)
     }
 }
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
+public enum MdlSessionMode {
+    
+    case centralClientMode
+    case peripheralServerMode
+}
+
+
+public struct FfiConverterTypeMDLSessionMode: FfiConverterRustBuffer {
+    typealias SwiftType = MdlSessionMode
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> MdlSessionMode {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .centralClientMode
+        
+        case 2: return .peripheralServerMode
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: MdlSessionMode, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .centralClientMode:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .peripheralServerMode:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+public func FfiConverterTypeMDLSessionMode_lift(_ buf: RustBuffer) throws -> MdlSessionMode {
+    return try FfiConverterTypeMDLSessionMode.lift(buf)
+}
+
+public func FfiConverterTypeMDLSessionMode_lower(_ value: MdlSessionMode) -> RustBuffer {
+    return FfiConverterTypeMDLSessionMode.lower(value)
+}
+
+
+
+extension MdlSessionMode: Equatable, Hashable {}
+
+
 
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
