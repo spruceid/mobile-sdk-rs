@@ -1,11 +1,11 @@
 [package]
 name = "mobile-sdk-rs"
-version = "0.3.0"
+version = "0.0.2"
 edition = "2021"
-authors = ["Spruce Systems, Inc."]
+authors = ["Spruce Systems, Inc. with Additions by AffintiQuest"]
 license = "Apache-2.0 OR MIT"
 description = "Mobile SDK Rust bindings"
-repository = "https://github.com/spruceid/mobile-sdk-rs/"
+repository = "https://github.com/AffinitiQuest/mobile-sdk-rs/"
 
 [lib]
 crate-type = ["staticlib", "lib", "cdylib"]
